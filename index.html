@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Rapport Tool – Verkehrsdienst</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --bg: #F4F6F9; --surface: #FFFFFF; --border: #DDE1E7; --text: #1A1D23; --sub: #6B7280;
+  --accent: #1C3FAA; --accent-light: #EEF2FF; --green: #059669; --green-bg: #ECFDF5;
+  --red: #DC2626; --red-bg: #FEE2E2; --yellow: #D97706; --radius: 12px; --shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; min-height: 100vh; }
+
+header { background: var(--accent); color: #fff; padding: 0 16px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+header h1 { font-size: 15px; font-weight: 700; }
+.lang-toggle { display: flex; gap: 4px; background: rgba(255,255,255,.15); border-radius: 8px; padding: 3px; }
+.lang-btn { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; background: transparent; color: rgba(255,255,255,.7); transition: all .15s; }
+.lang-btn.active { background: #fff; color: var(--accent); }
+
+.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tab { flex: 1; min-width: 80px; padding: 13px 8px; font-size: 12px; font-weight: 600; color: var(--sub); cursor: pointer; border-bottom: 2px solid transparent; text-align: center; white-space: nowrap; transition: all .15s; user-select: none; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.page { display: none; padding: 16px; max-width: 680px; margin: 0 auto; padding-bottom: 48px; }
+.page.active { display: block; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px; }
+.card-title { font-size: 11px; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: .7px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.opt-badge { font-size: 10px; font-weight: 700; color: var(--sub); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; text-transform: uppercase; letter-spacing: .3px; }
+
+.field { margin-bottom: 13px; }
+.field:last-child { margin-bottom: 0; }
+.field label { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--sub); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .4px; }
+.req { color: var(--red); font-size: 14px; line-height: 1; }
+.field input, .field select, .field textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 9px; padding: 12px 14px; font-size: 15px; color: var(--text); background: var(--bg); transition: border-color .15s, background .15s; -webkit-appearance: none; appearance: none; font-family: inherit; }
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+.field input.error, .field select.error { border-color: var(--red); background: #FFF5F5; }
+.field .err-msg { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
+.field.has-error .err-msg { display: block; }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7280' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.net-display { background: var(--green-bg); border: 1.5px solid #A7F3D0; border-radius: 10px; padding: 14px 18px; text-align: center; margin-bottom: 0; }
+.net-val { font-size: 32px; font-weight: 800; color: var(--green); line-height: 1; }
+.net-lbl { font-size: 11px; color: var(--green); font-weight: 600; margin-top: 3px; text-transform: uppercase; letter-spacing: .5px; }
+
+.sig-wrap { border: 1.5px solid var(--border); border-radius: 9px; overflow: hidden; background: #fff; position: relative; }
+.sig-wrap canvas { display: block; width: 100%; touch-action: none; cursor: crosshair; }
+.sig-actions { display: flex; justify-content: flex-end; padding: 8px 10px; border-top: 1px solid var(--border); }
+.sig-clear { font-size: 12px; color: var(--red); background: none; border: none; cursor: pointer; font-weight: 600; padding: 4px 8px; border-radius: 6px; }
+.sig-clear:hover { background: var(--red-bg); }
+.sig-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 13px; color: #C4C9D4; pointer-events: none; text-align: center; line-height: 1.5; }
+
+.confirm-box { display: flex; align-items: flex-start; gap: 12px; background: var(--accent-light); border: 1.5px solid #C7D7FA; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; cursor: pointer; }
+.confirm-box input[type=checkbox] { width: 20px; height: 20px; min-width: 20px; cursor: pointer; accent-color: var(--accent); margin-top: 2px; }
+.confirm-box label { font-size: 13px; color: var(--accent); font-weight: 500; line-height: 1.5; cursor: pointer; }
+.confirm-box.box-error { background: var(--red-bg); border-color: #FCA5A5; }
+.confirm-box.box-error label { color: var(--red); }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 13px 20px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; border: none; transition: all .15s; font-family: inherit; }
+.btn-primary { background: var(--accent); color: #fff; width: 100%; }
+.btn-primary:active { background: #1835a0; transform: scale(.98); }
+.btn-ghost { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+.btn-ghost:hover { background: var(--bg); }
+.btn-green { background: var(--green); color: #fff; }
+.btn-red { background: var(--red); color: #fff; }
+.btn-sm { padding: 8px 14px; font-size: 12px; border-radius: 8px; font-weight: 600; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.success-screen { display: none; text-align: center; padding: 56px 24px; }
+.success-screen.show { display: block; }
+.success-icon { font-size: 60px; margin-bottom: 16px; }
+.success-screen h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.success-screen p { font-size: 14px; color: var(--sub); margin-bottom: 28px; }
+
+.stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+.stat-pill { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align: center; }
+.stat-pill .val { font-size: 24px; font-weight: 800; color: var(--accent); }
+.stat-pill .lbl { font-size: 10px; color: var(--sub); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 580px; }
+th { text-align: left; font-size: 10px; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: .5px; padding: 10px 12px; border-bottom: 2px solid var(--border); white-space: nowrap; }
+td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--accent-light); }
+.badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge-green { background: var(--green-bg); color: var(--green); }
+.badge-blue { background: var(--accent-light); color: var(--accent); }
+
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.filter-row input, .filter-row select { border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 13px; background: var(--surface); -webkit-appearance: none; appearance: none; font-family: inherit; color: var(--text); }
+.filter-row input { flex: 1; min-width: 140px; }
+
+.ma-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--border); }
+.ma-stat-row:last-child { border-bottom: none; }
+.ma-stat-name { font-weight: 700; font-size: 14px; }
+.ma-stat-meta { font-size: 12px; color: var(--sub); margin-top: 2px; }
+.ma-stat-h { font-size: 20px; font-weight: 800; color: var(--accent); }
+
+.admin-locked { text-align: center; padding: 48px 20px; }
+.lock-icon { font-size: 48px; margin-bottom: 16px; }
+.pin-input { font-size: 24px; letter-spacing: 8px; text-align: center; border: 2px solid var(--border); border-radius: 10px; padding: 14px; width: 100%; max-width: 200px; }
+.ma-chip { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px; margin-bottom: 8px; background: var(--bg); }
+.ma-chip-name { font-weight: 600; }
+.ma-chip-remove { background: none; border: none; color: var(--red); cursor: pointer; font-size: 20px; padding: 0 4px; line-height: 1; }
+.new-ma-row { display: flex; gap: 8px; margin-top: 12px; }
+.new-ma-row input { flex: 1; border: 1.5px solid var(--border); border-radius: 9px; padding: 11px 14px; font-size: 14px; background: var(--surface); font-family: inherit; }
+.new-ma-row input:focus { outline: none; border-color: var(--accent); }
+
+.empty { text-align: center; padding: 40px 20px; color: var(--sub); }
+.empty .ico { font-size: 36px; margin-bottom: 10px; }
+
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--text); color: #fff; padding: 12px 22px; border-radius: 10px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,.25); z-index: 999; opacity: 0; transition: all .2s; pointer-events: none; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 500; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.show { display: flex; }
+.modal { background: #fff; border-radius: 16px; padding: 24px; max-width: 360px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.modal p { font-size: 13px; color: var(--sub); margin-bottom: 20px; }
+.modal .btn-row { gap: 8px; }
+
+.divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+@media (max-width: 500px) {
+  .row2 { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="h-title">Stundenrapport</h1>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('de')">DE</button>
+    <button class="lang-btn" onclick="setLang('sq')">SQ</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('erfassen')" id="tab-erfassen">Erfassen</div>
+  <div class="tab" onclick="showTab('uebersicht')" id="tab-uebersicht">Übersicht</div>
+  <div class="tab" onclick="showTab('mitarbeiter')" id="tab-mitarbeiter">Mitarbeiter</div>
+  <div class="tab" onclick="showTab('admin')" id="tab-admin">Admin</div>
+</div>
+
+<!-- ERFASSEN -->
+<div class="page active" id="page-erfassen">
+
+  <div class="success-screen" id="successScreen">
+    <div class="success-icon">✅</div>
+    <h2 id="success-title">Rapport gespeichert!</h2>
+    <p id="success-sub">Der Rapport wurde erfolgreich erfasst.</p>
+    <button class="btn btn-primary" onclick="resetForm()" style="max-width:280px;margin:0 auto" id="btn-neuer">Neuer Rapport</button>
+  </div>
+
+  <div id="formArea">
+
+    <div class="card">
+      <div class="card-title" id="lbl-sec-ma">Mitarbeiter</div>
+      <div class="field" id="field-ma">
+        <label><span id="lbl-name">Name</span> <span class="req">*</span></label>
+        <select id="maSelect"><option value="">— wählen —</option></select>
+        <div class="err-msg" id="err-ma">Bitte Mitarbeiter wählen.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" id="lbl-sec-auftrag">Auftrag</div>
+      <div class="field" id="field-kunde">
+        <label><span id="lbl-kunde">Kundenname</span> <span class="req">*</span></label>
+        <input type="text" id="kunde" placeholder="z.B. Stadt Bern">
+        <div class="err-msg" id="err-kunde">Pflichtfeld</div>
+      </div>
+      <div class="field" id="field-strasse">
+        <label><span id="lbl-strasse">Strasse</span> <span class="req">*</span></label>
+        <input type="text" id="strasse" placeholder="z.B. Bahnhofstrasse 12">
+        <div class="err-msg" id="err-strasse">Pflichtfeld</div>
+      </div>
+      <div class="field" id="field-ort">
+        <label><span id="lbl-ort">Ort / PLZ</span> <span class="req">*</span></label>
+        <input type="text" id="ort" placeholder="z.B. 3011 Bern">
+        <div class="err-msg" id="err-ort">Pflichtfeld</div>
+      </div>
+      <div class="row2">
+        <div class="field" id="field-datum">
+          <label><span id="lbl-datum">Datum</span> <span class="req">*</span></label>
+          <input type="date" id="datum">
+          <div class="err-msg" id="err-datum">Pflichtfeld</div>
+        </div>
+        <div class="field">
+          <label id="lbl-einsatzart">Einsatzart</label>
+          <select id="einsatzart">
+            <option value="Verkehrsdienst">Verkehrsdienst</option>
+            <option value="Absperrung">Absperrung</option>
+            <option value="Veranstaltung">Veranstaltung</option>
+            <option value="Escort">Escort</option>
+            <option value="Sonstiges">Sonstiges</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label id="lbl-auftragNr">Auftragsnummer</label>
+        <input type="text" id="auftragNr" placeholder="optional">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" id="lbl-sec-zeiten">Arbeitszeit</div>
+      <div class="row2">
+        <div class="field" id="field-von">
+          <label><span id="lbl-von">Arbeitsbeginn</span> <span class="req">*</span></label>
+          <input type="time" id="von" value="08:00" oninput="calcNet()">
+          <div class="err-msg" id="err-von">Pflichtfeld</div>
+        </div>
+        <div class="field" id="field-bis">
+          <label><span id="lbl-bis">Arbeitsende</span> <span class="req">*</span></label>
+          <input type="time" id="bis" value="16:00" oninput="calcNet()">
+          <div class="err-msg" id="err-bis">Pflichtfeld</div>
+        </div>
+      </div>
+      <div class="field">
+        <label id="lbl-pause">Pause</label>
+        <select id="pause" onchange="calcNet()">
+          <option value="0">Keine Pause</option>
+          <option value="15">15 Minuten</option>
+          <option value="30" selected>30 Minuten</option>
+          <option value="45">45 Minuten</option>
+          <option value="60">1 Stunde</option>
+          <option value="90">1.5 Stunden</option>
+          <option value="120">2 Stunden</option>
+        </select>
+      </div>
+      <div class="net-display" id="netDisplay">
+        <div class="net-val" id="netVal">7.50 h</div>
+        <div class="net-lbl" id="netLbl">Nettostunden</div>
+      </div>
+    </div>
+
+    <!-- KUNDENUNTERSCHRIFT -->
+    <div class="card">
+      <div class="card-title">
+        <span id="lbl-sec-sig">Kundenunterschrift</span>
+        <span class="opt-badge" id="lbl-optional">Optional</span>
+      </div>
+      <p style="font-size:13px;color:var(--sub);margin-bottom:12px" id="lbl-sig-hint">Unterschrift des Kunden mit Finger oder Stift einholen.</p>
+      <div class="field" style="margin-bottom:12px">
+        <label id="lbl-sig-name">Name Unterzeichner</label>
+        <input type="text" id="sigName" placeholder="Vor- und Nachname">
+      </div>
+      <div class="sig-wrap">
+        <canvas id="sigCanvas" height="160"></canvas>
+        <div class="sig-placeholder" id="sigPlaceholder">✍ Hier unterschreiben</div>
+        <div class="sig-actions">
+          <button class="sig-clear" onclick="clearSig()" id="btn-sig-clear">Löschen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BEMERKUNGEN -->
+    <div class="card">
+      <div class="card-title" id="lbl-sec-bem">Bemerkungen</div>
+      <div class="field">
+        <textarea id="bemerkung" rows="3" placeholder="Besondere Vorkommnisse..." style="resize:vertical"></textarea>
+      </div>
+    </div>
+
+    <!-- BESTÄTIGUNG MITARBEITER -->
+    <div class="confirm-box" id="confirmBox" onclick="toggleConfirm()">
+      <input type="checkbox" id="confirmCheck" onclick="event.stopPropagation()">
+      <label for="confirmCheck" id="lbl-confirm">
+        Ich bestätige, dass alle Angaben in diesem Rapport korrekt und vollständig sind.
+      </label>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveRapport()" id="btn-save">✓ Rapport speichern</button>
+
+  </div>
+</div>
+
+<!-- ÜBERSICHT -->
+<div class="page" id="page-uebersicht">
+  <div class="stats-row" id="statsRow"></div>
+  <div class="card" style="padding:14px">
+    <div class="filter-row">
+      <input type="text" id="filterQ" placeholder="Suche..." oninput="renderTable()">
+      <input type="month" id="filterM" oninput="renderTable()">
+      <button class="btn btn-ghost btn-sm" onclick="clearFilter()" id="btn-filter-clear">Löschen</button>
+      <button class="btn btn-green btn-sm" onclick="exportCSV()" id="btn-csv">↓ CSV</button>
+    </div>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="table-wrap" id="tableWrap"></div>
+  </div>
+</div>
+
+<!-- MITARBEITER -->
+<div class="page" id="page-mitarbeiter">
+  <div class="card">
+    <div class="card-title" id="lbl-sec-mastats">Gesamtstunden pro Mitarbeiter</div>
+    <div id="maStatsList"></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="page" id="page-admin">
+  <div id="adminLocked" class="admin-locked">
+    <div class="lock-icon">🔒</div>
+    <p style="font-size:14px;color:var(--sub);margin-bottom:20px" id="lbl-pin-hint">Admin-PIN eingeben</p>
+    <input type="password" class="pin-input" id="pinInput" maxlength="4" inputmode="numeric" placeholder="••••" oninput="checkPin()">
+    <p style="font-size:12px;color:#C4C9D4;margin-top:12px" id="lbl-pin-sub">Standard-PIN: 1234</p>
+  </div>
+  <div id="adminPanel" style="display:none">
+    <div class="card">
+      <div class="card-title" id="lbl-sec-adminma">Mitarbeiterliste verwalten</div>
+      <div id="maChipList"></div>
+      <div class="new-ma-row">
+        <input type="text" id="newMaInput" placeholder="Name hinzufügen..." onkeydown="if(event.key==='Enter')addMa()">
+        <button class="btn btn-green btn-sm" onclick="addMa()" id="btn-add-ma">+ Hinzufügen</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" id="lbl-sec-pin">PIN ändern</div>
+      <div class="field" style="margin-bottom:12px">
+        <label id="lbl-new-pin">Neuer PIN (4 Ziffern)</label>
+        <input type="password" id="newPin" maxlength="4" inputmode="numeric" placeholder="••••" style="max-width:160px">
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="changePin()" id="btn-change-pin">PIN speichern</button>
+    </div>
+    <div class="card">
+      <div class="card-title" id="lbl-sec-danger">Daten</div>
+      <button class="btn btn-red btn-sm" onclick="clearAllData()" id="btn-clear-all">Alle Rapporte löschen</button>
+    </div>
+    <div style="text-align:right;margin-top:8px">
+      <button class="btn btn-ghost btn-sm" onclick="lockAdmin()" id="btn-logout">Abmelden</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3 id="modal-del-title">Rapport löschen?</h3>
+    <p id="modal-del-body">Dieser Eintrag wird unwiderruflich gelöscht.</p>
+    <div class="btn-row">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal()" id="btn-modal-cancel">Abbrechen</button>
+      <button class="btn btn-red" style="flex:1" onclick="confirmDelete()" id="btn-modal-ok">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE
+let rapports       = JSON.parse(localStorage.getItem('rv3_rapports') || '[]');
+let maList         = JSON.parse(localStorage.getItem('rv3_ma') || '["Muster Max","Müller Peter","Schmidt Anna"]');
+let adminPin       = localStorage.getItem('rv3_pin') || '1234';
+let lang           = localStorage.getItem('rv3_lang') || 'de';
+let sigDirty       = false;
+let deleteTargetId = null;
+let sigCtx, isDrawing = false, lastX = 0, lastY = 0;
+
+// ── TRANSLATIONS
+const T = {
+  de: {
+    'h-title':'Stundenrapport','tab-erfassen':'Erfassen','tab-uebersicht':'Übersicht',
+    'tab-mitarbeiter':'Mitarbeiter','tab-admin':'Admin',
+    'lbl-sec-ma':'Mitarbeiter','lbl-name':'Name','err-ma':'Bitte Mitarbeiter wählen.',
+    'lbl-sec-auftrag':'Auftrag','lbl-kunde':'Kundenname','err-kunde':'Pflichtfeld',
+    'lbl-strasse':'Strasse','err-strasse':'Pflichtfeld',
+    'lbl-ort':'Ort / PLZ','err-ort':'Pflichtfeld',
+    'lbl-datum':'Datum','err-datum':'Pflichtfeld',
+    'lbl-einsatzart':'Einsatzart','lbl-auftragNr':'Auftragsnummer',
+    'lbl-sec-zeiten':'Arbeitszeit',
+    'lbl-von':'Arbeitsbeginn','err-von':'Pflichtfeld',
+    'lbl-bis':'Arbeitsende','err-bis':'Pflichtfeld',
+    'lbl-pause':'Pause','netLbl':'Nettostunden',
+    'lbl-sec-sig':'Kundenunterschrift','lbl-optional':'Optional',
+    'lbl-sig-hint':'Unterschrift des Kunden mit Finger oder Stift einholen.',
+    'lbl-sig-name':'Name Unterzeichner',
+    'sigPlaceholder':'✍ Hier unterschreiben','btn-sig-clear':'Löschen',
+    'lbl-sec-bem':'Bemerkungen',
+    'lbl-confirm':'Ich bestätige, dass alle Angaben in diesem Rapport korrekt und vollständig sind.',
+    'btn-save':'✓ Rapport speichern',
+    'success-title':'Rapport gespeichert!','success-sub':'Der Rapport wurde erfolgreich erfasst.',
+    'btn-neuer':'Neuer Rapport',
+    'btn-filter-clear':'Löschen','btn-csv':'↓ CSV',
+    'lbl-sec-mastats':'Gesamtstunden pro Mitarbeiter',
+    'lbl-pin-hint':'Admin-PIN eingeben','lbl-pin-sub':'Standard-PIN: 1234',
+    'lbl-sec-adminma':'Mitarbeiterliste verwalten','btn-add-ma':'+ Hinzufügen',
+    'lbl-sec-pin':'PIN ändern','lbl-new-pin':'Neuer PIN (4 Ziffern)',
+    'btn-change-pin':'PIN speichern','lbl-sec-danger':'Daten',
+    'btn-clear-all':'Alle Rapporte löschen','btn-logout':'Abmelden',
+    'modal-del-title':'Rapport löschen?',
+    'modal-del-body':'Dieser Eintrag wird unwiderruflich gelöscht.',
+    'btn-modal-cancel':'Abbrechen','btn-modal-ok':'Löschen',
+    'ea':['Verkehrsdienst','Absperrung','Veranstaltung','Escort','Sonstiges'],
+    'pa':['Keine Pause','15 Minuten','30 Minuten','45 Minuten','1 Stunde','1.5 Stunden','2 Stunden'],
+    'th':['Datum','Mitarbeiter','Kunde','Adresse','Art','Zeit','Pause','Netto','Unterschrift / Unterzeichner',''],
+    'no-data':'Keine Rapporte vorhanden.','del':'Löschen',
+    'ph-ma':'— wählen —','ph-filter':'Suche...','ph-new-ma':'Name hinzufügen...',
+    'ph-signame':'Vor- und Nachname',
+    'ph-kunde':'z.B. Stadt Bern','ph-strasse':'z.B. Bahnhofstrasse 12',
+    'ph-ort':'z.B. 3011 Bern','ph-auftragNr':'optional',
+    'ph-bem':'Besondere Vorkommnisse...',
+    'stat-r':'Rapporte','stat-h':'Stunden','stat-ma':'Mitarbeiter',
+    'lbl-einsaetze':'Einsätze','lbl-letzter':'Letzter',
+    'min':'Min.',
+    'tSaved':'✓ Rapport gespeichert!','tMaAdd':'✓ Mitarbeiter hinzugefügt.',
+    'tMaRem':'Mitarbeiter entfernt.','tPinOk':'✓ PIN geändert.',
+    'tAllDel':'Alle Rapporte gelöscht.','tDel':'Rapport gelöscht.',
+    'tCsv':'✓ CSV exportiert.','tNoData':'Keine Daten.',
+    'tWrongPin':'Falscher PIN.','tPinInvalid':'PIN muss 4 Ziffern haben.',
+    'tName':'Bitte Namen eingeben.','tConfirm':'Bitte Bestätigung anhaken.',
+  },
+  sq: {
+    'h-title':'Raport Orësh','tab-erfassen':'Regjistro','tab-uebersicht':'Pasqyra',
+    'tab-mitarbeiter':'Punonjës','tab-admin':'Admin',
+    'lbl-sec-ma':'Punonjësi','lbl-name':'Emri','err-ma':'Ju lutem zgjidhni punonjësin.',
+    'lbl-sec-auftrag':'Porosia','lbl-kunde':'Emri i Klientit','err-kunde':'Fushë e detyrueshme',
+    'lbl-strasse':'Rruga','err-strasse':'Fushë e detyrueshme',
+    'lbl-ort':'Vendndodhja / Kodi Postar','err-ort':'Fushë e detyrueshme',
+    'lbl-datum':'Data','err-datum':'Fushë e detyrueshme',
+    'lbl-einsatzart':'Lloji i Shërbimit','lbl-auftragNr':'Nr. i Porosisë',
+    'lbl-sec-zeiten':'Orari i Punës',
+    'lbl-von':'Fillimi i Punës','err-von':'Fushë e detyrueshme',
+    'lbl-bis':'Mbarimi i Punës','err-bis':'Fushë e detyrueshme',
+    'lbl-pause':'Pushimi','netLbl':'Orë Neto',
+    'lbl-sec-sig':'Nënshkrimi i Klientit','lbl-optional':'Opsionale',
+    'lbl-sig-hint':'Merrni nënshkrimin e klientit me gisht ose stilolaps.',
+    'lbl-sig-name':'Emri i Nënshkruesit',
+    'sigPlaceholder':'✍ Nënshkruani këtu','btn-sig-clear':'Fshij',
+    'lbl-sec-bem':'Shënime',
+    'lbl-confirm':'Konfirmoj që të gjitha të dhënat në këtë raport janë të sakta dhe të plota.',
+    'btn-save':'✓ Ruaj Raportin',
+    'success-title':'Raporti u ruajt!','success-sub':'Raporti u regjistrua me sukses.',
+    'btn-neuer':'Raport i Ri',
+    'btn-filter-clear':'Fshij','btn-csv':'↓ CSV',
+    'lbl-sec-mastats':'Orë Totale për Punonjës',
+    'lbl-pin-hint':'Futni PIN-in e Adminit','lbl-pin-sub':'PIN standard: 1234',
+    'lbl-sec-adminma':'Administro Listën e Punonjësve','btn-add-ma':'+ Shto',
+    'lbl-sec-pin':'Ndrysho PIN-in','lbl-new-pin':'PIN i Ri (4 shifra)',
+    'btn-change-pin':'Ruaj PIN-in','lbl-sec-danger':'Të dhëna',
+    'btn-clear-all':'Fshij të gjitha Raportet','btn-logout':'Dilni',
+    'modal-del-title':'Fshi Raportin?',
+    'modal-del-body':'Ky regjistrim do të fshihet përgjithmonë.',
+    'btn-modal-cancel':'Anulo','btn-modal-ok':'Fshi',
+    'ea':['Shërbim Trafiku','Bllokadë','Ngjarje','Eskortë','Të tjera'],
+    'pa':['Pa Pushim','15 Minuta','30 Minuta','45 Minuta','1 Orë','1.5 Orë','2 Orë'],
+    'th':['Data','Punonjësi','Klienti','Adresa','Lloji','Ora','Pushim','Neto','Nënshkrim / Nënshkrues',''],
+    'no-data':'Nuk ka raporte.','del':'Fshi',
+    'ph-ma':'— zgjidhni —','ph-filter':'Kërko...','ph-new-ma':'Shto emrin...',
+    'ph-signame':'Emri dhe mbiemri',
+    'ph-kunde':'p.sh. Bashkia Bern','ph-strasse':'p.sh. Rruga Kryesore 12',
+    'ph-ort':'p.sh. 3011 Bern','ph-auftragNr':'opsionale',
+    'ph-bem':'Ngjarje të veçanta...',
+    'stat-r':'Raporte','stat-h':'Orë','stat-ma':'Punonjës',
+    'lbl-einsaetze':'Shërbime','lbl-letzter':'I fundit',
+    'min':'Min.',
+    'tSaved':'✓ Raporti u ruajt!','tMaAdd':'✓ Punonjësi u shtua.',
+    'tMaRem':'Punonjësi u fshi.','tPinOk':'✓ PIN-i u ndryshua.',
+    'tAllDel':'Të gjitha raportet u fshinë.','tDel':'Raporti u fshi.',
+    'tCsv':'✓ CSV u eksportua.','tNoData':'Nuk ka të dhëna.',
+    'tWrongPin':'PIN i gabuar.','tPinInvalid':'PIN duhet të ketë 4 shifra.',
+    'tName':'Ju lutem futni emrin.','tConfirm':'Ju lutem konfirmoni.',
+  }
+};
+const t = k => (T[lang]&&T[lang][k]) || T.de[k] || k;
+
+// ── LANG
+function setLang(l) {
+  lang = l; localStorage.setItem('rv3_lang', l);
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent === l.toUpperCase()));
+  applyLang();
+}
+function applyLang() {
+  const ids = ['h-title','tab-erfassen','tab-uebersicht','tab-mitarbeiter','tab-admin',
+    'lbl-sec-ma','lbl-name','err-ma','lbl-sec-auftrag','lbl-kunde','err-kunde',
+    'lbl-strasse','err-strasse','lbl-ort','err-ort','lbl-datum','err-datum',
+    'lbl-einsatzart','lbl-auftragNr','lbl-sec-zeiten','lbl-von','err-von',
+    'lbl-bis','err-bis','lbl-pause','netLbl','lbl-sec-sig','lbl-optional',
+    'lbl-sig-hint','lbl-sig-name','sigPlaceholder','btn-sig-clear',
+    'lbl-sec-bem','lbl-confirm','btn-save','success-title','success-sub','btn-neuer',
+    'btn-filter-clear','btn-csv','lbl-sec-mastats','lbl-pin-hint','lbl-pin-sub',
+    'lbl-sec-adminma','btn-add-ma','lbl-sec-pin','lbl-new-pin','btn-change-pin',
+    'lbl-sec-danger','btn-clear-all','btn-logout',
+    'modal-del-title','modal-del-body','btn-modal-cancel','btn-modal-ok'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = t(id); });
+
+  const eaVals = ['Verkehrsdienst','Absperrung','Veranstaltung','Escort','Sonstiges'];
+  const ea = document.getElementById('einsatzart');
+  t('ea').forEach((tx,i) => { ea.options[i].text = tx; ea.options[i].value = eaVals[i]; });
+
+  const pVals = [0,15,30,45,60,90,120];
+  const p = document.getElementById('pause');
+  t('pa').forEach((tx,i) => { p.options[i].text = tx; p.options[i].value = pVals[i]; });
+
+  const phs = {'filterQ':'ph-filter','newMaInput':'ph-new-ma','bemerkung':'ph-bem',
+    'kunde':'ph-kunde','strasse':'ph-strasse','ort':'ph-ort','auftragNr':'ph-auftragNr','sigName':'ph-signame'};
+  Object.entries(phs).forEach(([id,k]) => { const el=document.getElementById(id); if(el) el.placeholder=t(k); });
+  populateMaSelect(); calcNet();
+}
+
+// ── TABS
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('page-'+name).classList.add('active');
+  if (name==='uebersicht') { renderStats(); renderTable(); }
+  if (name==='mitarbeiter') renderMaStats();
+  if (name==='admin') renderMaChips();
+}
+
+// ── MA SELECT
+function populateMaSelect() {
+  const sel = document.getElementById('maSelect'), cur = sel.value;
+  sel.innerHTML = `<option value="">${t('ph-ma')}</option>`;
+  [...maList].sort().forEach(n => { const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
+  if (cur) sel.value = cur;
+}
+
+// ── SIGNATURE
+function initSig() {
+  const canvas = document.getElementById('sigCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = canvas.parentElement.clientWidth * dpr;
+  canvas.height = 160 * dpr;
+  canvas.style.height = '160px';
+  sigCtx = canvas.getContext('2d');
+  sigCtx.scale(dpr, dpr);
+  sigCtx.strokeStyle = '#1A1D23'; sigCtx.lineWidth = 2.2; sigCtx.lineCap = 'round'; sigCtx.lineJoin = 'round';
+  const pos = e => { const r=canvas.getBoundingClientRect(), s=e.touches?e.touches[0]:e; return [s.clientX-r.left,s.clientY-r.top]; };
+  const start = e => { e.preventDefault(); isDrawing=true; [lastX,lastY]=pos(e); document.getElementById('sigPlaceholder').style.display='none'; };
+  const draw  = e => { e.preventDefault(); if(!isDrawing) return; const [x,y]=pos(e); sigCtx.beginPath(); sigCtx.moveTo(lastX,lastY); sigCtx.lineTo(x,y); sigCtx.stroke(); [lastX,lastY]=[x,y]; sigDirty=true; };
+  const stop  = e => { e.preventDefault(); isDrawing=false; };
+  canvas.addEventListener('mousedown',start); canvas.addEventListener('mousemove',draw);
+  canvas.addEventListener('mouseup',stop);    canvas.addEventListener('mouseleave',stop);
+  canvas.addEventListener('touchstart',start,{passive:false});
+  canvas.addEventListener('touchmove',draw,{passive:false});
+  canvas.addEventListener('touchend',stop,{passive:false});
+}
+function clearSig() {
+  const c=document.getElementById('sigCanvas');
+  sigCtx.clearRect(0,0,c.width,c.height); sigDirty=false;
+  document.getElementById('sigPlaceholder').style.display='';
+}
+const getSigData = () => sigDirty ? document.getElementById('sigCanvas').toDataURL('image/png') : null;
+
+// ── CALC NET
+function calcNet() {
+  const von=document.getElementById('von').value, bis=document.getElementById('bis').value;
+  const pause=parseInt(document.getElementById('pause').value||0);
+  if (!von||!bis) return;
+  const [vh,vm]=von.split(':').map(Number), [bh,bm]=bis.split(':').map(Number);
+  let total=(bh*60+bm)-(vh*60+vm); if(total<0)total+=1440;
+  const net=Math.max(0,(total-pause)/60);
+  document.getElementById('netVal').textContent=net.toFixed(2)+' h';
+  const warm=net<1, d=document.getElementById('netDisplay');
+  d.style.background=warm?'#FEF3C7':'var(--green-bg)';
+  d.style.borderColor=warm?'#FCD34D':'#A7F3D0';
+  document.getElementById('netVal').style.color=warm?'var(--yellow)':'var(--green)';
+  document.getElementById('netLbl').style.color=warm?'var(--yellow)':'var(--green)';
+}
+
+// ── CONFIRM TOGGLE
+function toggleConfirm() {
+  const cb=document.getElementById('confirmCheck'); cb.checked=!cb.checked;
+  document.getElementById('confirmBox').classList.toggle('box-error',false);
+}
+
+// ── VALIDATE
+function validate() {
+  let ok=true;
+  [['field-ma','maSelect'],['field-kunde','kunde'],['field-strasse','strasse'],
+   ['field-ort','ort'],['field-datum','datum'],['field-von','von'],['field-bis','bis']]
+  .forEach(([f,i]) => {
+    const inp=document.getElementById(i), hasVal=inp.value.trim()!=='';
+    document.getElementById(f).classList.toggle('has-error',!hasVal);
+    inp.classList.toggle('error',!hasVal);
+    if(!hasVal) ok=false;
+  });
+  const cb=document.getElementById('confirmCheck'), box=document.getElementById('confirmBox');
+  if(!cb.checked){ box.classList.add('box-error'); ok=false; }
+  else box.classList.remove('box-error');
+  return ok;
+}
+
+// ── SAVE
+function saveRapport() {
+  if (!validate()) { showToast(t('tConfirm')); return; }
+  const von=document.getElementById('von').value, bis=document.getElementById('bis').value;
+  const pause=parseInt(document.getElementById('pause').value||0);
+  const [vh,vm]=von.split(':').map(Number), [bh,bm]=bis.split(':').map(Number);
+  let total=(bh*60+bm)-(vh*60+vm); if(total<0)total+=1440;
+  rapports.unshift({
+    id:Date.now(), ts:new Date().toISOString(),
+    datum:document.getElementById('datum').value,
+    ma:document.getElementById('maSelect').value,
+    kunde:document.getElementById('kunde').value.trim(),
+    strasse:document.getElementById('strasse').value.trim(),
+    ort:document.getElementById('ort').value.trim(),
+    auftragNr:document.getElementById('auftragNr').value.trim(),
+    einsatzart:document.getElementById('einsatzart').value,
+    von,bis,pause,
+    netH:parseFloat(Math.max(0,(total-pause)/60).toFixed(2)),
+    bemerkung:document.getElementById('bemerkung').value.trim(),
+    sigName:document.getElementById('sigName').value.trim(),
+    sig:getSigData()
+  });
+  save();
+  document.getElementById('formArea').style.display='none';
+  document.getElementById('successScreen').classList.add('show');
+  window.scrollTo(0,0);
+}
+
+function resetForm() {
+  document.getElementById('successScreen').classList.remove('show');
+  document.getElementById('formArea').style.display='';
+  ['maSelect','kunde','strasse','ort','auftragNr','bemerkung','sigName'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('datum').value=today();
+  document.getElementById('von').value='08:00';
+  document.getElementById('bis').value='16:00';
+  document.getElementById('pause').value='30';
+  document.getElementById('confirmCheck').checked=false;
+  document.getElementById('confirmBox').classList.remove('box-error');
+  document.querySelectorAll('.has-error').forEach(e=>e.classList.remove('has-error'));
+  document.querySelectorAll('.error').forEach(e=>e.classList.remove('error'));
+  clearSig(); calcNet(); window.scrollTo(0,0);
+}
+
+// ── TABLE
+function getFiltered() {
+  const q=(document.getElementById('filterQ')?.value||'').toLowerCase();
+  const m=document.getElementById('filterM')?.value||'';
+  return rapports.filter(r => {
+    const mq=!q||r.ma.toLowerCase().includes(q)||r.kunde.toLowerCase().includes(q)||(r.ort||'').toLowerCase().includes(q);
+    return mq&&(!m||r.datum.startsWith(m));
+  });
+}
+function renderStats(data) {
+  data=data||getFiltered();
+  const h=data.reduce((s,r)=>s+r.netH,0), u=new Set(data.map(r=>r.ma)).size;
+  document.getElementById('statsRow').innerHTML=
+    `<div class="stat-pill"><div class="val">${data.length}</div><div class="lbl">${t('stat-r')}</div></div>
+     <div class="stat-pill"><div class="val">${h.toFixed(1)}</div><div class="lbl">${t('stat-h')}</div></div>
+     <div class="stat-pill"><div class="val">${u}</div><div class="lbl">${t('stat-ma')}</div></div>`;
+}
+function renderTable() {
+  const data=getFiltered(); renderStats(data);
+  const wrap=document.getElementById('tableWrap');
+  if(!data.length){wrap.innerHTML=`<div class="empty"><div class="ico">📋</div><p>${t('no-data')}</p></div>`;return;}
+  const ths=t('th').map(h=>`<th>${h}</th>`).join('');
+  const rows=data.map(r=>`<tr>
+    <td style="white-space:nowrap">${fmtDate(r.datum)}</td>
+    <td><strong>${r.ma}</strong></td>
+    <td>${r.kunde}</td>
+    <td style="font-size:12px;color:var(--sub)">${r.strasse}<br>${r.ort}</td>
+    <td><span class="badge badge-blue" style="white-space:nowrap">${r.einsatzart}</span></td>
+    <td style="white-space:nowrap">${r.von}–${r.bis}</td>
+    <td style="color:var(--sub)">${r.pause} ${t('min')}</td>
+    <td><span class="badge badge-green">${r.netH.toFixed(2)} h</span></td>
+    <td>${r.sig?`<img src="${r.sig}" style="height:32px;max-width:80px;object-fit:contain;display:block">${r.sigName?`<small style="color:var(--sub);font-size:10px">${r.sigName}</small>`:''}`:'–'}</td>
+    <td><button onclick="askDelete(${r.id})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;font-weight:600;padding:4px 8px;border-radius:6px" onmouseover="this.style.background='var(--red-bg)'" onmouseout="this.style.background='none'">${t('del')}</button></td>
+  </tr>`).join('');
+  wrap.innerHTML=`<table><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+function clearFilter(){document.getElementById('filterQ').value='';document.getElementById('filterM').value='';renderTable();}
+
+// ── MA STATS
+function renderMaStats() {
+  const map={};
+  rapports.forEach(r=>{if(!map[r.ma])map[r.ma]={h:0,n:0,last:''};map[r.ma].h+=r.netH;map[r.ma].n++;if(!map[r.ma].last||r.datum>map[r.ma].last)map[r.ma].last=r.datum;});
+  const con=document.getElementById('maStatsList');
+  const sorted=Object.entries(map).sort((a,b)=>b[1].h-a[1].h);
+  if(!sorted.length){con.innerHTML=`<div class="empty"><div class="ico">👤</div><p>${t('no-data')}</p></div>`;return;}
+  con.innerHTML=sorted.map(([name,d])=>`<div class="ma-stat-row"><div><div class="ma-stat-name">${name}</div><div class="ma-stat-meta">${d.n} ${t('lbl-einsaetze')} · ${t('lbl-letzter')}: ${d.last?fmtDate(d.last):'–'}</div></div><div class="ma-stat-h">${d.h.toFixed(2)} h</div></div>`).join('');
+}
+
+// ── DELETE
+function askDelete(id){deleteTargetId=id;document.getElementById('deleteModal').classList.add('show');}
+function closeModal(){document.getElementById('deleteModal').classList.remove('show');deleteTargetId=null;}
+function confirmDelete(){rapports=rapports.filter(r=>r.id!==deleteTargetId);save();closeModal();renderTable();renderMaStats();showToast(t('tDel'));}
+
+// ── CSV
+function exportCSV() {
+  const data=getFiltered();
+  if(!data.length){showToast(t('tNoData'));return;}
+  const hdr=['Datum','Mitarbeiter','Kunde','Strasse','Ort','AuftragNr','Einsatzart','Von','Bis','Pause_Min','Netto_h','Unterzeichner','Bemerkung','Erfasst'];
+  const rows=data.map(r=>[r.datum,r.ma,r.kunde,r.strasse,r.ort,r.auftragNr||'',r.einsatzart,r.von,r.bis,r.pause,r.netH.toFixed(2),r.sigName||'',(r.bemerkung||'').replace(/,/g,' '),r.ts||''].join(','));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+[hdr.join(','),...rows].join('\n')],{type:'text/csv;charset=utf-8'}));
+  a.download='rapporte_'+today()+'.csv';a.click();showToast(t('tCsv'));
+}
+
+// ── ADMIN
+function checkPin(){
+  const v=document.getElementById('pinInput').value;
+  if(v.length===4){if(v===adminPin){document.getElementById('adminLocked').style.display='none';document.getElementById('adminPanel').style.display='';renderMaChips();}else{showToast(t('tWrongPin'));document.getElementById('pinInput').value='';}}
+}
+function lockAdmin(){document.getElementById('adminPanel').style.display='none';document.getElementById('adminLocked').style.display='';document.getElementById('pinInput').value='';}
+function renderMaChips(){document.getElementById('maChipList').innerHTML=[...maList].sort().map(n=>`<div class="ma-chip"><span class="ma-chip-name">${n}</span><button class="ma-chip-remove" onclick="removeMa('${n.replace(/'/g,"\\'")}')">×</button></div>`).join('');}
+function addMa(){const inp=document.getElementById('newMaInput'),name=inp.value.trim();if(!name){showToast(t('tName'));return;}if(!maList.includes(name)){maList.push(name);saveMa();populateMaSelect();renderMaChips();showToast(t('tMaAdd'));}inp.value='';}
+function removeMa(name){maList=maList.filter(n=>n!==name);saveMa();populateMaSelect();renderMaChips();showToast(t('tMaRem'));}
+function changePin(){const p=document.getElementById('newPin').value;if(!/^\d{4}$/.test(p)){showToast(t('tPinInvalid'));return;}adminPin=p;localStorage.setItem('rv3_pin',p);document.getElementById('newPin').value='';showToast(t('tPinOk'));}
+function clearAllData(){if(!confirm(lang==='sq'?'Jeni i sigurt?':'Wirklich alle Rapporte löschen?'))return;rapports=[];save();showToast(t('tAllDel'));}
+
+// ── UTILS
+const save   = () => localStorage.setItem('rv3_rapports', JSON.stringify(rapports));
+const saveMa = () => localStorage.setItem('rv3_ma', JSON.stringify(maList));
+const today  = () => new Date().toISOString().split('T')[0];
+const fmtDate = d => d ? d.split('-').reverse().join('.') : '';
+function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2800);}
+
+// ── INIT
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('datum').value=today();
+  initSig(); populateMaSelect();
+  setLang(lang);
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.textContent===lang.toUpperCase()));
+  calcNet();
+});
+</script>
+</body>
+</html>
