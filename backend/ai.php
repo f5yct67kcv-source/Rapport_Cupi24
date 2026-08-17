@@ -202,7 +202,7 @@ function anthropic_recherche_kunde(string $text): ?array
     // werden.
     for ($runde = 0; $runde < 4; $runde++) {
         $payload = [
-            'model' => 'claude-opus-5',
+            'model' => 'claude-sonnet-5',
             'max_tokens' => 8000,
             'system' => $system,
             'tools' => [
