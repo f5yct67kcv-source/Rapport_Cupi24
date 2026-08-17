@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Ersteinrichtung — Rapport-Tool</title>
+<style>
+body{font-family:-apple-system,sans-serif;max-width:360px;margin:60px auto;padding:0 20px;color:#1A1D23}
+input{width:100%;padding:10px;margin-bottom:12px;border:1px solid #ccc;border-radius:6px;font-size:15px;box-sizing:border-box}
+button{width:100%;padding:12px;background:#1C3FAA;color:#fff;border:none;border-radius:6px;font-size:15px;cursor:pointer}
+p{font-size:13px;color:#6B7280}
+#msg{margin-top:14px;font-size:14px}
+</style>
+</head>
+<body>
+<h2>Ersten Admin-Account anlegen</h2>
+<p>Dieses Formular funktioniert nur einmal — solange noch kein Mitarbeiter existiert. Danach diese Datei und <code>setup.php</code> vom Server löschen.</p>
+<input type="text" id="name" placeholder="Name">
+<input type="password" id="password" placeholder="Passwort (min. 6 Zeichen)">
+<button onclick="submitSetup()">Admin-Account erstellen</button>
+<div id="msg"></div>
+<script>
+function submitSetup(){
+  const name=document.getElementById('name').value.trim();
+  const password=document.getElementById('password').value;
+  const msg=document.getElementById('msg');
+  msg.textContent='...';
+  fetch('setup.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,password})})
+    .then(r=>r.json())
+    .then(data=>{ msg.textContent=data.message||JSON.stringify(data); msg.style.color=data.status==='ok'?'#059669':'#DC2626'; })
+    .catch(()=>{ msg.textContent='Netzwerkfehler.'; msg.style.color='#DC2626'; });
+}
+</script>
+</body>
+</html>

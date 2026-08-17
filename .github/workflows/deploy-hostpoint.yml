@@ -13,10 +13,17 @@ jobs:
 
       - name: Platzhalter durch echte Werte ersetzen
         run: |
-          mkdir -p dist
+          mkdir -p dist/api
           cp index.html dist/index.html
-          sed -i "s|__SHEETS_URL__|${{ secrets.SHEETS_URL }}|g" dist/index.html
-          sed -i "s|__APP_TOKEN__|${{ secrets.APP_TOKEN }}|g" dist/index.html
+          cp backend/db.php dist/db.php
+          cp backend/api/*.php dist/api/
+          # setup.php / setup.html bewusst NICHT hier -- Ersteinrichtung ist ein
+          # einmaliger manueller Upload, damit die Datei nicht bei jedem Push
+          # automatisch neu auf den Server kommt.
+          sed -i "s|__DB_HOST__|${{ secrets.DB_HOST }}|g" dist/db.php
+          sed -i "s|__DB_NAME__|${{ secrets.DB_NAME }}|g" dist/db.php
+          sed -i "s|__DB_USER__|${{ secrets.DB_USER }}|g" dist/db.php
+          sed -i "s|__DB_PASS__|${{ secrets.DB_PASSWORD }}|g" dist/db.php
 
       - name: Nach Hostpoint hochladen (FTPS)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
