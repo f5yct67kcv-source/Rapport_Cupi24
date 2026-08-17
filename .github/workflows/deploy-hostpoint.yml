@@ -19,6 +19,7 @@ jobs:
           cp sw.js dist/sw.js
           cp icons/*.png dist/icons/
           cp backend/db.php dist/db.php
+          cp backend/ai.php dist/ai.php
           cp backend/api/*.php dist/api/
           # setup.php / setup.html bewusst NICHT hier -- Ersteinrichtung ist ein
           # einmaliger manueller Upload, damit die Datei nicht bei jedem Push
@@ -27,6 +28,7 @@ jobs:
           sed -i "s|__DB_NAME__|${{ secrets.DB_NAME }}|g" dist/db.php
           sed -i "s|__DB_USER__|${{ secrets.DB_USER }}|g" dist/db.php
           sed -i "s|__DB_PASS__|${{ secrets.DB_PASSWORD }}|g" dist/db.php
+          sed -i "s|__ANTHROPIC_API_KEY__|${{ secrets.ANTHROPIC_API_KEY }}|g" dist/ai.php
 
       - name: Nach Hostpoint hochladen (FTPS)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5

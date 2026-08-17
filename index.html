@@ -372,6 +372,9 @@ tr:hover td { background: var(--accent-light); }
         <input type="password" id="newMaPassword" placeholder="Passwort (min. 6 Zeichen)" style="min-width:120px" onkeydown="if(event.key==='Enter')addMa()">
         <button class="btn btn-green btn-sm" onclick="addMa()" id="btn-add-ma">+ Hinzufügen</button>
       </div>
+      <div style="margin-top:10px">
+        <button class="btn btn-ghost btn-sm" onclick="openKiMaModal()">🎙️ Per Sprache/Diktat anlegen</button>
+      </div>
     </div>
   </div>
 
@@ -416,6 +419,22 @@ tr:hover td { background: var(--accent-light); }
 </div>
 
 <!-- MITARBEITER DETAIL MODAL -->
+<!-- KI-DIKTAT MITARBEITER -->
+<div class="modal-overlay" id="kiMaModal">
+  <div class="modal" style="max-width:420px">
+    <h3>Mitarbeiter per Sprache/Diktat</h3>
+    <p style="font-size:12px;color:var(--sub);margin:8px 0 12px">Tippe hier rein oder nutze das Mikrofon-Symbol der Tastatur zum Diktieren, z.B. „Neuer Mitarbeiter Hans Meier, Personalnummer 2530, geboren 3. Mai 1990, wohnhaft Musterweg 1, 3000 Bern, Mobil 079 123 45 67".</p>
+    <div class="field">
+      <textarea id="kiMaText" rows="4" placeholder="Text eingeben oder diktieren..."></textarea>
+    </div>
+    <div class="err-msg" id="kiMaError" style="display:none;margin-bottom:10px"></div>
+    <button class="btn btn-primary" style="width:100%" id="btn-ki-ma-submit" onclick="submitKiMaParse()">Felder erkennen</button>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeKiMaModal()">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="maDetailModal">
   <div class="modal" style="max-width:420px;max-height:90vh;overflow-y:auto">
     <h3>Mitarbeiter-Details</h3>
@@ -1023,6 +1042,32 @@ function exportCSV() {
 // ── ADMIN
 let maListData = [];
 let maDetailTarget = null;
+let kiParsedFields = null;
+
+function openKiMaModal(){
+  document.getElementById('kiMaText').value = '';
+  document.getElementById('kiMaError').style.display = 'none';
+  document.getElementById('kiMaModal').classList.add('show');
+}
+function closeKiMaModal(){ document.getElementById('kiMaModal').classList.remove('show'); }
+function submitKiMaParse(){
+  const text = document.getElementById('kiMaText').value.trim();
+  const errEl = document.getElementById('kiMaError');
+  errEl.style.display = 'none';
+  if (!text) { errEl.textContent = 'Bitte Text eingeben.'; errEl.style.display = ''; return; }
+  const btn = document.getElementById('btn-ki-ma-submit'); btn.disabled = true;
+  apiCall('ki_mitarbeiter_parse.php',{method:'POST',body:{text}}).then(({ok,data})=>{
+    btn.disabled = false;
+    if (!ok || data.status!=='ok') { errEl.textContent = data.message || 'Erkennung fehlgeschlagen.'; errEl.style.display = ''; return; }
+    kiParsedFields = data.felder || {};
+    closeKiMaModal();
+    const vorname = (kiParsedFields.vorname||'').toLowerCase().trim();
+    const nachname = (kiParsedFields.nachname||'').toLowerCase().trim();
+    document.getElementById('newMaInput').value = (vorname && nachname) ? `${vorname}.${nachname}`.replace(/\s+/g,'') : '';
+    document.getElementById('newMaPassword').focus();
+    showToast('✓ Felder erkannt — bitte prüfen, Passwort setzen und speichern.');
+  }).catch(()=>{ btn.disabled=false; errEl.textContent='Netzwerkfehler.'; errEl.style.display=''; });
+}
 
 function renderMaChips(){
   apiCall('mitarbeiter_list.php').then(({ok,data})=>{
@@ -1045,7 +1090,14 @@ function addMa(){
   if(password.length<6){showToast('Passwort mindestens 6 Zeichen.');return;}
   apiCall('mitarbeiter_create.php',{method:'POST',body:{name,password}}).then(({ok,data})=>{
     if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
-    nameInp.value='';passInp.value='';renderMaChips();showToast(t('tMaAdd'));
+    nameInp.value='';passInp.value='';
+    if (kiParsedFields) {
+      const felder = Object.assign({name}, kiParsedFields);
+      apiCall('mitarbeiter_update.php',{method:'POST',body:felder}).finally(()=>{ kiParsedFields=null; renderMaChips(); });
+    } else {
+      renderMaChips();
+    }
+    showToast(t('tMaAdd'));
   });
 }
 function showMaDetail(i){
