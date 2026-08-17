@@ -289,8 +289,14 @@ td .sec { font-size: 11.5px; color: var(--ink-3); }
 /* Vom Diktat erkannte Felder sichtbar markieren, damit der Pruefschritt
    nicht zur Formsache wird. */
 .inp.ki { border-color: var(--accent); background: var(--accent-soft); }
+/* Aus dem Internet ergaenzt — bewusst eine andere Farbe als das Diktat,
+   weil hier niemand die Angabe gesagt hat und sie geprueft gehoert. */
+.inp.web { border-color: var(--warn); background: var(--warn-soft); }
 .ki-hint { display: none; align-items: flex-start; gap: 9px; background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: var(--r-sm); padding: 10px 12px; font-size: 12.5px; color: var(--accent); line-height: 1.5; margin-bottom: 16px; }
 .ki-hint.on { display: flex; }
+.ki-hint.web { background: var(--warn-soft); border-color: #EFDCAE; color: var(--warn); }
+.ki-hint a { color: inherit; }
+.ki-hint .src { display: block; margin-top: 5px; font-size: 11.5px; opacity: .85; word-break: break-all; }
 
 /* Dialoge */
 .dlg-scrim { position: fixed; inset: 0; z-index: 70; background: rgba(16,18,22,.42); display: none; align-items: center; justify-content: center; padding: 20px; }
@@ -672,6 +678,10 @@ textarea.inp { resize: vertical; min-height: 92px; font-family: inherit; line-he
     <div class="dlg-bd">
       <div class="msg-err" id="kiErr" style="display:none"></div>
       <textarea class="inp" id="kiText2" rows="4" placeholder="Tippen — oder das Mikrofon der Tastatur benutzen …"></textarea>
+      <label class="check" id="kiWebWrap" style="margin-top:14px;display:none">
+        <input type="checkbox" id="kiWeb">
+        <span>Fehlende Angaben im Handelsregister und im Netz suchen <span style="color:var(--ink-3)">— dauert länger, Ergebnis wird mit Quelle angezeigt</span></span>
+      </label>
     </div>
     <div class="dlg-ft">
       <button class="btn btn-plain" onclick="closeDlg('dlgKi')">Abbrechen</button>
@@ -1303,28 +1313,42 @@ const KU_FELDER = ['name', 'strasse', 'ort', 'telefon', 'email'];
 const KU_LABEL = { name: 'Name', strasse: 'Strasse', ort: 'PLZ / Ort', telefon: 'Telefon', email: 'E-Mail' };
 const kuNeuId = f => 'kuNeu' + f[0].toUpperCase() + f.slice(1);
 
-function openKundeNeu(felder) {
+function openKundeNeu(felder, meta) {
   felder = felder || {};
+  meta = meta || {};
   const ausDiktat = Object.keys(felder).length > 0;
-  const erkannt = KU_FELDER.filter(f => felder[f]);
+  const web = (meta.recherchiert || []).filter(f => KU_FELDER.includes(f) && felder[f]);
+  const gesagt = KU_FELDER.filter(f => felder[f] && !web.includes(f));
+  const quellen = meta.quellen || [];
+  const lbl = fs => fs.map(f => KU_LABEL[f]).join(', ');
 
   $('kuNeuTitel').textContent = ausDiktat ? 'Erkannt — bitte prüfen' : 'Neuer Kunde';
   $('kuNeuText').textContent = ausDiktat
-    ? 'Aus dem Diktat übernommen. Es ist noch nichts gespeichert.'
+    ? 'Es ist noch nichts gespeichert.'
     : 'Name, Strasse, Ort und Telefon sind Pflicht.';
 
   KU_FELDER.forEach(f => {
     const el = $(kuNeuId(f));
     el.value = felder[f] || '';
-    el.classList.toggle('ki', ausDiktat && !!felder[f]);
+    el.classList.toggle('ki', !!felder[f] && !web.includes(f));
+    el.classList.toggle('web', web.includes(f));
   });
 
-  $('kuNeuKiHint').classList.toggle('on', ausDiktat);
+  const hint = $('kuNeuKiHint');
+  hint.classList.toggle('on', ausDiktat);
+  hint.classList.toggle('web', web.length > 0);
   if (ausDiktat) {
     const fehlt = ['name', 'strasse', 'ort', 'telefon'].filter(f => !felder[f]).map(f => KU_LABEL[f]);
-    $('kuNeuKiText').textContent =
-      (erkannt.length ? `Blau markiert wurde aus dem Diktat übernommen: ${erkannt.map(f => KU_LABEL[f]).join(', ')}.` : 'Aus dem Diktat liess sich kein Feld zuordnen.') +
-      (fehlt.length ? ` Noch offen als Pflichtfeld: ${fehlt.join(', ')}.` : '');
+    let t = gesagt.length ? `Blau: von dir gesagt — ${esc(lbl(gesagt))}.` : '';
+    if (web.length) {
+      t += `${t ? ' ' : ''}<b>Gelb: aus dem Netz ergänzt — ${esc(lbl(web))}. Diese Angaben hat niemand bestätigt, bitte prüfen.</b>`;
+    }
+    if (!gesagt.length && !web.length) t = 'Es liess sich kein Feld zuordnen.';
+    if (fehlt.length) t += ` Noch offen als Pflichtfeld: ${esc(fehlt.join(', '))}.`;
+    if (quellen.length) {
+      t += quellen.map(q => `<span class="src">Quelle: <a href="${esc(q)}" target="_blank" rel="noopener noreferrer">${esc(q)}</a></span>`).join('');
+    }
+    $('kuNeuKiText').innerHTML = t;
   }
   $('kuNeuErr').style.display = 'none';
   openDlg('dlgKuNeu');
@@ -1412,7 +1436,7 @@ const KI_TEXTE = {
   edit: ['Änderung diktieren',
     'Sagen, wen du meinst und was sich ändert. Zum Beispiel: „Ändere die Adresse von Daniele Ciardo zu Musterstrasse 1, 3000 Bern.“ Tippfehler beim Namen sind kein Problem.'],
   kunde: ['Kunden diktieren',
-    'Tippen — oder das Mikrofon der Tastatur benutzen. Zum Beispiel: „Neuer Kunde Studer Immobilien AG, Gerolagstrasse 12, 4632 Trimbach, Telefon 062 111 22 33, E-Mail info@studer-immo.ch.“']
+    'Tippen — oder das Mikrofon der Tastatur benutzen. Vollständig: „Neuer Kunde Studer Immobilien AG, Gerolagstrasse 12, 4632 Trimbach, Telefon 062 111 22 33.“ Mit Recherche genügt: „Leg mir die Borner AG mit Sitz in Winznau an.“']
 };
 
 function openKi(mode) {
@@ -1421,6 +1445,9 @@ function openKi(mode) {
   $('kiText').textContent = KI_TEXTE[mode][1];
   $('kiText2').value = '';
   $('kiErr').style.display = 'none';
+  // Recherche gibt es nur beim Kunden — beim Personal wird nichts nachgeschlagen.
+  $('kiWebWrap').style.display = mode === 'kunde' ? '' : 'none';
+  $('kiWeb').checked = false;
   openDlg('dlgKi');
   $('kiText2').focus();
 }
@@ -1429,15 +1456,22 @@ function submitKi() {
   const text = $('kiText2').value.trim();
   const err = $('kiErr'); err.style.display = 'none';
   if (!text) { err.textContent = 'Bitte etwas eingeben oder diktieren.'; err.style.display = ''; return; }
-  const b = $('kiBtn'); b.disabled = true; b.textContent = 'Erkenne …';
+  const mitRecherche = kiMode === 'kunde' && $('kiWeb').checked;
+  const b = $('kiBtn'); b.disabled = true;
+  b.textContent = mitRecherche ? 'Suche … (bis zu 1 Min.)' : 'Erkenne …';
   const reset = () => { b.disabled = false; b.textContent = 'Erkennen'; };
-  const endpoint = { neu: 'ki_mitarbeiter_parse.php', edit: 'ki_mitarbeiter_edit_parse.php', kunde: 'ki_kunden_parse.php' }[kiMode];
+  const endpoint = mitRecherche ? 'ki_kunden_recherche.php'
+    : { neu: 'ki_mitarbeiter_parse.php', edit: 'ki_mitarbeiter_edit_parse.php', kunde: 'ki_kunden_parse.php' }[kiMode];
 
   api(endpoint, { method: 'POST', body: { text } }).then(({ ok, data }) => {
     reset();
     if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Erkennung fehlgeschlagen.'; err.style.display = ''; return; }
     if (kiMode === 'neu') { closeDlg('dlgKi'); openMaNeu(data.felder || {}); return; }
-    if (kiMode === 'kunde') { closeDlg('dlgKi'); openKundeNeu(data.felder || {}); return; }
+    if (kiMode === 'kunde') {
+      closeDlg('dlgKi');
+      openKundeNeu(data.felder || {}, { recherchiert: data.recherchiert, quellen: data.quellen });
+      return;
+    }
     const idx = mitarbeiter.findIndex(m => m.name === data.mitarbeiter_login_name);
     if (idx === -1) { err.textContent = 'Die erkannte Person steht nicht in der Liste.'; err.style.display = ''; return; }
     closeDlg('dlgKi');
