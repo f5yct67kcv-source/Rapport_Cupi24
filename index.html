@@ -1276,14 +1276,22 @@ function renderMaChips(){
   apiCall('mitarbeiter_list.php').then(({ok,data})=>{
     if(!ok||data.status!=='ok') return;
     maListData = data.mitarbeiter.slice().sort((a,b)=>a.name.localeCompare(b.name));
-    document.getElementById('maChipList').innerHTML = maListData.map((m,i)=>{
-      const vollname = (m.vorname||m.nachname) ? `${m.vorname||''} ${m.nachname||''}`.trim() : '';
-      const meta = [m.personalnummer?`Nr. ${m.personalnummer}`:'', vollname].filter(Boolean).join(' · ');
-      return `<div class="ma-chip" style="cursor:pointer" onclick="showMaDetail(${i})">
-         <span class="ma-chip-name">${m.name}${m.ist_admin?' <span class="badge badge-blue" style="margin-left:6px;font-size:9px;vertical-align:middle">Admin</span>':''}${meta?`<br><small style="color:var(--sub);font-weight:400">${meta}</small>`:''}</span>
-         <span style="color:var(--sub);font-size:18px">›</span>
-       </div>`;
-    }).join('');
+    const wrap = document.getElementById('maChipList');
+    if(!maListData.length){ wrap.innerHTML = `<div class="empty"><div class="ico">👤</div><p>${t('no-data')}</p></div>`; return; }
+    const rows = maListData.map((m,i)=>`<tr onclick="showMaDetail(${i})" style="cursor:pointer">
+      <td>${m.personalnummer||'–'}</td>
+      <td style="white-space:nowrap;color:var(--sub)">${m.anrede||'–'}</td>
+      <td><strong>${m.vorname||'–'}</strong></td>
+      <td><strong>${m.nachname||'–'}</strong>${m.ist_admin?' <span class="badge badge-blue" style="font-size:9px">Admin</span>':''}</td>
+      <td style="font-size:12px;color:var(--sub)">${m.strasse||'–'}</td>
+      <td style="font-size:12px;color:var(--sub);white-space:nowrap">${m.ort||'–'}</td>
+      <td style="white-space:nowrap">${m.telefon||'–'}</td>
+      <td style="white-space:nowrap">${m.mobil||'–'}</td>
+      <td style="font-size:12px">${m.email||'–'}</td>
+    </tr>`).join('');
+    wrap.innerHTML = `<div class="table-wrap"><table><thead><tr>
+      <th>Nr.</th><th>Anrede</th><th>Vorname</th><th>Nachname</th><th>Strasse</th><th>Ort</th><th>Telefon</th><th>Mobil</th><th>E-Mail</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`;
   });
 }
 function addMa(){
