@@ -369,9 +369,10 @@ tr:hover td { background: var(--accent-light); }
   <div class="modal" style="max-width:420px">
     <h3>Rapport-Details</h3>
     <div id="detailBody" style="margin-top:10px"></div>
-    <div class="btn-row" style="margin-top:16px">
+    <p id="print-hint" style="display:none;font-size:11px;color:var(--sub);margin-top:10px">Im Druckdialog kann als Ziel „Als PDF speichern" gewählt werden, statt zu drucken.</p>
+    <div class="btn-row" style="margin-top:10px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeDetailModal()">Schliessen</button>
-      <button class="btn btn-primary" style="flex:1;display:none" id="btn-print-report" onclick="printReport(detailTargetId)">🖨 Bericht drucken</button>
+      <button class="btn btn-primary" style="flex:1;display:none" id="btn-print-report" onclick="printReport(detailTargetId)">🖨 Drucken / als PDF speichern</button>
     </div>
   </div>
 </div>
@@ -798,7 +799,9 @@ function showDetail(id) {
   document.getElementById('detailBody').innerHTML =
     rows.map(([k,v]) => `<div class="detail-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('') +
     (r.sig ? `<div style="margin-top:10px"><div style="color:var(--sub);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">Unterschrift</div><img class="detail-sig-img" src="${r.sig}"></div>` : '');
-  document.getElementById('btn-print-report').style.display = (currentUser && currentUser.ist_admin) ? '' : 'none';
+  const isAdmin = !!(currentUser && currentUser.ist_admin);
+  document.getElementById('btn-print-report').style.display = isAdmin ? '' : 'none';
+  document.getElementById('print-hint').style.display = isAdmin ? '' : 'none';
   document.getElementById('detailModal').classList.add('show');
 }
 function closeDetailModal(){document.getElementById('detailModal').classList.remove('show');detailTargetId=null;}
