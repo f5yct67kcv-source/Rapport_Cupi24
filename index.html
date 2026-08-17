@@ -125,6 +125,19 @@ tr:hover td { background: var(--accent-light); }
 
 .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
 
+.detail-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.detail-row:last-child { border-bottom: none; }
+.detail-row .k { color: var(--sub); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; }
+.detail-row .v { text-align: right; font-weight: 600; }
+.detail-sig-img { max-width: 100%; max-height: 100px; border: 1px solid var(--border); border-radius: 6px; margin-top: 6px; background: #fff; }
+
+#printArea { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  #printArea, #printArea * { visibility: visible; }
+  #printArea { display: block !important; position: absolute; top: 0; left: 0; width: 100%; padding: 24px; }
+}
+
 @media (max-width: 500px) {
   .row2 { grid-template-columns: 1fr; }
   .stats-row { grid-template-columns: 1fr 1fr; }
@@ -351,6 +364,20 @@ tr:hover td { background: var(--accent-light); }
   </div>
 </div>
 
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" style="max-width:420px">
+    <h3>Rapport-Details</h3>
+    <div id="detailBody" style="margin-top:10px"></div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeDetailModal()">Schliessen</button>
+      <button class="btn btn-primary" style="flex:1;display:none" id="btn-print-report" onclick="printReport(detailTargetId)">🖨 Bericht drucken</button>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -359,6 +386,7 @@ let rapports       = [];
 let lang           = localStorage.getItem('rv3_lang') || 'de';
 let sigDirty       = false;
 let deleteTargetId = null;
+let detailTargetId = null;
 let sigCtx, isDrawing = false, lastX = 0, lastY = 0;
 
 // ── BACKEND API
@@ -420,7 +448,7 @@ function mapRapport(r) {
     id: r.id, datum: r.datum, ma: r.mitarbeiter, kunde: r.kunde, strasse: r.strasse, ort: r.ort,
     auftragNr: r.auftrag_nr, einsatzart: r.einsatzart, von: r.von.slice(0, 5), bis: r.bis.slice(0, 5),
     pause: r.pause_min, netH: parseFloat(r.netto_h), bemerkung: r.bemerkung, sigName: r.unterzeichner,
-    ts: r.erfasst_am
+    sig: r.unterschrift, ts: r.erfasst_am
   };
 }
 
@@ -662,7 +690,8 @@ function saveRapport() {
     bis:document.getElementById('bis').value,
     pause:parseInt(document.getElementById('pause').value||0),
     bemerkung:document.getElementById('bemerkung').value.trim(),
-    sigName:document.getElementById('sigName').value.trim()
+    sigName:document.getElementById('sigName').value.trim(),
+    sig:getSigData()
   };
   const btn=document.getElementById('btn-save'); btn.disabled=true;
   apiCall('rapport_create.php',{method:'POST',body}).then(({ok,data})=>{
@@ -712,7 +741,7 @@ function renderTable() {
   const wrap=document.getElementById('tableWrap');
   if(!data.length){wrap.innerHTML=`<div class="empty"><div class="ico">📋</div><p>${t('no-data')}</p></div>`;return;}
   const ths=t('th').map(h=>`<th>${h}</th>`).join('');
-  const rows=data.map(r=>`<tr>
+  const rows=data.map(r=>`<tr onclick="showDetail(${r.id})" style="cursor:pointer">
     <td style="white-space:nowrap">${fmtDate(r.datum)}</td>
     <td><strong>${r.ma}</strong></td>
     <td>${r.kunde}</td>
@@ -722,7 +751,7 @@ function renderTable() {
     <td style="color:var(--sub)">${r.pause} ${t('min')}</td>
     <td><span class="badge badge-green">${r.netH.toFixed(2)} h</span></td>
     <td>${r.sigName?`<small style="color:var(--sub);font-size:12px">${r.sigName}</small>`:'–'}</td>
-    <td>${currentUser&&currentUser.ist_admin?`<button onclick="askDelete(${r.id})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;font-weight:600;padding:4px 8px;border-radius:6px" onmouseover="this.style.background='var(--red-bg)'" onmouseout="this.style.background='none'">${t('del')}</button>`:''}</td>
+    <td>${currentUser&&currentUser.ist_admin?`<button onclick="event.stopPropagation();askDelete(${r.id})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;font-weight:600;padding:4px 8px;border-radius:6px" onmouseover="this.style.background='var(--red-bg)'" onmouseout="this.style.background='none'">${t('del')}</button>`:''}</td>
   </tr>`).join('');
   wrap.innerHTML=`<table><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table>`;
 }
@@ -746,6 +775,62 @@ function confirmDelete(){
     if(!ok||data.status!=='ok'){showToast(data.message||'Fehler beim Löschen.');return;}
     loadAll();showToast(t('tDel'));
   });
+}
+
+// ── DETAIL / KUNDEN-BERICHT
+function showDetail(id) {
+  const r = rapports.find(x => x.id === id);
+  if (!r) return;
+  detailTargetId = id;
+  const rows = [
+    ['Datum', fmtDate(r.datum)],
+    ['Mitarbeiter', r.ma],
+    ['Kunde', r.kunde],
+    ['Adresse', `${r.strasse}, ${r.ort}`],
+    ['Auftrags-Nr.', r.auftragNr || '–'],
+    ['Einsatzart', r.einsatzart],
+    ['Zeit', `${r.von}–${r.bis} (${r.pause} ${t('min')} Pause)`],
+    ['Nettostunden', r.netH.toFixed(2) + ' h'],
+    ['Unterzeichner', r.sigName || '–'],
+    ['Bemerkung', r.bemerkung || '–'],
+  ];
+  document.getElementById('detailBody').innerHTML =
+    rows.map(([k,v]) => `<div class="detail-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('') +
+    (r.sig ? `<div style="margin-top:10px"><div style="color:var(--sub);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">Unterschrift</div><img class="detail-sig-img" src="${r.sig}"></div>` : '');
+  document.getElementById('btn-print-report').style.display = (currentUser && currentUser.ist_admin) ? '' : 'none';
+  document.getElementById('detailModal').classList.add('show');
+}
+function closeDetailModal(){document.getElementById('detailModal').classList.remove('show');detailTargetId=null;}
+
+function printReport(id) {
+  const r = rapports.find(x => x.id === id);
+  if (!r) return;
+  const rowsHtml = [
+    ['Datum', fmtDate(r.datum)],
+    ['Mitarbeiter', r.ma],
+    ['Kunde', r.kunde],
+    ['Adresse', `${r.strasse}, ${r.ort}`],
+    ['Auftrags-Nr.', r.auftragNr || '–'],
+    ['Einsatzart', r.einsatzart],
+    ['Arbeitszeit', `${r.von} – ${r.bis}`],
+    ['Pause', `${r.pause} Min.`],
+    ['Nettostunden', r.netH.toFixed(2) + ' h'],
+  ].map(([k,v]) => `<tr><td style="padding:6px 0;color:#6B7280;width:160px;border-bottom:1px solid #DDE1E7">${k}</td><td style="padding:6px 0;font-weight:600;border-bottom:1px solid #DDE1E7">${v}</td></tr>`).join('');
+  document.getElementById('printArea').innerHTML = `
+    <div style="font-family:-apple-system,sans-serif;color:#1A1D23;max-width:700px;margin:0 auto">
+      <div style="border-bottom:2px solid #1C3FAA;padding-bottom:16px;margin-bottom:20px">
+        <div style="font-size:20px;font-weight:800;color:#1C3FAA">Arbeitsrapport</div>
+        <div style="font-size:12px;color:#6B7280;margin-top:2px">Rapport-Nr. ${r.id}${r.ts ? ' · erfasst am ' + new Date(r.ts.replace(' ','T')).toLocaleDateString('de-CH') : ''}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px">${rowsHtml}</table>
+      ${r.bemerkung ? `<div style="margin-top:16px"><div style="font-size:11px;text-transform:uppercase;color:#6B7280;font-weight:700;margin-bottom:4px">Bemerkung</div><div style="font-size:14px">${r.bemerkung}</div></div>` : ''}
+      <div style="margin-top:32px;padding-top:16px;border-top:1px solid #DDE1E7">
+        <div style="font-size:11px;text-transform:uppercase;color:#6B7280;font-weight:700;margin-bottom:6px">Unterschrift Kunde</div>
+        ${r.sig ? `<img src="${r.sig}" style="max-height:100px;max-width:280px;display:block">` : '<div style="height:60px;border-bottom:1px solid #1A1D23;max-width:280px"></div>'}
+        <div style="font-size:13px;margin-top:6px">${r.sigName || ''}</div>
+      </div>
+    </div>`;
+  window.print();
 }
 
 // ── CSV

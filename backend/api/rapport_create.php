@@ -30,15 +30,23 @@ if ($nettoH < 0) {
     json_response(['status' => 'error', 'message' => 'Pause groesser als Arbeitszeit'], 400);
 }
 
+// Unterschrift optional: nur ein data:image/png;base64,... akzeptieren, Groesse begrenzen.
+$sig = $d['sig'] ?? null;
+if ($sig !== null) {
+    if (!is_string($sig) || strlen($sig) > 2_000_000 || !preg_match('#^data:image/png;base64,[A-Za-z0-9+/=]+$#', $sig)) {
+        json_response(['status' => 'error', 'message' => 'ungueltige Unterschrift'], 400);
+    }
+}
+
 $stmt = db()->prepare(
-    'INSERT INTO rapporte (mitarbeiter_id, datum, kunde, strasse, ort, auftrag_nr, einsatzart, von, bis, pause_min, netto_h, unterzeichner, bemerkung)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO rapporte (mitarbeiter_id, datum, kunde, strasse, ort, auftrag_nr, einsatzart, von, bis, pause_min, netto_h, unterzeichner, unterschrift, bemerkung)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 );
 $stmt->execute([
     $user['id'], $d['datum'], $d['kunde'], $d['strasse'], $d['ort'],
     $d['auftragNr'] ?? null, $d['einsatzart'] ?? 'Verkehrsdienst',
     $d['von'], $d['bis'], $pause, $nettoH,
-    $d['sigName'] ?? null, $d['bemerkung'] ?? null,
+    $d['sigName'] ?? null, $sig, $d['bemerkung'] ?? null,
 ]);
 
 json_response(['status' => 'ok', 'netto_h' => $nettoH]);

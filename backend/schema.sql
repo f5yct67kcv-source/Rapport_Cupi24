@@ -32,6 +32,7 @@ CREATE TABLE rapporte (
   pause_min INT NOT NULL DEFAULT 0,
   netto_h DECIMAL(5,2) NOT NULL,
   unterzeichner VARCHAR(200),
+  unterschrift MEDIUMTEXT,
   bemerkung TEXT,
   erfasst_am DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (mitarbeiter_id) REFERENCES mitarbeiter(id)
