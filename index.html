@@ -222,6 +222,10 @@ tr:hover td { background: var(--accent-light); }
 
     <div class="card">
       <div class="card-title" id="lbl-sec-auftrag">Auftrag</div>
+      <div class="field">
+        <label>Kunde wählen (optional)</label>
+        <select id="kundeSelect" onchange="applyKundeSelect()"><option value="">— manuell eingeben —</option></select>
+      </div>
       <div class="field" id="field-kunde">
         <label><span id="lbl-kunde">Kundenname</span> <span class="req">*</span></label>
         <input type="text" id="kunde" placeholder="z.B. Stadt Bern">
@@ -353,7 +357,13 @@ tr:hover td { background: var(--accent-light); }
 
 <!-- ADMIN -->
 <div class="page" id="page-admin">
-  <div id="adminPanel">
+  <div class="tabs" style="position:static;border-radius:var(--radius);overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow)">
+    <div class="tab active" onclick="showAdminSub('mitarbeiter')" id="admintab-mitarbeiter">Mitarbeiter</div>
+    <div class="tab" onclick="showAdminSub('kunden')" id="admintab-kunden">Kunden</div>
+    <div class="tab" onclick="showAdminSub('objekte')" id="admintab-objekte">Objekte</div>
+  </div>
+
+  <div id="adminPanel" class="admin-sub">
     <div class="card">
       <div class="card-title" id="lbl-sec-adminma">Mitarbeiterliste verwalten</div>
       <div id="maChipList"></div>
@@ -363,9 +373,33 @@ tr:hover td { background: var(--accent-light); }
         <button class="btn btn-green btn-sm" onclick="addMa()" id="btn-add-ma">+ Hinzufügen</button>
       </div>
     </div>
-    <div style="text-align:right;margin-top:8px">
-      <button class="btn btn-ghost btn-sm" onclick="doLogout()" id="btn-logout">Abmelden</button>
+  </div>
+
+  <div id="adminKundenPanel" class="admin-sub" style="display:none">
+    <div class="card">
+      <div class="card-title">Kunden verwalten</div>
+      <div id="kundenChipList"></div>
+      <div class="new-ma-row" style="flex-wrap:wrap">
+        <input type="text" id="newKundeName" placeholder="Name..." style="min-width:120px">
+        <input type="text" id="newKundeStrasse" placeholder="Strasse..." style="min-width:120px">
+        <input type="text" id="newKundeOrt" placeholder="Ort..." style="min-width:120px" onkeydown="if(event.key==='Enter')addKunde()">
+        <button class="btn btn-green btn-sm" onclick="addKunde()">+ Hinzufügen</button>
+      </div>
     </div>
+  </div>
+
+  <div id="adminObjektePanel" class="admin-sub" style="display:none">
+    <div class="card">
+      <div class="card-title">Objekte (Revierdienst)</div>
+      <div class="empty">
+        <div class="ico">🚧</div>
+        <p>Noch nicht verfügbar — eigenständige Werkzeug-Spur (V3), wird separat aufgegriffen, sobald sie dran ist.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:right;margin-top:8px">
+    <button class="btn btn-ghost btn-sm" onclick="doLogout()" id="btn-logout">Abmelden</button>
   </div>
 </div>
 
@@ -399,6 +433,30 @@ tr:hover td { background: var(--accent-light); }
       <button class="btn btn-ghost" style="flex:1" onclick="closeMaDetailModal()">Schliessen</button>
     </div>
     <button class="btn btn-red" style="width:100%;margin-top:10px" id="btn-ma-remove" onclick="confirmRemoveMa()">Mitarbeiter entfernen</button>
+  </div>
+</div>
+
+<!-- KUNDE DETAIL MODAL -->
+<div class="modal-overlay" id="kundeDetailModal">
+  <div class="modal" style="max-width:380px">
+    <h3>Kunde bearbeiten</h3>
+    <div class="field" style="margin-top:10px">
+      <label>Name</label>
+      <input type="text" id="kundeEditName">
+    </div>
+    <div class="field">
+      <label>Strasse</label>
+      <input type="text" id="kundeEditStrasse">
+    </div>
+    <div class="field">
+      <label>Ort</label>
+      <input type="text" id="kundeEditOrt">
+    </div>
+    <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px" onclick="saveKundeEdit()">Speichern</button>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeKundeDetailModal()">Schliessen</button>
+    </div>
+    <button class="btn btn-red" style="width:100%;margin-top:10px" onclick="confirmDeleteKunde()">Kunde entfernen</button>
   </div>
 </div>
 
@@ -492,6 +550,7 @@ function afterLogin() {
   document.getElementById('tab-admin').style.display = currentUser.ist_admin ? '' : 'none';
   document.getElementById('tab-mitarbeiter').style.display = currentUser.ist_admin ? '' : 'none';
   loadAll();
+  loadKundenOptions();
 }
 
 function mapRapport(r) {
@@ -658,7 +717,19 @@ function showTab(name) {
   document.getElementById('page-'+name).classList.add('active');
   if (name==='uebersicht') { renderStats(); renderTable(); }
   if (name==='mitarbeiter') renderMaStats();
-  if (name==='admin') renderMaChips();
+  if (name==='admin') showAdminSub('mitarbeiter');
+}
+
+// ── ADMIN SUB-TABS
+function showAdminSub(name) {
+  ['mitarbeiter','kunden','objekte'].forEach(n => {
+    document.getElementById('admintab-'+n).classList.toggle('active', n===name);
+  });
+  document.getElementById('adminPanel').style.display = name==='mitarbeiter' ? '' : 'none';
+  document.getElementById('adminKundenPanel').style.display = name==='kunden' ? '' : 'none';
+  document.getElementById('adminObjektePanel').style.display = name==='objekte' ? '' : 'none';
+  if (name==='mitarbeiter') renderMaChips();
+  if (name==='kunden') renderKundenList();
 }
 
 // ── SIGNATURE
@@ -955,6 +1026,84 @@ function confirmRemoveMa(){
     if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
     closeMaDetailModal();renderMaChips();showToast(t('tMaRem'));
   });
+}
+
+// ── KUNDEN (ADMIN)
+let kundenListData = [];
+let kundeDetailTarget = null;
+
+function renderKundenList(){
+  apiCall('kunden_list.php').then(({ok,data})=>{
+    if(!ok||data.status!=='ok') return;
+    kundenListData = data.kunden;
+    document.getElementById('kundenChipList').innerHTML = kundenListData.length ? kundenListData.map((k,i)=>
+      `<div class="ma-chip" style="cursor:pointer" onclick="showKundeDetail(${i})">
+         <span class="ma-chip-name">${k.name}<br><small style="color:var(--sub);font-weight:400">${k.strasse}, ${k.ort}</small></span>
+         <span style="color:var(--sub);font-size:18px">›</span>
+       </div>`).join('') : `<div class="empty"><div class="ico">🏢</div><p>${t('no-data')}</p></div>`;
+  });
+}
+function addKunde(){
+  const nameInp=document.getElementById('newKundeName'), strasseInp=document.getElementById('newKundeStrasse'), ortInp=document.getElementById('newKundeOrt');
+  const name=nameInp.value.trim(), strasse=strasseInp.value.trim(), ort=ortInp.value.trim();
+  if(!name||!strasse||!ort){showToast('Name, Strasse und Ort erforderlich.');return;}
+  apiCall('kunden_create.php',{method:'POST',body:{name,strasse,ort}}).then(({ok,data})=>{
+    if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
+    nameInp.value='';strasseInp.value='';ortInp.value='';
+    renderKundenList();loadKundenOptions();showToast('✓ Kunde hinzugefügt.');
+  });
+}
+function showKundeDetail(i){
+  const k = kundenListData[i];
+  if(!k) return;
+  kundeDetailTarget = k.id;
+  document.getElementById('kundeEditName').value = k.name;
+  document.getElementById('kundeEditStrasse').value = k.strasse;
+  document.getElementById('kundeEditOrt').value = k.ort;
+  document.getElementById('kundeDetailModal').classList.add('show');
+}
+function closeKundeDetailModal(){document.getElementById('kundeDetailModal').classList.remove('show');kundeDetailTarget=null;}
+function saveKundeEdit(){
+  if(!kundeDetailTarget) return;
+  const name=document.getElementById('kundeEditName').value.trim();
+  const strasse=document.getElementById('kundeEditStrasse').value.trim();
+  const ort=document.getElementById('kundeEditOrt').value.trim();
+  if(!name||!strasse||!ort){showToast('Name, Strasse und Ort erforderlich.');return;}
+  apiCall('kunden_update.php',{method:'POST',body:{id:kundeDetailTarget,name,strasse,ort}}).then(({ok,data})=>{
+    if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
+    closeKundeDetailModal();renderKundenList();loadKundenOptions();showToast('✓ Gespeichert.');
+  });
+}
+function confirmDeleteKunde(){
+  if(!kundeDetailTarget) return;
+  const k = kundenListData.find(x=>x.id===kundeDetailTarget);
+  if(!confirm(lang==='sq'?`Fshi "${k?.name}"?`:`"${k?.name}" wirklich entfernen?`)) return;
+  apiCall('kunden_delete.php',{method:'POST',body:{id:kundeDetailTarget}}).then(({ok,data})=>{
+    if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
+    closeKundeDetailModal();renderKundenList();loadKundenOptions();showToast('Kunde entfernt.');
+  });
+}
+
+// ── KUNDE-AUSWAHL (ERFASSEN)
+let kundenOptions = [];
+function loadKundenOptions(){
+  apiCall('kunden_list.php').then(({ok,data})=>{
+    if(!ok||data.status!=='ok') return;
+    kundenOptions = data.kunden;
+    const sel = document.getElementById('kundeSelect');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— manuell eingeben —</option>' + kundenOptions.map((k,i)=>`<option value="${i}">${k.name}</option>`).join('');
+    if (cur) sel.value = cur;
+  });
+}
+function applyKundeSelect(){
+  const idx = document.getElementById('kundeSelect').value;
+  if (idx==='') return;
+  const k = kundenOptions[idx];
+  if (!k) return;
+  document.getElementById('kunde').value = k.name;
+  document.getElementById('strasse').value = k.strasse;
+  document.getElementById('ort').value = k.ort;
 }
 
 // ── UTILS
