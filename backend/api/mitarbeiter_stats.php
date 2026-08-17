@@ -2,7 +2,10 @@
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
 
-require_session();
+$user = require_session();
+if (!$user['ist_admin']) {
+    json_response(['status' => 'error', 'message' => 'nur fuer Admin'], 403);
+}
 
 $rows = db()->query(
     'SELECT m.name, COUNT(r.id) AS anzahl, COALESCE(SUM(r.netto_h),0) AS stunden, MAX(r.datum) AS letzter
