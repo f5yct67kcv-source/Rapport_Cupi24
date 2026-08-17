@@ -274,6 +274,38 @@ td .sec { font-size: 11.5px; color: var(--ink-3); }
 .sig-box .lb { font-size: 11px; font-weight: 650; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-3); margin-bottom: 7px; }
 .sig-box img { max-width: 100%; max-height: 110px; border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff; display: block; }
 
+/* Formular im Schubladen-/Dialogkontext */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.form-grid .f.wide { grid-column: 1 / -1; }
+.zone { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 14px; margin-top: 18px; }
+.zone-hd { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+.zone-note { font-size: 12px; color: var(--ink-3); line-height: 1.5; margin-bottom: 11px; }
+.zone.danger { border-color: #F3C8C2; background: #FEF8F7; }
+.zone.danger .zone-hd { color: var(--neg); }
+.btn-danger { background: var(--neg); color: #fff; }
+.btn-danger:hover { background: #A82E22; }
+.inp-row { display: flex; gap: 8px; }
+.inp-row .inp { flex: 1; min-width: 0; }
+/* Vom Diktat erkannte Felder sichtbar markieren, damit der Pruefschritt
+   nicht zur Formsache wird. */
+.inp.ki { border-color: var(--accent); background: var(--accent-soft); }
+.ki-hint { display: none; align-items: flex-start; gap: 9px; background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: var(--r-sm); padding: 10px 12px; font-size: 12.5px; color: var(--accent); line-height: 1.5; margin-bottom: 16px; }
+.ki-hint.on { display: flex; }
+
+/* Dialoge */
+.dlg-scrim { position: fixed; inset: 0; z-index: 70; background: rgba(16,18,22,.42); display: none; align-items: center; justify-content: center; padding: 20px; }
+.dlg-scrim.on { display: flex; }
+.dlg { background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--sh-3); width: 100%; max-width: 460px; max-height: 88vh; display: flex; flex-direction: column; }
+.dlg.narrow { max-width: 380px; }
+.dlg-hd { padding: 20px 22px 0; flex: none; }
+.dlg-hd h2 { font-size: 16px; font-weight: 660; letter-spacing: -.2px; }
+.dlg-hd p { font-size: 12.5px; color: var(--ink-3); margin-top: 5px; line-height: 1.55; }
+.dlg-bd { padding: 18px 22px; overflow-y: auto; flex: 1; }
+.dlg-ft { padding: 14px 22px; border-top: 1px solid var(--line-soft); display: flex; gap: 9px; justify-content: flex-end; flex: none; }
+textarea.inp { resize: vertical; min-height: 92px; font-family: inherit; line-height: 1.55; }
+.check { display: flex; align-items: center; gap: 9px; cursor: pointer; font-size: 13.5px; }
+.check input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
+
 /* Hinweis */
 .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--shell); color: #fff; padding: 10px 18px; border-radius: var(--r-sm); font-size: 13px; font-weight: 550; box-shadow: var(--sh-2); z-index: 200; opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; }
 .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -496,7 +528,18 @@ td .sec { font-size: 11.5px; color: var(--ink-3); }
             <input class="inp" type="search" id="mQ" placeholder="Name, Ort oder Personalnummer …" oninput="renderMitarbeiter()">
           </div>
           <div class="sp" style="flex:1"></div>
-          <a class="btn btn-plain btn-sm" href="index.html">Bearbeiten in der Erfassung</a>
+          <button class="btn btn-plain btn-sm" onclick="openKi('neu')" title="Angaben diktieren statt tippen">
+            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+            Diktat: anlegen
+          </button>
+          <button class="btn btn-plain btn-sm" onclick="openKi('edit')" title="Änderung diktieren">
+            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+            Diktat: ändern
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="openMaNeu()">
+            <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Neuer Mitarbeitender
+          </button>
         </div>
         <div class="card"><div class="card-bd flush"><div class="tw" id="maTable"></div></div></div>
       </section>
@@ -509,7 +552,10 @@ td .sec { font-size: 11.5px; color: var(--ink-3); }
             <input class="inp" type="search" id="kQ" placeholder="Kunde, Ort oder Strasse …" oninput="renderKunden()">
           </div>
           <div class="sp" style="flex:1"></div>
-          <a class="btn btn-plain btn-sm" href="index.html">Bearbeiten in der Erfassung</a>
+          <button class="btn btn-primary btn-sm" onclick="openKundeNeu()">
+            <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Neuer Kunde
+          </button>
         </div>
         <div class="card"><div class="card-bd flush"><div class="tw" id="kuTable"></div></div></div>
       </section>
@@ -545,14 +591,95 @@ td .sec { font-size: 11.5px; color: var(--ink-3); }
     </button>
   </div>
   <div class="drawer-bd" id="drBody"></div>
-  <div class="drawer-ft">
-    <button class="btn btn-primary" onclick="printReport()">
-      <svg class="i i-sm" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-      Kundenbericht drucken
-    </button>
-    <span style="font-size:11.5px;color:var(--ink-3);align-self:center;line-height:1.35">Im Druckdialog<br>„Als PDF sichern“ wählen</span>
-  </div>
+  <div class="drawer-ft" id="drFoot"></div>
 </aside>
+
+<!-- ══════════════════════════ DIALOGE ══════════════════════════ -->
+
+<!-- Neuer Mitarbeitender. Dasselbe Formular wird vom Diktat vorausgefuellt --
+     der Pruefschritt aus ENT-015 ist damit kein Sonderweg mehr. -->
+<div class="dlg-scrim" id="dlgMaNeu">
+  <div class="dlg">
+    <div class="dlg-hd">
+      <h2 id="maNeuTitel">Neuer Mitarbeitender</h2>
+      <p id="maNeuText">Login-Name und Passwort sind Pflicht, die übrigen Angaben können später ergänzt werden.</p>
+    </div>
+    <div class="dlg-bd">
+      <div class="ki-hint" id="maNeuKiHint">
+        <svg class="i i-sm" viewBox="0 0 24 24" style="margin-top:1px"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        <span id="maNeuKiText"></span>
+      </div>
+      <div class="msg-err" id="maNeuErr" style="display:none"></div>
+      <div class="form-grid">
+        <div class="f"><label for="maNeuName">Login-Name *</label><input class="inp" id="maNeuName" autocomplete="off"></div>
+        <div class="f"><label for="maNeuPass">Passwort *</label><input class="inp" id="maNeuPass" type="text" placeholder="min. 6 Zeichen" autocomplete="new-password"></div>
+        <div class="f"><label for="maNeuPersonalnummer">Personalnummer</label><input class="inp" id="maNeuPersonalnummer"></div>
+        <div class="f"><label for="maNeuAnrede">Anrede</label><select class="inp" id="maNeuAnrede"><option value="">–</option><option>Herr</option><option>Frau</option><option>Divers</option></select></div>
+        <div class="f"><label for="maNeuVorname">Vorname</label><input class="inp" id="maNeuVorname"></div>
+        <div class="f"><label for="maNeuNachname">Nachname</label><input class="inp" id="maNeuNachname"></div>
+        <div class="f"><label for="maNeuGeburtsdatum">Geburtsdatum</label><input class="inp" id="maNeuGeburtsdatum" type="date"></div>
+        <div class="f"><label for="maNeuOrt">PLZ / Ort</label><input class="inp" id="maNeuOrt"></div>
+        <div class="f wide"><label for="maNeuStrasse">Strasse</label><input class="inp" id="maNeuStrasse"></div>
+        <div class="f"><label for="maNeuTelefon">Telefon</label><input class="inp" id="maNeuTelefon"></div>
+        <div class="f"><label for="maNeuMobil">Mobil</label><input class="inp" id="maNeuMobil"></div>
+        <div class="f wide"><label for="maNeuEmail">E-Mail</label><input class="inp" id="maNeuEmail" type="email"></div>
+        <div class="f wide"><label class="check"><input type="checkbox" id="maNeuAdmin"> Darf die Verwaltung benutzen (Admin)</label></div>
+      </div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgMaNeu')">Abbrechen</button>
+      <button class="btn btn-primary" id="maNeuBtn" onclick="createMa()">Mitarbeitenden anlegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Neuer Kunde -->
+<div class="dlg-scrim" id="dlgKuNeu">
+  <div class="dlg">
+    <div class="dlg-hd"><h2>Neuer Kunde</h2><p>Name, Strasse, Ort und Telefon sind Pflicht.</p></div>
+    <div class="dlg-bd">
+      <div class="msg-err" id="kuNeuErr" style="display:none"></div>
+      <div class="form-grid">
+        <div class="f wide"><label for="kuNeuName">Name *</label><input class="inp" id="kuNeuName"></div>
+        <div class="f wide"><label for="kuNeuStrasse">Strasse *</label><input class="inp" id="kuNeuStrasse"></div>
+        <div class="f"><label for="kuNeuOrt">PLZ / Ort *</label><input class="inp" id="kuNeuOrt"></div>
+        <div class="f"><label for="kuNeuTelefon">Telefon *</label><input class="inp" id="kuNeuTelefon"></div>
+        <div class="f wide"><label for="kuNeuEmail">E-Mail</label><input class="inp" id="kuNeuEmail" type="email"></div>
+      </div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgKuNeu')">Abbrechen</button>
+      <button class="btn btn-primary" id="kuNeuBtn" onclick="createKunde()">Kunden anlegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Diktat: anlegen oder ändern -->
+<div class="dlg-scrim" id="dlgKi">
+  <div class="dlg narrow">
+    <div class="dlg-hd"><h2 id="kiTitel">Per Diktat</h2><p id="kiText"></p></div>
+    <div class="dlg-bd">
+      <div class="msg-err" id="kiErr" style="display:none"></div>
+      <textarea class="inp" id="kiText2" rows="4" placeholder="Tippen — oder das Mikrofon der Tastatur benutzen …"></textarea>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgKi')">Abbrechen</button>
+      <button class="btn btn-primary" id="kiBtn" onclick="submitKi()">Erkennen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rückfrage vor folgenreichen Schritten -->
+<div class="dlg-scrim" id="dlgConfirm">
+  <div class="dlg narrow">
+    <div class="dlg-hd"><h2 id="cfTitel">Sicher?</h2><p id="cfText"></p></div>
+    <div class="dlg-bd" style="padding-top:0"></div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgConfirm')">Abbrechen</button>
+      <button class="btn btn-danger" id="cfBtn">Bestätigen</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 <div id="printArea"></div>
@@ -571,7 +698,15 @@ let stats = null;
 let rapporte = [];
 let mitarbeiter = [];
 let kunden = [];
-let drawerId = null;
+let drawerId = null;   // offener Rapport in der Schublade
+let maTarget = null;   // offener Mitarbeitender (Login-Name)
+let kuTarget = null;   // offener Kunde (id)
+let kiMode = 'neu';
+const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email'];
+const MA_LABEL = { personalnummer:'Personalnummer', anrede:'Anrede', vorname:'Vorname', nachname:'Nachname',
+  geburtsdatum:'Geburtsdatum', strasse:'Strasse', ort:'PLZ / Ort', telefon:'Telefon', mobil:'Mobil', email:'E-Mail' };
+const labelListe = fs => fs.map(f => MA_LABEL[f] || f).join(', ');
+const MIC = '<svg class="i i-sm" viewBox="0 0 24 24" style="margin-top:1px;flex:none"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>';
 
 // ── Hilfsfunktionen
 const $ = id => document.getElementById(id);
@@ -889,7 +1024,7 @@ function renderMitarbeiter() {
       <th>Pers-Nr.</th><th>Anrede</th><th>Vorname</th><th>Nachname</th><th>Anschrift</th>
       <th>Ort</th><th>Telefon</th><th>Mobil</th><th>E-Mail</th><th>Rolle</th>
     </tr></thead><tbody>` + d.map(m => `
-      <tr>
+      <tr class="click" onclick="openMa(${mitarbeiter.indexOf(m)})">
         <td class="num nowrap">${dash(m.personalnummer)}</td>
         <td class="nowrap">${dash(m.anrede)}</td>
         <td class="nowrap">${dash(m.vorname)}</td>
@@ -919,7 +1054,7 @@ function renderKunden() {
   $('kuTable').innerHTML = `<table><thead><tr>
       <th>Kunde</th><th>Strasse</th><th>Ort</th><th>Telefon</th><th>E-Mail</th><th class="num">Rapporte</th>
     </tr></thead><tbody>` + d.map(k => `
-      <tr>
+      <tr class="click" onclick="openKunde(${kunden.indexOf(k)})">
         <td class="strong">${esc(k.name)}</td>
         <td>${dash(k.strasse)}</td>
         <td class="nowrap">${dash(k.ort)}</td>
@@ -953,7 +1088,19 @@ function openDrawer(id) {
     '<dl class="dl">' + rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('') + '</dl>' +
     (r.unterschrift
       ? `<div class="sig-box"><div class="lb">Unterschrift Kunde</div><img src="${esc(r.unterschrift)}" alt="Unterschrift"></div>`
-      : `<div class="sig-box"><div class="lb">Unterschrift Kunde</div><p style="font-size:12.5px;color:var(--ink-3)">Keine Unterschrift erfasst.</p></div>`);
+      : `<div class="sig-box"><div class="lb">Unterschrift Kunde</div><p style="font-size:12.5px;color:var(--ink-3)">Keine Unterschrift erfasst.</p></div>`) +
+    `<p class="zone-note" style="margin-top:20px">Für ein PDF im Druckdialog „Als PDF sichern“ wählen.</p>`;
+  $('drFoot').innerHTML =
+    `<button class="btn btn-primary" onclick="printReport()">
+       <svg class="i i-sm" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+       Kundenbericht drucken
+     </button>
+     <div style="flex:1"></div>
+     <button class="btn btn-plain" onclick="askDeleteRapport(${Number(id)})">Löschen</button>`;
+  showDrawer();
+}
+
+function showDrawer() {
   $('scrim').classList.add('on');
   $('drawer').classList.add('on');
   $('drawer').setAttribute('aria-hidden', 'false');
@@ -963,7 +1110,295 @@ function closeDrawer() {
   $('scrim').classList.remove('on');
   $('drawer').classList.remove('on');
   $('drawer').setAttribute('aria-hidden', 'true');
-  drawerId = null;
+  drawerId = null; maTarget = null; kuTarget = null;
+}
+
+function askDeleteRapport(id) {
+  askConfirm('Rapport löschen?',
+    `Rapport Nr. ${id} wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.`,
+    'Endgültig löschen',
+    () => api('rapport_delete.php', { method: 'POST', body: { id } }).then(({ ok, data }) => {
+      if (!ok || data.status !== 'ok') { toast(data.message || 'Löschen fehlgeschlagen.'); return; }
+      closeDrawer();
+      Promise.all([loadRapporte(), loadStats()]).then(() => toast('Rapport gelöscht.'));
+    }));
+}
+
+// ══════════════════════════════════════════ DIALOGE
+function openDlg(id) { $(id).classList.add('on'); }
+function closeDlg(id) { $(id).classList.remove('on'); }
+
+function askConfirm(titel, text, knopf, fn) {
+  $('cfTitel').textContent = titel;
+  $('cfText').textContent = text;
+  const b = $('cfBtn');
+  b.textContent = knopf;
+  b.onclick = () => { closeDlg('dlgConfirm'); fn(); };
+  openDlg('dlgConfirm');
+}
+
+// ══════════════════════════════════════════ MITARBEITENDE ANLEGEN
+// Dasselbe Formular fuer Hand- und Diktateingabe. Beim Diktat sind die
+// uebernommenen Felder blau markiert und nichts ist gespeichert, bevor
+// hier bewusst geklickt wird (ENT-015).
+const maNeuId = f => 'maNeu' + f[0].toUpperCase() + f.slice(1);
+
+function openMaNeu(felder) {
+  felder = felder || {};
+  const ausDiktat = Object.keys(felder).length > 0;
+  const erkannt = MA_FELDER.filter(f => felder[f]);
+
+  $('maNeuTitel').textContent = ausDiktat ? 'Erkannt — bitte prüfen' : 'Neuer Mitarbeitender';
+  $('maNeuText').textContent = ausDiktat
+    ? 'Aus dem Diktat übernommen. Es ist noch nichts gespeichert.'
+    : 'Login-Name und Passwort sind Pflicht, die übrigen Angaben lassen sich später ergänzen.';
+
+  const vorname = (felder.vorname || '').toLowerCase().trim();
+  const nachname = (felder.nachname || '').toLowerCase().trim();
+  $('maNeuName').value = (vorname && nachname) ? `${vorname}.${nachname}`.replace(/\s+/g, '') : '';
+  $('maNeuPass').value = '';
+  $('maNeuAdmin').checked = false;
+  MA_FELDER.forEach(f => {
+    const el = $(maNeuId(f));
+    el.value = felder[f] || '';
+    el.classList.toggle('ki', ausDiktat && !!felder[f]);
+  });
+
+  $('maNeuKiHint').classList.toggle('on', ausDiktat);
+  if (ausDiktat) {
+    $('maNeuKiText').textContent = erkannt.length
+      ? `Blau markiert wurde aus dem Diktat übernommen: ${labelListe(erkannt)}. Der Login-Name ist ein Vorschlag, das Passwort musst du selbst setzen.`
+      : 'Aus dem Diktat liess sich kein Feld zuordnen — bitte von Hand ausfüllen.';
+  }
+  $('maNeuErr').style.display = 'none';
+  openDlg('dlgMaNeu');
+  $('maNeuName').focus();
+}
+
+function createMa() {
+  const err = $('maNeuErr'); err.style.display = 'none';
+  const name = $('maNeuName').value.trim();
+  const password = $('maNeuPass').value;
+  if (!name) { err.textContent = 'Login-Name erforderlich.'; err.style.display = ''; return; }
+  if (password.length < 6) { err.textContent = 'Passwort mindestens 6 Zeichen.'; err.style.display = ''; return; }
+
+  const body = { name, password, ist_admin: $('maNeuAdmin').checked ? 1 : 0 };
+  MA_FELDER.forEach(f => { body[f] = $(maNeuId(f)).value.trim(); });
+
+  const b = $('maNeuBtn'); b.disabled = true;
+  api('mitarbeiter_create.php', { method: 'POST', body }).then(({ ok, data }) => {
+    b.disabled = false;
+    if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Anlegen fehlgeschlagen.'; err.style.display = ''; return; }
+    closeDlg('dlgMaNeu');
+    Promise.all([loadMitarbeiter(), loadStats()]).then(() => toast(`„${name}“ angelegt.`));
+  });
+}
+
+// ══════════════════════════════════════════ MITARBEITENDE BEARBEITEN
+function openMa(i, aenderungen) {
+  const m = mitarbeiter[i];
+  if (!m) return;
+  drawerId = null; kuTarget = null;
+  maTarget = m.name;
+
+  const a = aenderungen || {};
+  const val = f => (a[f] !== undefined ? a[f] : (m[f] || ''));
+  const mark = f => (a[f] !== undefined ? ' ki' : '');
+  const inp = (f, label, typ, wide) =>
+    `<div class="f${wide ? ' wide' : ''}"><label for="maE_${f}">${label}</label>` +
+    `<input class="inp${mark(f)}" id="maE_${f}" type="${typ || 'text'}" value="${esc(val(f))}"></div>`;
+  const anredeOpts = ['', 'Herr', 'Frau', 'Divers']
+    .map(o => `<option value="${o}"${val('anrede') === o ? ' selected' : ''}>${o || '–'}</option>`).join('');
+  const erkannt = Object.keys(a).filter(f => MA_FELDER.includes(f));
+
+  $('drTitle').textContent = fullName(m) || m.name;
+  $('drBody').innerHTML = `
+    ${erkannt.length ? `<div class="ki-hint on">${MIC}<span>Blau markiert wurde aus dem Diktat übernommen: ${esc(labelListe(erkannt))}. Es ist noch nichts gespeichert — bitte prüfen und unten speichern.</span></div>` : ''}
+    <dl class="dl">
+      <dt>Login-Name</dt><dd>${esc(m.name)}</dd>
+      <dt>Rolle</dt><dd>${Number(m.ist_admin) ? 'Verwaltung (Admin)' : 'Mitarbeitende'}</dd>
+      <dt>Angelegt am</dt><dd>${m.erstellt_am ? dmy(m.erstellt_am) : '–'}</dd>
+    </dl>
+    <div class="form-grid" style="margin-top:18px">
+      ${inp('personalnummer', 'Personalnummer')}
+      <div class="f"><label for="maE_anrede">Anrede</label><select class="inp${mark('anrede')}" id="maE_anrede">${anredeOpts}</select></div>
+      ${inp('vorname', 'Vorname')}
+      ${inp('nachname', 'Nachname')}
+      ${inp('geburtsdatum', 'Geburtsdatum', 'date')}
+      ${inp('ort', 'PLZ / Ort')}
+      ${inp('strasse', 'Strasse', 'text', true)}
+      ${inp('telefon', 'Telefon')}
+      ${inp('mobil', 'Mobil')}
+      ${inp('email', 'E-Mail', 'email', true)}
+    </div>
+    <div class="zone">
+      <div class="zone-hd">Passwort</div>
+      <div class="zone-note">Setzt ein neues Passwort und meldet die Person auf allen Geräten ab.</div>
+      <div class="inp-row">
+        <input class="inp" id="maPw" type="text" placeholder="min. 6 Zeichen" autocomplete="off">
+        <button class="btn btn-plain" onclick="resetMaPw()">Setzen</button>
+      </div>
+    </div>
+    ${m.name === (me && me.name) ? '' : `
+    <div class="zone danger">
+      <div class="zone-hd">Mitarbeitenden entfernen</div>
+      <div class="zone-note">Das Konto wird deaktiviert und die Person überall abgemeldet. Bereits erfasste Rapporte bleiben unverändert erhalten.</div>
+      <button class="btn btn-danger btn-sm" onclick="askRemoveMa()">Entfernen</button>
+    </div>`}`;
+  $('drFoot').innerHTML =
+    `<button class="btn btn-plain" onclick="closeDrawer()">Schliessen</button>
+     <div style="flex:1"></div>
+     <button class="btn btn-primary" onclick="saveMa()">Angaben speichern</button>`;
+  showDrawer();
+}
+
+function saveMa() {
+  if (!maTarget) return;
+  const body = { name: maTarget };
+  MA_FELDER.forEach(f => { body[f] = ($('maE_' + f).value || '').trim(); });
+  api('mitarbeiter_update.php', { method: 'POST', body }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { toast(data.message || 'Speichern fehlgeschlagen.'); return; }
+    closeDrawer();
+    loadMitarbeiter().then(() => toast('Angaben gespeichert.'));
+  });
+}
+
+function resetMaPw() {
+  if (!maTarget) return;
+  const password = $('maPw').value;
+  if (password.length < 6) { toast('Passwort mindestens 6 Zeichen.'); return; }
+  api('mitarbeiter_reset_password.php', { method: 'POST', body: { name: maTarget, password } }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
+    $('maPw').value = '';
+    toast('Neues Passwort gesetzt.');
+  });
+}
+
+function askRemoveMa() {
+  const name = maTarget;
+  if (!name) return;
+  askConfirm('Mitarbeitenden entfernen?',
+    `„${name}“ wird deaktiviert und überall abgemeldet. Erfasste Rapporte bleiben erhalten.`,
+    'Entfernen',
+    () => api('mitarbeiter_deactivate.php', { method: 'POST', body: { name } }).then(({ ok, data }) => {
+      if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
+      closeDrawer();
+      Promise.all([loadMitarbeiter(), loadStats()]).then(() => toast('Mitarbeitender entfernt.'));
+    }));
+}
+
+// ══════════════════════════════════════════ KUNDEN PFLEGEN
+function openKundeNeu() {
+  ['kuNeuName', 'kuNeuStrasse', 'kuNeuOrt', 'kuNeuTelefon', 'kuNeuEmail'].forEach(id => { $(id).value = ''; });
+  $('kuNeuErr').style.display = 'none';
+  openDlg('dlgKuNeu');
+  $('kuNeuName').focus();
+}
+
+function createKunde() {
+  const err = $('kuNeuErr'); err.style.display = 'none';
+  const body = {
+    name: $('kuNeuName').value.trim(), strasse: $('kuNeuStrasse').value.trim(),
+    ort: $('kuNeuOrt').value.trim(), telefon: $('kuNeuTelefon').value.trim(),
+    email: $('kuNeuEmail').value.trim()
+  };
+  if (!body.name || !body.strasse || !body.ort || !body.telefon) {
+    err.textContent = 'Name, Strasse, Ort und Telefon sind Pflicht.'; err.style.display = ''; return;
+  }
+  const b = $('kuNeuBtn'); b.disabled = true;
+  api('kunden_create.php', { method: 'POST', body }).then(({ ok, data }) => {
+    b.disabled = false;
+    if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Anlegen fehlgeschlagen.'; err.style.display = ''; return; }
+    closeDlg('dlgKuNeu');
+    Promise.all([loadKunden(), loadStats()]).then(() => toast('Kunde angelegt.'));
+  });
+}
+
+function openKunde(i) {
+  const k = kunden[i];
+  if (!k) return;
+  drawerId = null; maTarget = null;
+  kuTarget = k.id;
+  $('drTitle').textContent = k.name;
+  $('drBody').innerHTML = `
+    <div class="form-grid">
+      <div class="f wide"><label for="kuE_name">Name *</label><input class="inp" id="kuE_name" value="${esc(k.name)}"></div>
+      <div class="f wide"><label for="kuE_strasse">Strasse *</label><input class="inp" id="kuE_strasse" value="${esc(k.strasse || '')}"></div>
+      <div class="f"><label for="kuE_ort">PLZ / Ort *</label><input class="inp" id="kuE_ort" value="${esc(k.ort || '')}"></div>
+      <div class="f"><label for="kuE_telefon">Telefon *</label><input class="inp" id="kuE_telefon" value="${esc(k.telefon || '')}"></div>
+      <div class="f wide"><label for="kuE_email">E-Mail</label><input class="inp" id="kuE_email" type="email" value="${esc(k.email || '')}"></div>
+    </div>
+    <div class="zone danger">
+      <div class="zone-hd">Kunde entfernen</div>
+      <div class="zone-note">Der Kunde verschwindet aus der Auswahlliste der Erfassung. Bereits erfasste Rapporte behalten ihre Kundenangaben und bleiben unverändert.</div>
+      <button class="btn btn-danger btn-sm" onclick="askDeleteKunde()">Entfernen</button>
+    </div>`;
+  $('drFoot').innerHTML =
+    `<button class="btn btn-plain" onclick="closeDrawer()">Schliessen</button>
+     <div style="flex:1"></div>
+     <button class="btn btn-primary" onclick="saveKunde()">Speichern</button>`;
+  showDrawer();
+}
+
+function saveKunde() {
+  if (!kuTarget) return;
+  const body = {
+    id: kuTarget,
+    name: $('kuE_name').value.trim(), strasse: $('kuE_strasse').value.trim(),
+    ort: $('kuE_ort').value.trim(), telefon: $('kuE_telefon').value.trim(),
+    email: $('kuE_email').value.trim()
+  };
+  if (!body.name || !body.strasse || !body.ort || !body.telefon) { toast('Name, Strasse, Ort und Telefon sind Pflicht.'); return; }
+  api('kunden_update.php', { method: 'POST', body }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { toast(data.message || 'Speichern fehlgeschlagen.'); return; }
+    closeDrawer();
+    loadKunden().then(() => toast('Kunde gespeichert.'));
+  });
+}
+
+function askDeleteKunde() {
+  const id = kuTarget;
+  if (!id) return;
+  askConfirm('Kunde entfernen?',
+    'Der Kunde verschwindet aus der Auswahlliste. Bereits erfasste Rapporte bleiben unverändert.',
+    'Entfernen',
+    () => api('kunden_delete.php', { method: 'POST', body: { id } }).then(({ ok, data }) => {
+      if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
+      closeDrawer();
+      Promise.all([loadKunden(), loadStats()]).then(() => toast('Kunde entfernt.'));
+    }));
+}
+
+// ══════════════════════════════════════════ DIKTAT
+function openKi(mode) {
+  kiMode = mode;
+  $('kiTitel').textContent = mode === 'neu' ? 'Mitarbeitenden diktieren' : 'Änderung diktieren';
+  $('kiText').textContent = mode === 'neu'
+    ? 'Tippen — oder das Mikrofon der Tastatur benutzen. Zum Beispiel: „Neuer Mitarbeiter Hans Meier, Personalnummer 2530, geboren 3. Mai 1990, Musterweg 1, 3000 Bern, Mobil 079 123 45 67.“'
+    : 'Sagen, wen du meinst und was sich ändert. Zum Beispiel: „Ändere die Adresse von Daniele Ciardo zu Musterstrasse 1, 3000 Bern.“ Tippfehler beim Namen sind kein Problem.';
+  $('kiText2').value = '';
+  $('kiErr').style.display = 'none';
+  openDlg('dlgKi');
+  $('kiText2').focus();
+}
+
+function submitKi() {
+  const text = $('kiText2').value.trim();
+  const err = $('kiErr'); err.style.display = 'none';
+  if (!text) { err.textContent = 'Bitte etwas eingeben oder diktieren.'; err.style.display = ''; return; }
+  const b = $('kiBtn'); b.disabled = true; b.textContent = 'Erkenne …';
+  const reset = () => { b.disabled = false; b.textContent = 'Erkennen'; };
+  const endpoint = kiMode === 'neu' ? 'ki_mitarbeiter_parse.php' : 'ki_mitarbeiter_edit_parse.php';
+
+  api(endpoint, { method: 'POST', body: { text } }).then(({ ok, data }) => {
+    reset();
+    if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Erkennung fehlgeschlagen.'; err.style.display = ''; return; }
+    if (kiMode === 'neu') { closeDlg('dlgKi'); openMaNeu(data.felder || {}); return; }
+    const idx = mitarbeiter.findIndex(m => m.name === data.mitarbeiter_login_name);
+    if (idx === -1) { err.textContent = 'Die erkannte Person steht nicht in der Liste.'; err.style.display = ''; return; }
+    closeDlg('dlgKi');
+    openMa(idx, data.aenderungen || {});
+  }).catch(() => { reset(); err.textContent = 'Netzwerkfehler.'; err.style.display = ''; });
 }
 
 function printReport() {
@@ -1008,7 +1443,15 @@ function printReport() {
 }
 
 // ══════════════════════════════════════════ START
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const dlg = document.querySelector('.dlg-scrim.on');   // oberster Dialog zuerst
+  if (dlg) { dlg.classList.remove('on'); return; }
+  closeDrawer();
+});
+document.querySelectorAll('.dlg-scrim').forEach(s => {
+  s.addEventListener('click', e => { if (e.target === s) s.classList.remove('on'); });
+});
 $('gPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 $('gName').addEventListener('keydown', e => { if (e.key === 'Enter') $('gPass').focus(); });
 
