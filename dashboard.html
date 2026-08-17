@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cockpit</title>
+<link rel="icon" href="icons/icon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="theme-color" content="#16181D">
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   DESIGN-TOKENS — einzige Stelle fuer Farben, Radien, Schatten.
+   Akzent aendern = eine Zeile.
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  /* Seitenleiste (Graphit) */
+  --shell:        #16181D;
+  --shell-hi:     #1E2128;
+  --shell-line:   #272B33;
+  --shell-txt:    #9298A5;
+  --shell-txt-hi: #F3F5F8;
+
+  /* Arbeitsflaeche */
+  --bg:           #F7F8FA;
+  --surface:      #FFFFFF;
+  --line:         #E5E8EC;
+  --line-soft:    #EFF1F4;
+
+  /* Text */
+  --ink:          #14161A;
+  --ink-2:        #545B67;
+  --ink-3:        #8B919D;
+
+  /* Akzent */
+  --accent:       #2F5BD7;
+  --accent-hi:    #2549B0;
+  --accent-soft:  #EDF2FE;
+  --accent-line:  #CBD9F9;
+
+  /* Semantik */
+  --pos:      #0E7C55;  --pos-soft:  #E6F6EF;
+  --neg:      #C2382A;  --neg-soft:  #FCEDEB;
+  --warn:     #9A6B08;  --warn-soft: #FBF3E0;
+
+  --r-xs: 5px; --r-sm: 7px; --r: 10px; --r-lg: 14px;
+  --sh-1: 0 1px 2px rgba(16,18,22,.06);
+  --sh-2: 0 8px 28px -8px rgba(16,18,22,.18);
+  --sh-3: 0 24px 64px -16px rgba(16,18,22,.30);
+
+  --side-w: 232px;
+  --top-h: 60px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+/* Zahlen laufen nicht — Ziffern gleich breit */
+.num, td.num, .kpi-val, .bar-val, table td, table th { font-variant-numeric: tabular-nums; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+svg.i { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+svg.i-sm { width: 15px; height: 15px; }
+
+/* ══════════════════════════════════════════ ZUGANGS-GATE */
+#gate { position: fixed; inset: 0; z-index: 900; background: var(--shell); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.gate-card { width: 100%; max-width: 360px; background: var(--surface); border-radius: var(--r-lg); padding: 32px; box-shadow: var(--sh-3); }
+.gate-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 26px; }
+.gate-brand img { width: 36px; height: 36px; border-radius: 9px; object-fit: contain; background: var(--shell); padding: 3px; }
+.gate-brand .wm { font-size: 16px; font-weight: 700; letter-spacing: -.2px; }
+.gate-brand .sub { font-size: 11px; color: var(--ink-3); letter-spacing: .3px; }
+.gate-msg { font-size: 13px; color: var(--ink-2); margin-bottom: 20px; line-height: 1.6; }
+
+/* ══════════════════════════════════════════ FORMELEMENTE */
+.f { margin-bottom: 14px; }
+.f label { display: block; font-size: 11px; font-weight: 650; color: var(--ink-2); letter-spacing: .4px; text-transform: uppercase; margin-bottom: 6px; }
+.inp {
+  width: 100%; border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 9px 12px; font: inherit; font-size: 14px; color: var(--ink);
+  background: var(--surface); transition: border-color .13s, box-shadow .13s;
+  -webkit-appearance: none; appearance: none;
+}
+.inp::placeholder { color: var(--ink-3); }
+.inp:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+select.inp { padding-right: 30px; background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(135deg, var(--ink-3) 50%, transparent 50%); background-position: right 14px center, right 9px center; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid transparent; border-radius: var(--r-sm); padding: 9px 15px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .13s, border-color .13s, color .13s; white-space: nowrap; text-decoration: none; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hi); }
+.btn-primary:disabled { opacity: .55; cursor: default; }
+.btn-plain { background: var(--surface); border-color: var(--line); color: var(--ink); }
+.btn-plain:hover { background: var(--bg); border-color: #D6DAE1; }
+.btn-quiet { background: transparent; color: var(--ink-2); }
+.btn-quiet:hover { background: var(--line-soft); color: var(--ink); }
+.btn-wide { width: 100%; }
+.btn-sm { padding: 6px 11px; font-size: 12px; }
+
+.msg-err { font-size: 12.5px; color: var(--neg); background: var(--neg-soft); border-radius: var(--r-xs); padding: 8px 11px; margin-bottom: 14px; }
+
+/* ══════════════════════════════════════════ SHELL */
+.shell { display: none; min-height: 100vh; }
+.shell.on { display: block; }
+
+.side {
+  position: fixed; top: 0; left: 0; bottom: 0; width: var(--side-w); z-index: 40;
+  background: var(--shell); display: flex; flex-direction: column;
+}
+.side-brand { display: flex; align-items: center; gap: 11px; padding: 0 18px; height: var(--top-h); border-bottom: 1px solid var(--shell-line); flex: none; }
+.side-brand img { width: 30px; height: 30px; border-radius: 8px; object-fit: contain; background: #fff; padding: 2px; }
+.side-brand .wm { color: var(--shell-txt-hi); font-size: 15px; font-weight: 700; letter-spacing: -.2px; line-height: 1.15; }
+.side-brand .sub { color: #656B78; font-size: 10px; letter-spacing: .8px; text-transform: uppercase; }
+
+.side-nav { padding: 14px 12px; flex: 1; overflow-y: auto; }
+.nav-lbl { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #5C626E; padding: 0 8px; margin: 4px 0 8px; }
+.nav-item {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 9px 10px; margin-bottom: 2px; border: none; background: transparent;
+  border-radius: var(--r-sm); color: var(--shell-txt); font: inherit; font-size: 13.5px; font-weight: 550;
+  cursor: pointer; text-align: left; transition: background .13s, color .13s;
+}
+.nav-item:hover { background: var(--shell-hi); color: var(--shell-txt-hi); }
+.nav-item.on { background: var(--shell-hi); color: var(--shell-txt-hi); }
+.nav-item.on svg.i { stroke: var(--accent); }
+.nav-item .tag { margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: .4px; color: #6C7280; background: #23262E; border-radius: 20px; padding: 2px 7px; }
+
+.side-foot { padding: 12px; border-top: 1px solid var(--shell-line); flex: none; }
+.side-user { display: flex; align-items: center; gap: 10px; padding: 7px 8px; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; letter-spacing: .3px; flex: none; }
+.side-user .who { min-width: 0; }
+.side-user .who b { display: block; color: var(--shell-txt-hi); font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side-user .who span { font-size: 11px; color: #6C7280; }
+.side-foot .nav-item { margin-top: 4px; }
+
+.main { margin-left: var(--side-w); min-height: 100vh; display: flex; flex-direction: column; }
+.topbar {
+  position: sticky; top: 0; z-index: 30; height: var(--top-h); flex: none;
+  background: rgba(255,255,255,.86); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 16px; padding: 0 26px;
+}
+.topbar h1 { font-size: 16px; font-weight: 680; letter-spacing: -.2px; }
+.topbar .crumb { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+.topbar .sp { flex: 1; }
+.btn-burger { display: none; }
+
+.content { padding: 26px; max-width: 1440px; width: 100%; }
+.view { display: none; }
+.view.on { display: block; animation: fade .18s ease-out; }
+@keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+/* ══════════════════════════════════════════ KARTEN */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); }
+.card-hd { display: flex; align-items: center; gap: 12px; padding: 15px 18px; border-bottom: 1px solid var(--line-soft); }
+.card-hd h2 { font-size: 13.5px; font-weight: 650; letter-spacing: -.1px; }
+.card-hd .note { font-size: 11.5px; color: var(--ink-3); }
+.card-hd .sp { flex: 1; }
+.card-bd { padding: 18px; }
+/* flush = randlos, z.B. fuer Tabellen. Breite Inhalte scrollen in der Karte,
+   nie die ganze Seite. */
+.card-bd.flush { padding: 0; overflow-x: auto; }
+
+.grid { display: grid; gap: 16px; margin-bottom: 16px; }
+/* Ohne min-width:0 dehnt sich ein Grid-Element auf seine Inhaltsbreite aus —
+   der Scroll-Container in der Karte wuerde dann nie greifen. */
+.grid > * { min-width: 0; }
+.g-kpi { grid-template-columns: repeat(4, 1fr); }
+.g-2-1 { grid-template-columns: 2fr 1fr; align-items: start; }
+.g-1-1 { grid-template-columns: 1fr 1fr; align-items: start; }
+
+/* KPI */
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; box-shadow: var(--sh-1); }
+.kpi-top { display: flex; align-items: center; gap: 8px; color: var(--ink-3); margin-bottom: 11px; }
+.kpi-top span { font-size: 11px; font-weight: 650; letter-spacing: .6px; text-transform: uppercase; }
+.kpi-val { font-size: 28px; font-weight: 700; letter-spacing: -.9px; line-height: 1.1; }
+.kpi-val .unit { font-size: 15px; font-weight: 600; color: var(--ink-3); letter-spacing: 0; margin-left: 2px; }
+.kpi-foot { margin-top: 9px; display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ink-3); }
+.delta { display: inline-flex; align-items: center; gap: 3px; font-weight: 650; border-radius: 20px; padding: 1.5px 7px; font-size: 11px; }
+.delta.up   { color: var(--pos); background: var(--pos-soft); }
+.delta.down { color: var(--neg); background: var(--neg-soft); }
+.delta.flat { color: var(--ink-3); background: var(--line-soft); }
+
+/* Balken */
+.bars { display: flex; align-items: flex-end; gap: 8px; height: 152px; padding-top: 6px; }
+.bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
+.bar-val { font-size: 11px; font-weight: 650; color: var(--ink-2); }
+.bar-fill { width: 100%; max-width: 46px; background: var(--accent-soft); border: 1px solid var(--accent-line); border-bottom: none; border-radius: var(--r-xs) var(--r-xs) 0 0; min-height: 3px; transition: background .13s; }
+.bar:hover .bar-fill { background: var(--accent-line); }
+.bar.now .bar-fill { background: var(--accent); border-color: var(--accent); }
+.bar-lbl { font-size: 10.5px; color: var(--ink-3); white-space: nowrap; letter-spacing: .2px; }
+.bar.now .bar-lbl { color: var(--ink); font-weight: 650; }
+.bars-axis { border-top: 1px solid var(--line); margin-top: -25px; }
+
+/* Tabellen */
+.tw { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  text-align: left; font-size: 10.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+  color: var(--ink-3); padding: 10px 18px; background: #FBFCFD;
+  border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+tbody td { padding: 11px 18px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr.click { cursor: pointer; }
+tbody tr.click:hover td { background: #FAFBFD; }
+td.num, th.num { text-align: right; }
+td .sec { font-size: 11.5px; color: var(--ink-3); }
+.strong { font-weight: 620; }
+.nowrap { white-space: nowrap; }
+
+.chip { display: inline-flex; align-items: center; border-radius: var(--r-xs); padding: 2px 8px; font-size: 11px; font-weight: 620; letter-spacing: .1px; white-space: nowrap; }
+.chip-n { background: var(--line-soft); color: var(--ink-2); }
+.chip-a { background: var(--accent-soft); color: var(--accent); }
+.chip-p { background: var(--pos-soft); color: var(--pos); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pos); flex: none; box-shadow: 0 0 0 3px var(--pos-soft); }
+
+/* Ranking-Zeile */
+.rank { display: flex; align-items: center; gap: 12px; padding: 11px 18px; border-bottom: 1px solid var(--line-soft); }
+.rank:last-child { border-bottom: none; }
+.rank .who { flex: 1; min-width: 0; }
+.rank .who b { display: block; font-size: 13px; font-weight: 620; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank .who span { font-size: 11.5px; color: var(--ink-3); }
+.rank .h { font-size: 14px; font-weight: 680; font-variant-numeric: tabular-nums; }
+.rank-track { height: 3px; background: var(--line-soft); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+.rank-track i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+
+/* Leerzustaende */
+.empty { text-align: center; padding: 44px 24px; }
+.empty .ic { width: 40px; height: 40px; border-radius: 11px; background: var(--line-soft); color: var(--ink-3); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+.empty .ic svg.i { width: 20px; height: 20px; }
+.empty h3 { font-size: 14px; font-weight: 650; margin-bottom: 5px; }
+.empty p { font-size: 12.5px; color: var(--ink-3); max-width: 380px; margin: 0 auto; line-height: 1.6; }
+
+/* Skelett */
+.sk { background: linear-gradient(90deg, var(--line-soft) 25%, #E4E7EC 50%, var(--line-soft) 75%); background-size: 200% 100%; animation: sh 1.3s infinite; border-radius: var(--r-xs); }
+@keyframes sh { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* Werkzeugleiste */
+.bar-tools { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 16px; }
+.search { position: relative; flex: 1; min-width: 200px; max-width: 340px; }
+.search svg.i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--ink-3); }
+.search .inp { padding-left: 34px; }
+
+/* Detail-Schublade */
+.scrim { position: fixed; inset: 0; background: rgba(16,18,22,.42); z-index: 60; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.scrim.on { opacity: 1; pointer-events: auto; }
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 420px; max-width: 100%; z-index: 61;
+  background: var(--surface); box-shadow: var(--sh-3); transform: translateX(100%); transition: transform .22s cubic-bezier(.32,.72,0,1);
+  display: flex; flex-direction: column;
+}
+.drawer.on { transform: none; }
+.drawer-hd { display: flex; align-items: center; gap: 12px; padding: 0 20px; height: var(--top-h); border-bottom: 1px solid var(--line); flex: none; }
+.drawer-hd h2 { font-size: 15px; font-weight: 660; }
+.drawer-hd .sp { flex: 1; }
+.drawer-bd { padding: 20px; overflow-y: auto; flex: 1; }
+.drawer-ft { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; gap: 9px; flex: none; }
+
+.dl { display: grid; grid-template-columns: 118px 1fr; gap: 1px 14px; }
+.dl dt { font-size: 11px; font-weight: 650; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-3); padding: 8px 0; }
+.dl dd { font-size: 13.5px; font-weight: 550; padding: 8px 0; word-break: break-word; }
+.dl dt + dd { border-bottom: 1px solid var(--line-soft); }
+.dl dt { border-bottom: 1px solid var(--line-soft); }
+.dl dt:last-of-type, .dl dd:last-of-type { border-bottom: none; }
+.sig-box { margin-top: 18px; }
+.sig-box .lb { font-size: 11px; font-weight: 650; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-3); margin-bottom: 7px; }
+.sig-box img { max-width: 100%; max-height: 110px; border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff; display: block; }
+
+/* Hinweis */
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--shell); color: #fff; padding: 10px 18px; border-radius: var(--r-sm); font-size: 13px; font-weight: 550; box-shadow: var(--sh-2); z-index: 200; opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; }
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Druck */
+#printArea { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  #printArea, #printArea * { visibility: visible; }
+  #printArea { display: block !important; position: absolute; top: 0; left: 0; width: 100%; padding: 24px; }
+}
+
+/* ══════════════════════════════════════════ RESPONSIV */
+@media (max-width: 1180px) {
+  .g-kpi { grid-template-columns: repeat(2, 1fr); }
+  .g-2-1, .g-1-1 { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .side { transform: translateX(-100%); transition: transform .22s cubic-bezier(.32,.72,0,1); box-shadow: var(--sh-3); }
+  .side.on { transform: none; }
+  .main { margin-left: 0; }
+  .btn-burger { display: inline-flex; }
+  .content { padding: 18px 16px; }
+  .topbar { padding: 0 16px; }
+}
+@media (max-width: 620px) {
+  /* Kopfzeile: nur noch Symbole, damit nichts aus dem Bild laeuft */
+  .topbar .btn .lbl { display: none; }
+  .topbar .btn { padding: 8px; }
+}
+@media (max-width: 560px) {
+  .g-kpi { grid-template-columns: 1fr; }
+  .bars { gap: 5px; height: 128px; }
+  .bar-val { display: none; }
+  .drawer-ft span { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════ ZUGANGS-GATE ══════════════════════════ -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-brand">
+      <img src="icons/icon-192.png" alt="">
+      <div>
+        <div class="wm" id="gateWm">Cockpit</div>
+        <div class="sub">CUPI 24 GmbH</div>
+      </div>
+    </div>
+
+    <div id="gateLogin">
+      <div class="gate-msg">Bitte melden Sie sich mit Ihrem Konto an.</div>
+      <div id="gateErr" class="msg-err" style="display:none"></div>
+      <div class="f">
+        <label for="gName">Name</label>
+        <input class="inp" type="text" id="gName" autocomplete="username">
+      </div>
+      <div class="f">
+        <label for="gPass">Passwort</label>
+        <input class="inp" type="password" id="gPass" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary btn-wide" id="gBtn" onclick="doLogin()">Anmelden</button>
+    </div>
+
+    <div id="gateDenied" style="display:none">
+      <div class="gate-msg">
+        Dieser Bereich ist der Administration vorbehalten.<br>
+        Für die Rapporterfassung geht es <a href="index.html" style="color:var(--accent);font-weight:600">hier zur Erfassung</a>.
+      </div>
+      <button class="btn btn-plain btn-wide" onclick="doLogout()">Abmelden</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ SHELL ══════════════════════════ -->
+<div class="shell" id="shell">
+
+  <aside class="side" id="side">
+    <div class="side-brand">
+      <img src="icons/icon-192.png" alt="">
+      <div>
+        <div class="wm" id="sideWm">Cockpit</div>
+        <div class="sub">CUPI 24</div>
+      </div>
+    </div>
+
+    <nav class="side-nav">
+      <div class="nav-lbl">Betrieb</div>
+      <button class="nav-item on" id="nav-uebersicht" onclick="go('uebersicht')">
+        <svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
+        Übersicht
+      </button>
+      <button class="nav-item" id="nav-rapporte" onclick="go('rapporte')">
+        <svg class="i" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Rapporte
+      </button>
+
+      <div class="nav-lbl" style="margin-top:16px">Stammdaten</div>
+      <button class="nav-item" id="nav-mitarbeiter" onclick="go('mitarbeiter')">
+        <svg class="i" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Mitarbeitende
+      </button>
+      <button class="nav-item" id="nav-kunden" onclick="go('kunden')">
+        <svg class="i" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        Kunden
+      </button>
+      <button class="nav-item" id="nav-objekte" onclick="go('objekte')">
+        <svg class="i" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Objekte
+        <span class="tag">bald</span>
+      </button>
+    </nav>
+
+    <div class="side-foot">
+      <div class="side-user">
+        <div class="avatar" id="uAvatar">–</div>
+        <div class="who">
+          <b id="uName">–</b>
+          <span id="uRole">–</span>
+        </div>
+      </div>
+      <button class="nav-item" onclick="doLogout()">
+        <svg class="i" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+        Abmelden
+      </button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="btn btn-quiet btn-sm btn-burger" onclick="toggleSide()" aria-label="Navigation">
+        <svg class="i" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div>
+        <h1 id="pgTitle">Übersicht</h1>
+        <div class="crumb" id="pgCrumb">Laufender Monat</div>
+      </div>
+      <div class="sp"></div>
+      <a class="btn btn-plain btn-sm" href="index.html" title="Zur Rapporterfassung">
+        <svg class="i i-sm" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2.5"/><line x1="10.5" y1="18" x2="13.5" y2="18"/></svg>
+        <span class="lbl">Erfassung</span>
+      </a>
+      <button class="btn btn-plain btn-sm" onclick="reloadAll()" id="btnReload" title="Daten neu laden">
+        <svg class="i i-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        <span class="lbl">Aktualisieren</span>
+      </button>
+    </header>
+
+    <div class="content">
+
+      <!-- ─────────── ÜBERSICHT ─────────── -->
+      <section class="view on" id="view-uebersicht">
+        <div class="grid g-kpi" id="kpiGrid"></div>
+
+        <div class="grid g-2-1">
+          <div class="card">
+            <div class="card-hd">
+              <h2>Stundenverlauf</h2>
+              <div class="sp"></div>
+              <span class="note">letzte 8 Kalenderwochen</span>
+            </div>
+            <div class="card-bd"><div id="chart"></div></div>
+          </div>
+
+          <div class="card">
+            <div class="card-hd">
+              <h2>Angemeldete Benutzer</h2>
+              <div class="sp"></div>
+              <span class="note" id="angemeldetCount"></span>
+            </div>
+            <div class="card-bd flush"><div id="angemeldet"></div></div>
+          </div>
+        </div>
+
+        <div class="grid g-2-1">
+          <div class="card">
+            <div class="card-hd">
+              <h2>Letzte Rapporte</h2>
+              <div class="sp"></div>
+              <button class="btn btn-quiet btn-sm" onclick="go('rapporte')">Alle ansehen →</button>
+            </div>
+            <div class="card-bd flush"><div id="letzte"></div></div>
+          </div>
+
+          <div class="card">
+            <div class="card-hd">
+              <h2>Stunden je Mitarbeitende</h2>
+              <div class="sp"></div>
+              <span class="note">laufender Monat</span>
+            </div>
+            <div class="card-bd flush"><div id="proMa"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────── RAPPORTE ─────────── -->
+      <section class="view" id="view-rapporte">
+        <div class="bar-tools">
+          <div class="search">
+            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="inp" type="search" id="rQ" placeholder="Mitarbeitende, Kunde oder Ort …" oninput="renderRapporte()">
+          </div>
+          <input class="inp" type="month" id="rM" style="width:auto" onchange="renderRapporte()">
+          <button class="btn btn-quiet btn-sm" onclick="rClear()">Zurücksetzen</button>
+          <div class="sp" style="flex:1"></div>
+          <button class="btn btn-plain btn-sm" onclick="exportCSV()">
+            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            CSV
+          </button>
+        </div>
+        <div class="card"><div class="card-bd flush"><div class="tw" id="rapporteTable"></div></div></div>
+      </section>
+
+      <!-- ─────────── MITARBEITENDE ─────────── -->
+      <section class="view" id="view-mitarbeiter">
+        <div class="bar-tools">
+          <div class="search">
+            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="inp" type="search" id="mQ" placeholder="Name, Ort oder Personalnummer …" oninput="renderMitarbeiter()">
+          </div>
+          <div class="sp" style="flex:1"></div>
+          <a class="btn btn-plain btn-sm" href="index.html">Bearbeiten in der Erfassung</a>
+        </div>
+        <div class="card"><div class="card-bd flush"><div class="tw" id="maTable"></div></div></div>
+      </section>
+
+      <!-- ─────────── KUNDEN ─────────── -->
+      <section class="view" id="view-kunden">
+        <div class="bar-tools">
+          <div class="search">
+            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="inp" type="search" id="kQ" placeholder="Kunde, Ort oder Strasse …" oninput="renderKunden()">
+          </div>
+          <div class="sp" style="flex:1"></div>
+          <a class="btn btn-plain btn-sm" href="index.html">Bearbeiten in der Erfassung</a>
+        </div>
+        <div class="card"><div class="card-bd flush"><div class="tw" id="kuTable"></div></div></div>
+      </section>
+
+      <!-- ─────────── OBJEKTE ─────────── -->
+      <section class="view" id="view-objekte">
+        <div class="card"><div class="card-bd">
+          <div class="empty">
+            <div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+            <h3>Objekte sind noch nicht eingerichtet</h3>
+            <p>
+              Objekte werden als eigene Werkzeug-Spur geführt. Bevor hier etwas entsteht,
+              muss geklärt sein, was ein Objekt fachlich ist und wie es zu Kunde, Einsatz
+              und Rapport steht. Der Menüpunkt steht bewusst schon hier, damit die Struktur
+              vollständig sichtbar ist.
+            </p>
+          </div>
+        </div></div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ DETAIL-SCHUBLADE ══════════════════════════ -->
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-hd">
+    <h2 id="drTitle">Rapport</h2>
+    <div class="sp"></div>
+    <button class="btn btn-quiet btn-sm" onclick="closeDrawer()" aria-label="Schliessen">
+      <svg class="i" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="drawer-bd" id="drBody"></div>
+  <div class="drawer-ft">
+    <button class="btn btn-primary" onclick="printReport()">
+      <svg class="i i-sm" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Kundenbericht drucken
+    </button>
+    <span style="font-size:11.5px;color:var(--ink-3);align-self:center;line-height:1.35">Im Druckdialog<br>„Als PDF sichern“ wählen</span>
+  </div>
+</aside>
+
+<div class="toast" id="toast"></div>
+<div id="printArea"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   PRODUKTNAME — sobald der endgültige Name feststeht, nur hier ändern.
+   ══════════════════════════════════════════════════════════════════ */
+const APP_NAME = 'Cockpit';
+
+// ── Zustand
+const API = 'api/';
+let token = localStorage.getItem('rv3_token') || '';
+let me    = JSON.parse(localStorage.getItem('rv3_user') || 'null');
+let stats = null;
+let rapporte = [];
+let mitarbeiter = [];
+let kunden = [];
+let drawerId = null;
+
+// ── Hilfsfunktionen
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf = (n, d) => Number(n || 0).toLocaleString('de-CH', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+const dmy = d => d ? String(d).slice(0, 10).split('-').reverse().join('.') : '–';
+const hm  = t => t ? String(t).slice(0, 5) : '';
+const dash = v => (v === null || v === undefined || String(v).trim() === '') ? '<span style="color:var(--ink-3)">–</span>' : esc(v);
+
+function fullName(o) {
+  const n = [o.vorname, o.nachname].filter(Boolean).join(' ').trim();
+  return n || o.name || '';
+}
+function initials(s) {
+  const p = String(s || '').replace(/[._-]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+  return ((p[0] || '?')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
+}
+function toast(msg) {
+  const el = $('toast'); el.textContent = msg; el.classList.add('on');
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('on'), 2600);
+}
+
+function api(path, opts) {
+  opts = opts || {};
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['X-Auth-Token'] = token;
+  return fetch(API + path, {
+    method: opts.method || 'GET',
+    headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  }).then(r => r.json().then(data => ({ ok: r.ok, status: r.status, data })).catch(() => ({ ok: false, status: r.status, data: {} })));
+}
+
+// ══════════════════════════════════════════ ZUGANG
+function doLogin() {
+  const name = $('gName').value.trim(), pass = $('gPass').value;
+  const err = $('gateErr');
+  err.style.display = 'none';
+  if (!name || !pass) { err.textContent = 'Name und Passwort erforderlich.'; err.style.display = ''; return; }
+  const btn = $('gBtn'); btn.disabled = true; btn.textContent = 'Anmelden …';
+  api('login.php', { method: 'POST', body: { name, password: pass } }).then(({ ok, data }) => {
+    btn.disabled = false; btn.textContent = 'Anmelden';
+    if (!ok || data.status !== 'ok') {
+      err.textContent = data.message || 'Anmeldung fehlgeschlagen.'; err.style.display = ''; return;
+    }
+    token = data.token;
+    me = { name: data.name, ist_admin: data.ist_admin };
+    localStorage.setItem('rv3_token', token);
+    localStorage.setItem('rv3_user', JSON.stringify(me));
+    enter();
+  });
+}
+
+function doLogout() {
+  api('logout.php', { method: 'POST' }).catch(() => {});
+  localStorage.removeItem('rv3_token'); localStorage.removeItem('rv3_user');
+  location.reload();
+}
+
+function enter() {
+  if (!me || !me.ist_admin) {
+    $('gateLogin').style.display = 'none';
+    $('gateDenied').style.display = '';
+    return;
+  }
+  $('gate').style.display = 'none';
+  $('shell').classList.add('on');
+  $('uName').textContent = me.name;
+  $('uRole').textContent = 'Administration';
+  $('uAvatar').textContent = initials(me.name);
+  reloadAll();
+}
+
+// ══════════════════════════════════════════ NAVIGATION
+const TITLES = {
+  uebersicht:  ['Übersicht', 'Laufender Monat'],
+  rapporte:    ['Rapporte', 'Alle erfassten Einsätze'],
+  mitarbeiter: ['Mitarbeitende', 'Stammdaten'],
+  kunden:      ['Kunden', 'Stammdaten'],
+  objekte:     ['Objekte', 'Stammdaten']
+};
+
+function go(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('on'));
+  $('view-' + view).classList.add('on');
+  const nav = $('nav-' + view); if (nav) nav.classList.add('on');
+  $('pgTitle').textContent = TITLES[view][0];
+  $('pgCrumb').textContent = TITLES[view][1];
+  $('side').classList.remove('on');
+  if (view === 'rapporte') renderRapporte();
+  if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
+  if (view === 'kunden' && !kunden.length) loadKunden();
+  history.replaceState(null, '', '#' + view);
+}
+function toggleSide() { $('side').classList.toggle('on'); }
+
+// ══════════════════════════════════════════ LADEN
+function reloadAll() {
+  const b = $('btnReload'); b.disabled = true;
+  Promise.all([loadStats(), loadRapporte()]).then(() => { b.disabled = false; });
+  if (mitarbeiter.length) loadMitarbeiter();
+  if (kunden.length) loadKunden();
+}
+
+function loadStats() {
+  skeletons();
+  return api('dashboard_stats.php').then(({ ok, status, data }) => {
+    if (status === 401) return doLogout();
+    if (!ok || data.status !== 'ok') { toast(data.message || 'Kennzahlen konnten nicht geladen werden.'); return; }
+    stats = data;
+    renderKpi(); renderChart(); renderAngemeldet(); renderLetzte(); renderProMa();
+  });
+}
+
+function loadRapporte() {
+  return api('rapport_list.php').then(({ ok, status, data }) => {
+    if (status === 401) return doLogout();
+    if (!ok || data.status !== 'ok') return;
+    rapporte = data.rapporte || [];
+    renderRapporte();
+  });
+}
+
+function loadMitarbeiter() {
+  return api('mitarbeiter_list.php').then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') return;
+    mitarbeiter = data.mitarbeiter || [];
+    renderMitarbeiter();
+  });
+}
+
+function loadKunden() {
+  return api('kunden_list.php').then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') return;
+    kunden = data.kunden || [];
+    renderKunden();
+  });
+}
+
+function skeletons() {
+  if (stats) return;
+  $('kpiGrid').innerHTML = Array.from({ length: 4 }, () =>
+    `<div class="kpi"><div class="sk" style="height:12px;width:52%"></div>
+     <div class="sk" style="height:28px;width:38%;margin-top:14px"></div>
+     <div class="sk" style="height:11px;width:64%;margin-top:12px"></div></div>`).join('');
+  $('chart').innerHTML = '<div class="sk" style="height:152px"></div>';
+  ['angemeldet', 'letzte', 'proMa'].forEach(id => {
+    $(id).innerHTML = `<div style="padding:18px">${Array.from({length:3},()=>'<div class="sk" style="height:14px;margin-bottom:12px"></div>').join('')}</div>`;
+  });
+}
+
+const EMPTY = (t, p) => `<div class="empty"><div class="ic"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><h3>${t}</h3><p>${p}</p></div>`;
+
+// ══════════════════════════════════════════ ÜBERSICHT
+function delta(now, prev) {
+  if (!prev) return now ? '<span class="delta flat">neu</span>' : '<span class="delta flat">–</span>';
+  const p = Math.round(((now - prev) / prev) * 100);
+  if (p === 0) return '<span class="delta flat">±0 %</span>';
+  const up = p > 0;
+  return `<span class="delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(p)} %</span>`;
+}
+
+function renderKpi() {
+  const k = stats.kpi;
+  const ic = {
+    doc:   '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>',
+    users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',
+    case:  '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>'
+  };
+  const cards = [
+    { i: ic.doc,   l: 'Rapporte',      v: nf(k.rapporte_monat), f: `${delta(k.rapporte_monat, k.rapporte_vormonat)} <span>zum Vormonat (${nf(k.rapporte_vormonat)})</span>` },
+    { i: ic.clock, l: 'Nettostunden',  v: nf(k.stunden_monat, 1), u: 'h', f: `${delta(k.stunden_monat, k.stunden_vormonat)} <span>zum Vormonat (${nf(k.stunden_vormonat, 1)} h)</span>` },
+    { i: ic.users, l: 'Mitarbeitende', v: nf(k.mitarbeiter), f: '<span>aktive Konten</span>' },
+    { i: ic.case,  l: 'Kunden',        v: nf(k.kunden), f: `<span>${nf(k.rapporte_total)} Rapporte insgesamt</span>` }
+  ];
+  $('kpiGrid').innerHTML = cards.map(c => `
+    <div class="kpi">
+      <div class="kpi-top"><svg class="i i-sm" viewBox="0 0 24 24">${c.i}</svg><span>${c.l}</span></div>
+      <div class="kpi-val">${c.v}${c.u ? `<span class="unit">${c.u}</span>` : ''}</div>
+      <div class="kpi-foot">${c.f}</div>
+    </div>`).join('');
+}
+
+function renderChart() {
+  const v = stats.verlauf || [];
+  const max = Math.max(1, ...v.map(x => x.stunden));
+  $('chart').innerHTML =
+    `<div class="bars">` + v.map((x, i) => {
+      const h = Math.round((x.stunden / max) * 108);
+      return `<div class="bar ${i === v.length - 1 ? 'now' : ''}" title="KW ${x.kw} · ${nf(x.stunden,1)} h aus ${x.anzahl} Rapporten">
+        <div class="bar-val">${x.stunden ? nf(x.stunden, 0) : ''}</div>
+        <div class="bar-fill" style="height:${Math.max(3, h)}px"></div>
+        <div class="bar-lbl">KW&nbsp;${x.kw}</div>
+      </div>`;
+    }).join('') + `</div><div class="bars-axis"></div>`;
+}
+
+function renderAngemeldet() {
+  const a = stats.angemeldet || [];
+  $('angemeldetCount').textContent = a.length ? a.length + (a.length === 1 ? ' Sitzung' : ' Sitzungen') : '';
+  if (!a.length) { $('angemeldet').innerHTML = EMPTY('Niemand angemeldet', 'Sobald sich jemand anmeldet, erscheint er hier.'); return; }
+  $('angemeldet').innerHTML = a.map(u => `
+    <div class="rank">
+      <span class="dot"></span>
+      <div class="who">
+        <b>${esc(fullName(u))}</b>
+        <span>${esc(u.name)}</span>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12.5px;font-weight:620" class="num">${dmy(u.letzte_anmeldung)}</div>
+        <div style="font-size:11px;color:var(--ink-3)" class="num">${String(u.letzte_anmeldung || '').slice(11, 16)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderLetzte() {
+  const l = stats.letzte_rapporte || [];
+  if (!l.length) { $('letzte').innerHTML = EMPTY('Noch keine Rapporte', 'Erfasste Einsätze erscheinen hier automatisch.'); return; }
+  $('letzte').innerHTML = `<table><thead><tr>
+      <th>Datum</th><th>Mitarbeitende</th><th>Kunde</th><th>Einsatzart</th><th class="num">Netto</th>
+    </tr></thead><tbody>` + l.map(r => `
+      <tr class="click" onclick="openDrawer(${Number(r.id)})">
+        <td class="nowrap num">${dmy(r.datum)}</td>
+        <td class="strong">${esc(r.mitarbeiter)}</td>
+        <td>${esc(r.kunde)}<div class="sec">${esc(r.ort)}</div></td>
+        <td><span class="chip chip-n">${esc(r.einsatzart)}</span></td>
+        <td class="num strong nowrap">${nf(r.netto_h, 2)} h</td>
+      </tr>`).join('') + `</tbody></table>`;
+}
+
+function renderProMa() {
+  const p = stats.pro_mitarbeiter || [];
+  if (!p.length) { $('proMa').innerHTML = EMPTY('Keine Mitarbeitenden', 'Konten werden in der Erfassung angelegt.'); return; }
+  const max = Math.max(1, ...p.map(x => Number(x.stunden)));
+  $('proMa').innerHTML = p.map(m => `
+    <div class="rank">
+      <div class="who">
+        <b>${esc(fullName(m))}</b>
+        <span>${m.anzahl} ${Number(m.anzahl) === 1 ? 'Einsatz' : 'Einsätze'}</span>
+        <div class="rank-track"><i style="width:${Math.round((Number(m.stunden) / max) * 100)}%"></i></div>
+      </div>
+      <div class="h">${nf(m.stunden, 1)}<span style="font-size:11px;color:var(--ink-3);font-weight:600"> h</span></div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════ RAPPORTE
+function rFiltered() {
+  const q = ($('rQ').value || '').toLowerCase().trim();
+  const m = $('rM').value || '';
+  return rapporte.filter(r => {
+    const hit = !q || [r.mitarbeiter, r.kunde, r.ort, r.strasse, r.auftrag_nr]
+      .some(f => String(f || '').toLowerCase().includes(q));
+    return hit && (!m || String(r.datum).startsWith(m));
+  });
+}
+function rClear() { $('rQ').value = ''; $('rM').value = ''; renderRapporte(); }
+
+function renderRapporte() {
+  const d = rFiltered();
+  if ($('view-rapporte').classList.contains('on')) {
+    const h = d.reduce((s, r) => s + Number(r.netto_h), 0);
+    $('pgCrumb').textContent = `${nf(d.length)} von ${nf(rapporte.length)} Rapporten · ${nf(h, 2)} h`;
+  }
+  if (!d.length) {
+    $('rapporteTable').innerHTML = rapporte.length
+      ? EMPTY('Keine Treffer', 'Für diese Suche gibt es keine Rapporte. Filter zurücksetzen und erneut versuchen.')
+      : EMPTY('Noch keine Rapporte', 'Sobald Einsätze in der Erfassung gespeichert werden, erscheinen sie hier.');
+    return;
+  }
+  $('rapporteTable').innerHTML = `<table><thead><tr>
+      <th>Datum</th><th>Mitarbeitende</th><th>Kunde</th><th>Ort</th>
+      <th>Einsatzart</th><th>Zeit</th><th class="num">Pause</th><th class="num">Netto</th><th>Unterzeichner</th>
+    </tr></thead><tbody>` + d.map(r => `
+      <tr class="click" onclick="openDrawer(${Number(r.id)})">
+        <td class="nowrap num">${dmy(r.datum)}</td>
+        <td class="strong nowrap">${esc(r.mitarbeiter)}</td>
+        <td>${esc(r.kunde)}<div class="sec">${esc(r.strasse)}</div></td>
+        <td class="nowrap">${esc(r.ort)}</td>
+        <td><span class="chip chip-n">${esc(r.einsatzart)}</span></td>
+        <td class="nowrap num">${hm(r.von)}–${hm(r.bis)}</td>
+        <td class="num nowrap" style="color:var(--ink-3)">${nf(r.pause_min)} min</td>
+        <td class="num nowrap"><span class="chip chip-p">${nf(r.netto_h, 2)} h</span></td>
+        <td>${r.unterzeichner ? esc(r.unterzeichner) : '<span style="color:var(--ink-3)">–</span>'}</td>
+      </tr>`).join('') + `</tbody></table>`;
+}
+
+function exportCSV() {
+  const d = rFiltered();
+  if (!d.length) { toast('Keine Daten zum Exportieren.'); return; }
+  const hdr = ['Datum','Mitarbeitende','Kunde','Strasse','Ort','AuftragNr','Einsatzart','Von','Bis','Pause_Min','Netto_h','Unterzeichner','Bemerkung','Erfasst'];
+  const cell = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  const rows = d.map(r => [r.datum, r.mitarbeiter, r.kunde, r.strasse, r.ort, r.auftrag_nr || '', r.einsatzart,
+    hm(r.von), hm(r.bis), r.pause_min, Number(r.netto_h).toFixed(2), r.unterzeichner || '', r.bemerkung || '', r.erfasst_am || ''].map(cell).join(';'));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + [hdr.map(cell).join(';'), ...rows].join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'rapporte_' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  toast(d.length + ' Rapporte exportiert.');
+}
+
+// ══════════════════════════════════════════ MITARBEITENDE
+function renderMitarbeiter() {
+  const q = ($('mQ').value || '').toLowerCase().trim();
+  const d = mitarbeiter.filter(m => !q ||
+    [m.name, m.vorname, m.nachname, m.ort, m.personalnummer, m.email].some(f => String(f || '').toLowerCase().includes(q)));
+  if (!d.length) {
+    $('maTable').innerHTML = mitarbeiter.length
+      ? EMPTY('Keine Treffer', 'Für diese Suche gibt es keine Mitarbeitenden.')
+      : EMPTY('Noch keine Mitarbeitenden', 'Konten werden im Admin-Bereich der Erfassung angelegt.');
+    return;
+  }
+  $('maTable').innerHTML = `<table><thead><tr>
+      <th>Pers-Nr.</th><th>Anrede</th><th>Vorname</th><th>Nachname</th><th>Anschrift</th>
+      <th>Ort</th><th>Telefon</th><th>Mobil</th><th>E-Mail</th><th>Rolle</th>
+    </tr></thead><tbody>` + d.map(m => `
+      <tr>
+        <td class="num nowrap">${dash(m.personalnummer)}</td>
+        <td class="nowrap">${dash(m.anrede)}</td>
+        <td class="nowrap">${dash(m.vorname)}</td>
+        <td class="strong nowrap">${dash(m.nachname)}<div class="sec">${esc(m.name)}</div></td>
+        <td>${dash(m.strasse)}</td>
+        <td class="nowrap">${dash(m.ort)}</td>
+        <td class="nowrap num">${dash(m.telefon)}</td>
+        <td class="nowrap num">${dash(m.mobil)}</td>
+        <td>${dash(m.email)}</td>
+        <td>${Number(m.ist_admin) ? '<span class="chip chip-a">Admin</span>' : '<span class="chip chip-n">Mitarbeit.</span>'}</td>
+      </tr>`).join('') + `</tbody></table>`;
+}
+
+// ══════════════════════════════════════════ KUNDEN
+function renderKunden() {
+  const q = ($('kQ').value || '').toLowerCase().trim();
+  const d = kunden.filter(k => !q ||
+    [k.name, k.ort, k.strasse, k.email].some(f => String(f || '').toLowerCase().includes(q)));
+  if (!d.length) {
+    $('kuTable').innerHTML = kunden.length
+      ? EMPTY('Keine Treffer', 'Für diese Suche gibt es keine Kunden.')
+      : EMPTY('Noch keine Kunden', 'Kunden werden im Admin-Bereich der Erfassung angelegt.');
+    return;
+  }
+  const zaehl = {};
+  rapporte.forEach(r => { zaehl[r.kunde] = (zaehl[r.kunde] || 0) + 1; });
+  $('kuTable').innerHTML = `<table><thead><tr>
+      <th>Kunde</th><th>Strasse</th><th>Ort</th><th>Telefon</th><th>E-Mail</th><th class="num">Rapporte</th>
+    </tr></thead><tbody>` + d.map(k => `
+      <tr>
+        <td class="strong">${esc(k.name)}</td>
+        <td>${dash(k.strasse)}</td>
+        <td class="nowrap">${dash(k.ort)}</td>
+        <td class="nowrap num">${dash(k.telefon)}</td>
+        <td>${dash(k.email)}</td>
+        <td class="num">${zaehl[k.name] ? nf(zaehl[k.name]) : '<span style="color:var(--ink-3)">–</span>'}</td>
+      </tr>`).join('') + `</tbody></table>`;
+}
+
+// ══════════════════════════════════════════ SCHUBLADE + DRUCK
+function openDrawer(id) {
+  const r = rapporte.find(x => Number(x.id) === Number(id));
+  if (!r) { toast('Rapport nicht gefunden — bitte aktualisieren.'); return; }
+  drawerId = Number(id);
+  $('drTitle').textContent = 'Rapport Nr. ' + r.id;
+  const rows = [
+    ['Datum', dmy(r.datum)],
+    ['Mitarbeitende', esc(r.mitarbeiter)],
+    ['Kunde', esc(r.kunde)],
+    ['Adresse', esc(r.strasse) + ', ' + esc(r.ort)],
+    ['Auftrags-Nr.', dash(r.auftrag_nr)],
+    ['Einsatzart', esc(r.einsatzart)],
+    ['Arbeitszeit', hm(r.von) + ' – ' + hm(r.bis)],
+    ['Pause', nf(r.pause_min) + ' Min.'],
+    ['Nettostunden', '<strong>' + nf(r.netto_h, 2) + ' h</strong>'],
+    ['Unterzeichner', dash(r.unterzeichner)],
+    ['Bemerkung', dash(r.bemerkung)],
+    ['Erfasst am', r.erfasst_am ? dmy(r.erfasst_am) + ', ' + String(r.erfasst_am).slice(11, 16) : '–']
+  ];
+  $('drBody').innerHTML =
+    '<dl class="dl">' + rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('') + '</dl>' +
+    (r.unterschrift
+      ? `<div class="sig-box"><div class="lb">Unterschrift Kunde</div><img src="${esc(r.unterschrift)}" alt="Unterschrift"></div>`
+      : `<div class="sig-box"><div class="lb">Unterschrift Kunde</div><p style="font-size:12.5px;color:var(--ink-3)">Keine Unterschrift erfasst.</p></div>`);
+  $('scrim').classList.add('on');
+  $('drawer').classList.add('on');
+  $('drawer').setAttribute('aria-hidden', 'false');
+}
+
+function closeDrawer() {
+  $('scrim').classList.remove('on');
+  $('drawer').classList.remove('on');
+  $('drawer').setAttribute('aria-hidden', 'true');
+  drawerId = null;
+}
+
+function printReport() {
+  const r = rapporte.find(x => Number(x.id) === drawerId);
+  if (!r) return;
+  const line = (k, v) => `<tr><td style="padding:7px 0;color:#6B7280;width:170px;border-bottom:1px solid #E5E8EC">${k}</td><td style="padding:7px 0;font-weight:600;border-bottom:1px solid #E5E8EC">${v}</td></tr>`;
+  const rows = [
+    ['Datum', dmy(r.datum)],
+    ['Mitarbeitende', esc(r.mitarbeiter)],
+    ['Kunde', esc(r.kunde)],
+    ['Adresse', esc(r.strasse) + ', ' + esc(r.ort)],
+    ['Auftrags-Nr.', r.auftrag_nr ? esc(r.auftrag_nr) : '–'],
+    ['Einsatzart', esc(r.einsatzart)],
+    ['Arbeitszeit', hm(r.von) + ' – ' + hm(r.bis)],
+    ['Pause', nf(r.pause_min) + ' Min.'],
+    ['Nettostunden', nf(r.netto_h, 2) + ' h']
+  ].map(([k, v]) => line(k, v)).join('');
+
+  $('printArea').innerHTML = `
+    <div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#14161A;max-width:700px;margin:0 auto">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;border-bottom:2px solid #16181D;padding-bottom:14px;margin-bottom:22px">
+        <div>
+          <div style="font-size:21px;font-weight:800;letter-spacing:-.4px">Arbeitsrapport</div>
+          <div style="font-size:12px;color:#6B7280;margin-top:3px">Rapport-Nr. ${esc(r.id)}${r.erfasst_am ? ' · erfasst am ' + dmy(r.erfasst_am) : ''}</div>
+        </div>
+        <div style="text-align:right;font-size:12px;color:#6B7280;line-height:1.5">
+          <div style="font-weight:700;color:#14161A;font-size:13px">CUPI 24 GmbH</div>
+          Sicherheits- und Verkehrsdienst
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px">${rows}</table>
+      ${r.bemerkung ? `<div style="margin-top:20px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;font-weight:700;margin-bottom:5px">Bemerkung</div><div style="font-size:14px">${esc(r.bemerkung)}</div></div>` : ''}
+      <div style="margin-top:38px;padding-top:16px;border-top:1px solid #E5E8EC">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;font-weight:700;margin-bottom:8px">Unterschrift Kunde</div>
+        ${r.unterschrift
+          ? `<img src="${esc(r.unterschrift)}" style="max-height:100px;max-width:280px;display:block">`
+          : '<div style="height:58px;border-bottom:1px solid #14161A;max-width:280px"></div>'}
+        <div style="font-size:13px;margin-top:7px">${r.unterzeichner ? esc(r.unterzeichner) : ''}</div>
+      </div>
+    </div>`;
+  window.print();
+}
+
+// ══════════════════════════════════════════ START
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+$('gPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+$('gName').addEventListener('keydown', e => { if (e.key === 'Enter') $('gPass').focus(); });
+
+document.title = APP_NAME;
+$('gateWm').textContent = APP_NAME;
+$('sideWm').textContent = APP_NAME;
+
+if (token && me) {
+  enter();
+  const v = location.hash.replace('#', '');
+  if (TITLES[v]) go(v);
+}
+</script>
+</body>
+</html>
