@@ -15,12 +15,14 @@ $id = (int)($input['id'] ?? 0);
 $name = trim((string)($input['name'] ?? ''));
 $strasse = trim((string)($input['strasse'] ?? ''));
 $ort = trim((string)($input['ort'] ?? ''));
+$telefon = trim((string)($input['telefon'] ?? ''));
+$email = trim((string)($input['email'] ?? '')) ?: null;
 
-if ($id <= 0 || $name === '' || $strasse === '' || $ort === '') {
-    json_response(['status' => 'error', 'message' => 'Name, Strasse und Ort erforderlich'], 400);
+if ($id <= 0 || $name === '' || $strasse === '' || $ort === '' || $telefon === '') {
+    json_response(['status' => 'error', 'message' => 'Name, Strasse, Ort und Telefon erforderlich'], 400);
 }
 
-$stmt = db()->prepare('UPDATE kunden SET name = ?, strasse = ?, ort = ? WHERE id = ?');
-$stmt->execute([$name, $strasse, $ort, $id]);
+$stmt = db()->prepare('UPDATE kunden SET name = ?, strasse = ?, ort = ?, telefon = ?, email = ? WHERE id = ?');
+$stmt->execute([$name, $strasse, $ort, $telefon, $email, $id]);
 
 json_response(['status' => 'ok']);

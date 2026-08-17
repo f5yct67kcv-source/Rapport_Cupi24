@@ -14,12 +14,14 @@ $input = json_decode(file_get_contents('php://input'), true) ?? [];
 $name = trim((string)($input['name'] ?? ''));
 $strasse = trim((string)($input['strasse'] ?? ''));
 $ort = trim((string)($input['ort'] ?? ''));
+$telefon = trim((string)($input['telefon'] ?? ''));
+$email = trim((string)($input['email'] ?? '')) ?: null;
 
-if ($name === '' || $strasse === '' || $ort === '') {
-    json_response(['status' => 'error', 'message' => 'Name, Strasse und Ort erforderlich'], 400);
+if ($name === '' || $strasse === '' || $ort === '' || $telefon === '') {
+    json_response(['status' => 'error', 'message' => 'Name, Strasse, Ort und Telefon erforderlich'], 400);
 }
 
-$stmt = db()->prepare('INSERT INTO kunden (name, strasse, ort) VALUES (?, ?, ?)');
-$stmt->execute([$name, $strasse, $ort]);
+$stmt = db()->prepare('INSERT INTO kunden (name, strasse, ort, telefon, email) VALUES (?, ?, ?, ?, ?)');
+$stmt->execute([$name, $strasse, $ort, $telefon, $email]);
 
 json_response(['status' => 'ok', 'id' => (int)db()->lastInsertId()]);

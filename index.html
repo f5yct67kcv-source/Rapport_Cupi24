@@ -383,11 +383,8 @@ tr:hover td { background: var(--accent-light); }
     <div class="card">
       <div class="card-title">Kunden verwalten</div>
       <div id="kundenChipList"></div>
-      <div class="new-ma-row" style="flex-wrap:wrap">
-        <input type="text" id="newKundeName" placeholder="Name..." style="min-width:120px">
-        <input type="text" id="newKundeStrasse" placeholder="Strasse..." style="min-width:120px">
-        <input type="text" id="newKundeOrt" placeholder="Ort..." style="min-width:120px" onkeydown="if(event.key==='Enter')addKunde()">
-        <button class="btn btn-green btn-sm" onclick="addKunde()">+ Hinzufügen</button>
+      <div style="margin-top:10px">
+        <button class="btn btn-green btn-sm" onclick="openKundeAddModal()">+ Kunde hinzufügen</button>
       </div>
     </div>
   </div>
@@ -605,22 +602,63 @@ tr:hover td { background: var(--accent-light); }
   <div class="modal" style="max-width:380px">
     <h3>Kunde bearbeiten</h3>
     <div class="field" style="margin-top:10px">
-      <label>Name</label>
+      <label>Name <span class="req">*</span></label>
       <input type="text" id="kundeEditName">
     </div>
     <div class="field">
-      <label>Strasse</label>
+      <label>Strasse <span class="req">*</span></label>
       <input type="text" id="kundeEditStrasse">
     </div>
     <div class="field">
-      <label>Ort</label>
+      <label>Ort / PLZ <span class="req">*</span></label>
       <input type="text" id="kundeEditOrt">
     </div>
+    <div class="field">
+      <label>Telefon <span class="req">*</span></label>
+      <input type="text" id="kundeEditTelefon">
+    </div>
+    <div class="field">
+      <label>E-Mail</label>
+      <input type="email" id="kundeEditEmail">
+    </div>
+    <div class="err-msg" id="kundeEditError" style="display:none;margin-bottom:6px"></div>
     <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px" onclick="saveKundeEdit()">Speichern</button>
     <div class="btn-row" style="margin-top:16px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeKundeDetailModal()">Schliessen</button>
     </div>
     <button class="btn btn-red" style="width:100%;margin-top:10px" onclick="confirmDeleteKunde()">Kunde entfernen</button>
+  </div>
+</div>
+
+<!-- KUNDE HINZUFUEGEN MODAL -->
+<div class="modal-overlay" id="kundeAddModal">
+  <div class="modal" style="max-width:380px">
+    <h3>Kunde hinzufügen</h3>
+    <div class="field" style="margin-top:10px">
+      <label>Name <span class="req">*</span></label>
+      <input type="text" id="newKundeName">
+    </div>
+    <div class="field">
+      <label>Strasse <span class="req">*</span></label>
+      <input type="text" id="newKundeStrasse">
+    </div>
+    <div class="field">
+      <label>Ort / PLZ <span class="req">*</span></label>
+      <input type="text" id="newKundeOrt">
+    </div>
+    <div class="field">
+      <label>Telefon <span class="req">*</span></label>
+      <input type="text" id="newKundeTelefon">
+    </div>
+    <div class="field">
+      <label>E-Mail</label>
+      <input type="email" id="newKundeEmail" onkeydown="if(event.key==='Enter')addKunde()">
+    </div>
+    <div class="err-msg" id="kundeAddError" style="display:none;margin-bottom:6px"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="addKunde()">Kunde anlegen</button>
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeKundeAddModal()">Abbrechen</button>
+    </div>
   </div>
 </div>
 
@@ -1340,14 +1378,24 @@ function renderKundenList(){
        </div>`).join('') : `<div class="empty"><div class="ico">🏢</div><p>${t('no-data')}</p></div>`;
   });
 }
+function openKundeAddModal(){
+  ['newKundeName','newKundeStrasse','newKundeOrt','newKundeTelefon','newKundeEmail'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('kundeAddError').style.display = 'none';
+  document.getElementById('kundeAddModal').classList.add('show');
+}
+function closeKundeAddModal(){ document.getElementById('kundeAddModal').classList.remove('show'); }
 function addKunde(){
-  const nameInp=document.getElementById('newKundeName'), strasseInp=document.getElementById('newKundeStrasse'), ortInp=document.getElementById('newKundeOrt');
-  const name=nameInp.value.trim(), strasse=strasseInp.value.trim(), ort=ortInp.value.trim();
-  if(!name||!strasse||!ort){showToast('Name, Strasse und Ort erforderlich.');return;}
-  apiCall('kunden_create.php',{method:'POST',body:{name,strasse,ort}}).then(({ok,data})=>{
-    if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
-    nameInp.value='';strasseInp.value='';ortInp.value='';
-    renderKundenList();loadKundenOptions();showToast('✓ Kunde hinzugefügt.');
+  const errEl = document.getElementById('kundeAddError');
+  errEl.style.display = 'none';
+  const name=document.getElementById('newKundeName').value.trim();
+  const strasse=document.getElementById('newKundeStrasse').value.trim();
+  const ort=document.getElementById('newKundeOrt').value.trim();
+  const telefon=document.getElementById('newKundeTelefon').value.trim();
+  const email=document.getElementById('newKundeEmail').value.trim();
+  if(!name||!strasse||!ort||!telefon){errEl.textContent='Name, Strasse, Ort und Telefon erforderlich.';errEl.style.display='';return;}
+  apiCall('kunden_create.php',{method:'POST',body:{name,strasse,ort,telefon,email}}).then(({ok,data})=>{
+    if(!ok||data.status!=='ok'){errEl.textContent=data.message||'Fehler.';errEl.style.display='';return;}
+    closeKundeAddModal();renderKundenList();loadKundenOptions();showToast('✓ Kunde hinzugefügt.');
   });
 }
 function showKundeDetail(i){
@@ -1357,17 +1405,24 @@ function showKundeDetail(i){
   document.getElementById('kundeEditName').value = k.name;
   document.getElementById('kundeEditStrasse').value = k.strasse;
   document.getElementById('kundeEditOrt').value = k.ort;
+  document.getElementById('kundeEditTelefon').value = k.telefon || '';
+  document.getElementById('kundeEditEmail').value = k.email || '';
+  document.getElementById('kundeEditError').style.display = 'none';
   document.getElementById('kundeDetailModal').classList.add('show');
 }
 function closeKundeDetailModal(){document.getElementById('kundeDetailModal').classList.remove('show');kundeDetailTarget=null;}
 function saveKundeEdit(){
   if(!kundeDetailTarget) return;
+  const errEl = document.getElementById('kundeEditError');
+  errEl.style.display = 'none';
   const name=document.getElementById('kundeEditName').value.trim();
   const strasse=document.getElementById('kundeEditStrasse').value.trim();
   const ort=document.getElementById('kundeEditOrt').value.trim();
-  if(!name||!strasse||!ort){showToast('Name, Strasse und Ort erforderlich.');return;}
-  apiCall('kunden_update.php',{method:'POST',body:{id:kundeDetailTarget,name,strasse,ort}}).then(({ok,data})=>{
-    if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
+  const telefon=document.getElementById('kundeEditTelefon').value.trim();
+  const email=document.getElementById('kundeEditEmail').value.trim();
+  if(!name||!strasse||!ort||!telefon){errEl.textContent='Name, Strasse, Ort und Telefon erforderlich.';errEl.style.display='';return;}
+  apiCall('kunden_update.php',{method:'POST',body:{id:kundeDetailTarget,name,strasse,ort,telefon,email}}).then(({ok,data})=>{
+    if(!ok||data.status!=='ok'){errEl.textContent=data.message||'Fehler.';errEl.style.display='';return;}
     closeKundeDetailModal();renderKundenList();loadKundenOptions();showToast('✓ Gespeichert.');
   });
 }
