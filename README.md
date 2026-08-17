@@ -38,6 +38,22 @@ backend/
 das nicht geschehen ist, zeigt der Bereich „Planung" einen entsprechenden
 Hinweis; alle uebrigen Bereiche arbeiten unveraendert weiter.
 
+**Die Datei enthaelt zwei Teile — genau einen davon ausfuehren:**
+
+- **Teil A**, wenn `schema_planung.sql` noch nie gelaufen ist: der ganze
+  obere Block (objekte, masterschichten, feiertage, einsaetze,
+  einsatz_zuteilung).
+- **Teil B**, wenn die erste Fassung vom 17.08. bereits lief (also
+  `einsaetze` und `einsatz_zuteilung` schon bestehen): die drei neuen
+  Tabellen anlegen und danach die auskommentierten ALTER-Befehle am Dateiende
+  ausfuehren.
+
+Danach im Dashboard unter **Planung → Übersicht → Feiertage** einmal pro Jahr
+„Jahr eintragen" druecken. Der Kalender ist Kanton Solothurn, Quelle steht in
+der Liste. Er markiert Tage — ueber Zuschlaege oder Entschaedigung sagt er
+ausdruecklich nichts aus (siehe GAV-AUS-003 und GAV-AUS-006 im
+Projekt-Repository).
+
 Der Produktname des Dashboards steht noch nicht fest (Arbeitstitel „Cockpit",
 siehe OP-18). Er haengt an der Konstante `APP_NAME` am Anfang des Skriptblocks
 in `dashboard.html` — eine Zeile aendern genuegt.

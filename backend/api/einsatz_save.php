@@ -38,7 +38,9 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $datum)) {
 if (!preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $von) || !preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $bis)) {
     json_response(['status' => 'error', 'message' => 'Zeiten im Format HH:MM erforderlich'], 400);
 }
-if (!in_array($status, ['geplant', 'bestaetigt', 'abgesagt'], true)) {
+// provisorisch: aus einer Masterschicht "auf Abruf" entstanden, zaehlt nicht
+// als offene Stelle (ENT-021).
+if (!in_array($status, ['geplant', 'bestaetigt', 'abgesagt', 'provisorisch'], true)) {
     json_response(['status' => 'error', 'message' => 'unbekannter Status'], 400);
 }
 if ($bedarf < 0 || $bedarf > 99) {

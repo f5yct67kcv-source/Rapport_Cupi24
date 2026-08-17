@@ -367,6 +367,64 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ma-pick .leer { padding: 14px 12px; font-size: 12.5px; color: var(--ink-3); }
 .pick-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--ink-3); }
 
+/* Reiter innerhalb eines Bereichs */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 18px; overflow-x: auto; }
+.tab { border: none; background: transparent; padding: 10px 14px 9px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tab:hover { color: var(--ink); }
+.tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+.ptab { display: none; }
+.ptab.on { display: block; }
+
+/* Monatsmatrix — erste Spalte bleibt stehen, die Tage scrollen in der Karte */
+.mx { overflow-x: auto; }
+.mx table { border-collapse: separate; border-spacing: 0; }
+.mx th, .mx td { border-bottom: 1px solid var(--line-soft); }
+.mx th.obj, .mx td.obj {
+  position: sticky; left: 0; z-index: 2; background: var(--surface);
+  min-width: 208px; max-width: 240px; border-right: 1px solid var(--line);
+  padding: 8px 14px; text-align: left;
+}
+.mx thead th { background: #FBFCFD; padding: 6px 3px; font-size: 10px; font-weight: 700; color: var(--ink-3); text-align: center; }
+.mx thead th.obj { background: #FBFCFD; z-index: 3; }
+.mx thead th .wd { display: block; font-size: 9px; font-weight: 600; opacity: .75; }
+.mx thead th.we { color: var(--ink-2); background: #F3F5F8; }
+.mx thead th.fei { color: var(--warn); background: var(--warn-soft); }
+.mx thead th.heute { color: var(--accent); background: var(--accent-soft); }
+.mx td.d { text-align: center; padding: 3px 2px; }
+.mx td.d.we { background: #FBFCFD; }
+.mx td.d.fei { background: #FDFAF2; }
+.mx .zelle { display: inline-flex; width: 21px; height: 21px; border-radius: 5px; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; border: none; padding: 0; font-family: inherit; cursor: pointer; }
+.mx .z-voll { background: var(--pos-soft); color: var(--pos); }
+.mx .z-teil { background: var(--warn-soft); color: var(--warn); }
+.mx .z-leer { background: var(--neg-soft); color: var(--neg); }
+.mx .z-prov { background: var(--accent-soft); color: var(--accent); }
+.mx .z-ab   { background: var(--line-soft); color: var(--ink-3); text-decoration: line-through; }
+.mx .z-nix  { color: #D8DCE2; cursor: default; }
+.mx td.obj b { display: block; font-size: 13px; font-weight: 620; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mx td.obj span { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.legende { display: flex; flex-wrap: wrap; gap: 14px; padding: 12px 18px; border-top: 1px solid var(--line-soft); font-size: 11.5px; color: var(--ink-3); }
+.legende i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+/* Masterschichten in der Objekt-Schublade */
+.ms-zeile { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 11px 13px; margin-bottom: 8px; }
+.ms-zeile.aus { opacity: .55; }
+.ms-kopf { display: flex; align-items: center; gap: 8px; }
+.ms-kopf b { font-size: 13.5px; font-weight: 620; flex: 1; min-width: 0; }
+.ms-meta { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; line-height: 1.55; }
+.ms-tage { display: flex; gap: 3px; margin-top: 7px; flex-wrap: wrap; }
+.ms-tage span { font-size: 10px; font-weight: 700; width: 26px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; background: var(--line-soft); color: var(--ink-3); }
+.ms-tage span.hat { background: var(--accent-soft); color: var(--accent); }
+.ms-tage span.fei { background: var(--warn-soft); color: var(--warn); }
+
+/* Vorschau vor Massenbefehlen */
+.vs-kopf { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.vs-liste { border: 1px solid var(--line); border-radius: var(--r-sm); max-height: 260px; overflow-y: auto; }
+.vs-liste .z { display: flex; align-items: baseline; gap: 9px; padding: 6px 11px; border-bottom: 1px solid var(--line-soft); font-size: 12.5px; }
+.vs-liste .z:last-child { border-bottom: none; }
+.vs-liste .z .dt { font-variant-numeric: tabular-nums; font-weight: 620; white-space: nowrap; }
+.vs-liste .z .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vs-liste .z .zt { color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
 /* ══════════════════════════════════════════ RESPONSIV */
 @media (max-width: 1180px) {
   .g-kpi { grid-template-columns: repeat(2, 1fr); }
@@ -466,11 +524,6 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
         <svg class="i" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
         Kunden
       </button>
-      <button class="nav-item" id="nav-objekte" onclick="go('objekte')">
-        <svg class="i" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        Objekte
-        <span class="tag">bald</span>
-      </button>
     </nav>
 
     <div class="side-foot">
@@ -557,6 +610,41 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 
       <!-- ─────────── PLANUNG ─────────── -->
       <section class="view" id="view-planung">
+        <div class="tabs">
+          <button class="tab on" id="ptab-uebersicht" onclick="goTab('uebersicht')">Übersicht</button>
+          <button class="tab" id="ptab-einsaetze" onclick="goTab('einsaetze')">Einsätze</button>
+          <button class="tab" id="ptab-objekte" onclick="goTab('objekte')">Objekte</button>
+          <button class="tab" id="ptab-tag" onclick="goTab('tag')">Tagesplan</button>
+        </div>
+
+        <!-- ── Reiter: Monatsübersicht ── -->
+        <div class="ptab on" id="pv-uebersicht">
+          <div class="bar-tools">
+            <input class="inp" type="month" id="mxM" style="width:auto" onchange="renderMatrix()">
+            <button class="btn btn-quiet btn-sm" onclick="mxSchieben(-1)">‹ Vormonat</button>
+            <button class="btn btn-quiet btn-sm" onclick="mxHeute()">Heute</button>
+            <button class="btn btn-quiet btn-sm" onclick="mxSchieben(1)">Folgemonat ›</button>
+            <div class="sp" style="flex:1"></div>
+            <button class="btn btn-plain btn-sm" onclick="openFeiertage()">
+              <svg class="i i-sm" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>
+              <span class="lbl">Feiertage</span>
+            </button>
+          </div>
+          <div class="card">
+            <div class="card-bd flush"><div class="mx" id="mxTable"></div></div>
+            <div class="legende">
+              <span><i style="background:var(--pos-soft)"></i>voll besetzt</span>
+              <span><i style="background:var(--warn-soft)"></i>teilweise besetzt</span>
+              <span><i style="background:var(--neg-soft)"></i>niemand eingeteilt</span>
+              <span><i style="background:var(--accent-soft)"></i>provisorisch (auf Abruf)</span>
+              <span><i style="background:var(--line-soft)"></i>abgesagt</span>
+              <span style="margin-left:auto">Die Zahl in der Zelle ist die Anzahl eingeteilter Personen.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Reiter: Einsätze ── -->
+        <div class="ptab" id="pv-einsaetze">
         <div class="grid g-kpi" id="plKpi"></div>
 
         <div class="bar-tools">
@@ -589,6 +677,37 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
           </button>
         </div>
         <div class="card"><div class="card-bd flush"><div class="tw" id="plTable"></div></div></div>
+        </div>
+
+        <!-- ── Reiter: Objekte (Daueraufträge) ── -->
+        <div class="ptab" id="pv-objekte">
+          <div class="bar-tools">
+            <div class="search">
+              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="inp" type="search" id="oQ" placeholder="Objekt, Kunde oder Ort …" oninput="renderObjekte()">
+            </div>
+            <label class="check" style="font-size:12.5px"><input type="checkbox" id="oInaktiv" onchange="renderObjekte()"> auch stillgelegte</label>
+            <div class="sp" style="flex:1"></div>
+            <button class="btn btn-primary btn-sm" onclick="openObjektNeu()">
+              <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Neues Objekt
+            </button>
+          </div>
+          <div class="card"><div class="card-bd flush"><div class="tw" id="oTable"></div></div></div>
+        </div>
+
+        <!-- ── Reiter: Tagesplan ── -->
+        <div class="ptab" id="pv-tag">
+          <div class="bar-tools">
+            <input class="inp" type="date" id="tgD" style="width:auto" onchange="renderTagesplan()">
+            <button class="btn btn-quiet btn-sm" onclick="tgSchieben(-1)">‹ Vortag</button>
+            <button class="btn btn-quiet btn-sm" onclick="tgHeute()">Heute</button>
+            <button class="btn btn-quiet btn-sm" onclick="tgSchieben(1)">Folgetag ›</button>
+            <div class="sp" style="flex:1"></div>
+            <label class="check" style="font-size:12.5px"><input type="checkbox" id="tgNurOffen" onchange="renderTagesplan()"> nur unbesetzte</label>
+          </div>
+          <div id="tgBody"></div>
+        </div>
       </section>
 
       <!-- ─────────── RAPPORTE ─────────── -->
@@ -651,22 +770,6 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
           </button>
         </div>
         <div class="card"><div class="card-bd flush"><div class="tw" id="kuTable"></div></div></div>
-      </section>
-
-      <!-- ─────────── OBJEKTE ─────────── -->
-      <section class="view" id="view-objekte">
-        <div class="card"><div class="card-bd">
-          <div class="empty">
-            <div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-            <h3>Objekte sind noch nicht eingerichtet</h3>
-            <p>
-              Objekte werden als eigene Werkzeug-Spur geführt. Bevor hier etwas entsteht,
-              muss geklärt sein, was ein Objekt fachlich ist und wie es zu Kunde, Einsatz
-              und Rapport steht. Der Menüpunkt steht bewusst schon hier, damit die Struktur
-              vollständig sichtbar ist.
-            </p>
-          </div>
-        </div></div>
       </section>
 
     </div>
@@ -803,6 +906,146 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
   </div>
 </div>
 
+<!-- Objekt anlegen oder ändern -->
+<div class="dlg-scrim" id="dlgObNeu">
+  <div class="dlg">
+    <div class="dlg-hd">
+      <h2 id="obNeuTitel">Neues Objekt</h2>
+      <p>Ein Objekt ist der feste Einsatzort eines Dauerauftrags. Bezeichnung, Kunde und Ort sind Pflicht.</p>
+    </div>
+    <div class="dlg-bd">
+      <div class="msg-err" id="obNeuErr" style="display:none"></div>
+      <div class="form-grid">
+        <div class="f wide"><label for="obName">Bezeichnung *</label><input class="inp" id="obName" placeholder="z. B. Einkaufszentrum Nord"></div>
+        <div class="f wide"><label for="obKunde_name">Kunde *</label><input class="inp" id="obKunde_name" list="dlKunden" autocomplete="off"></div>
+        <div class="f wide"><label for="obStrasse">Strasse</label><input class="inp" id="obStrasse"></div>
+        <div class="f"><label for="obOrt">PLZ / Ort *</label><input class="inp" id="obOrt"></div>
+        <div class="f"><label for="obKanton">Kanton</label><input class="inp" id="obKanton" value="SO" maxlength="2" style="text-transform:uppercase"></div>
+        <div class="f wide"><label for="obEinsatzart">Einsatzart</label><input class="inp" id="obEinsatzart" value="Revierdienst"></div>
+        <div class="f wide"><label for="obBemerkung">Bemerkung</label><textarea class="inp" id="obBemerkung" rows="2" style="min-height:56px"></textarea></div>
+        <div class="f wide"><label class="check"><input type="checkbox" id="obAktiv" checked> Objekt ist in Betrieb</label></div>
+      </div>
+      <p class="zone-note" style="margin-top:4px">Der Kanton bestimmt, welche Feiertage für dieses Objekt gelten.</p>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgObNeu')">Abbrechen</button>
+      <button class="btn btn-primary" id="obNeuBtn" onclick="saveObjekt()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Masterschicht anlegen oder ändern -->
+<div class="dlg-scrim" id="dlgMs">
+  <div class="dlg wide">
+    <div class="dlg-hd">
+      <h2 id="msTitel">Neue Masterschicht</h2>
+      <p id="msText">Eine Vorlage, aus der die einzelnen Schichten entstehen.</p>
+    </div>
+    <div class="dlg-bd">
+      <div class="ki-hint web" id="msStichtagHint" style="display:none">
+        <svg class="i i-sm" viewBox="0 0 24 24" style="margin-top:1px;flex:none"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+        <span id="msStichtagText"></span>
+      </div>
+      <div class="msg-err" id="msErr" style="display:none"></div>
+      <div class="form-grid">
+        <div class="f wide"><label for="msName">Bezeichnung *</label><input class="inp" id="msName" placeholder="z. B. Schliessrunde"></div>
+        <div class="f"><label for="msKuerzel">Kürzel</label><input class="inp" id="msKuerzel" maxlength="10" placeholder="SR"></div>
+        <div class="f"><label for="msArt">Art</label><select class="inp" id="msArt"><option value="arbeit">Arbeit</option><option value="fahrtzeit">Fahrtzeit</option></select></div>
+        <div class="f"><label for="msVon">Von *</label><input class="inp" id="msVon" type="time" onchange="msRechne()"></div>
+        <div class="f"><label for="msBis">Bis *</label><input class="inp" id="msBis" type="time" onchange="msRechne()"></div>
+        <div class="f"><label for="msPauseMin">Pause (Minuten)</label><input class="inp" id="msPauseMin" type="number" min="0" max="1440" value="0" oninput="msRechne()"></div>
+        <div class="f"><label for="msArbeitszeit">Effektive Arbeitszeit (h)</label><input class="inp" id="msArbeitszeit" type="number" step="0.01" min="0"></div>
+        <div class="f wide"><label class="check"><input type="checkbox" id="msAufAbruf"> Nur auf Abruf (z. B. wetterabhängig) — erzeugte Schichten sind provisorisch</label></div>
+        <div class="f wide"><label for="msRhythmus">Rhythmus</label>
+          <select class="inp" id="msRhythmus" onchange="msRhythmusUm()">
+            <option value="woche">Wochenmuster — Anzahl je Wochentag</option>
+            <option value="intervall">Intervall — jeden n-ten Tag</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="msWoche">
+        <label style="display:block;font-size:11px;font-weight:650;color:var(--ink-2);letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px">Benötigte Mitarbeitende je Tag</label>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <div class="f" style="margin:0"><label for="msBedarf_mo">Mo</label><input class="inp" id="msBedarf_mo" type="number" min="0" max="99" value="0"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_di">Di</label><input class="inp" id="msBedarf_di" type="number" min="0" max="99" value="0"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_mi">Mi</label><input class="inp" id="msBedarf_mi" type="number" min="0" max="99" value="0"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_do">Do</label><input class="inp" id="msBedarf_do" type="number" min="0" max="99" value="0"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_fr">Fr</label><input class="inp" id="msBedarf_fr" type="number" min="0" max="99" value="0"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_sa">Sa</label><input class="inp" id="msBedarf_sa" type="number" min="0" max="99" value="0"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_so">So</label><input class="inp" id="msBedarf_so" type="number" min="0" max="99" value="0"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_feiertag" style="color:var(--warn)">Feiertag</label><input class="inp" id="msBedarf_feiertag" type="number" min="0" max="99" value="0"></div>
+        </div>
+        <p class="zone-note" style="margin-top:8px">An einem Feiertag gilt der Feiertagswert <b>statt</b> des Wochentagswerts. Das ist eine Bedarfsangabe — keine Aussage über Zuschläge.</p>
+      </div>
+
+      <div id="msIntervall" style="display:none">
+        <div class="form-grid">
+          <div class="f"><label for="msIntervallTage">Alle wie viele Tage?</label><input class="inp" id="msIntervallTage" type="number" min="1" max="365" value="2"></div>
+          <div class="f"><label for="msIntervallStart">Erster Tag</label><input class="inp" id="msIntervallStart" type="date"></div>
+          <div class="f wide"><label for="msBedarf_intervall">Benötigte Mitarbeitende</label><input class="inp" id="msBedarf_intervall" type="number" min="0" max="99" value="1"></div>
+        </div>
+        <p class="zone-note">Gerechnet wird strikt jeder n-te Tag ab dem ersten Tag — ohne Rücksicht auf Wochentage und Feiertage.</p>
+      </div>
+
+      <div class="form-grid" style="margin-top:16px">
+        <div class="f"><label for="msGueltigAb" id="msGueltigAbLbl">Gültig ab *</label><input class="inp" id="msGueltigAb" type="date"></div>
+        <div class="f"><label for="msGueltigBis">Gültig bis (leer = offen)</label><input class="inp" id="msGueltigBis" type="date"></div>
+      </div>
+      <p class="zone-note" style="margin-top:-6px">Für saisonale Muster hier den Zeitraum eingrenzen, z. B. April bis Oktober.</p>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgMs')">Abbrechen</button>
+      <button class="btn btn-primary" id="msBtn" onclick="saveMs()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vorschau vor dem Erzeugen von Schichten -->
+<div class="dlg-scrim" id="dlgVorschau">
+  <div class="dlg wide">
+    <div class="dlg-hd">
+      <h2>Schichten erzeugen</h2>
+      <p id="vsText">Es wird nichts gespeichert, bevor du unten bestätigst.</p>
+    </div>
+    <div class="dlg-bd">
+      <div class="msg-err" id="vsErr" style="display:none"></div>
+      <div class="form-grid">
+        <div class="f"><label for="vsVon">Von *</label><input class="inp" id="vsVon" type="date" onchange="ladeVorschau()"></div>
+        <div class="f"><label for="vsBis">Bis *</label><input class="inp" id="vsBis" type="date" onchange="ladeVorschau()"></div>
+      </div>
+      <div id="vsInhalt"></div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgVorschau')">Abbrechen</button>
+      <button class="btn btn-primary" id="vsBtn" onclick="schichtenErzeugen()" disabled>Erzeugen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Feiertagskalender -->
+<div class="dlg-scrim" id="dlgFeiertage">
+  <div class="dlg">
+    <div class="dlg-hd">
+      <h2>Feiertage</h2>
+      <p>Kalenderangaben mit Quelle. Sie markieren den Tag — eine Aussage über Zuschläge oder Entschädigung ist das ausdrücklich <b>nicht</b>.</p>
+    </div>
+    <div class="dlg-bd">
+      <div class="msg-err" id="ftErr" style="display:none"></div>
+      <div class="bar-tools" style="margin-bottom:12px">
+        <input class="inp" type="number" id="ftJahr" min="2020" max="2100" style="width:110px">
+        <button class="btn btn-plain btn-sm" onclick="ladeFeiertage()">Anzeigen</button>
+        <div class="sp" style="flex:1"></div>
+        <button class="btn btn-primary btn-sm" onclick="feiertageErzeugen()">Jahr eintragen</button>
+      </div>
+      <div id="ftInhalt"></div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgFeiertage')">Schliessen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Kundennamen für die Eingabehilfe in der Planung -->
 <datalist id="dlKunden"></datalist>
 
@@ -855,10 +1098,19 @@ let rapporte = [];
 let mitarbeiter = [];
 let kunden = [];
 let einsaetze = [];
+let objekte = [];
+let masterschichten = [];   // die des offenen Objekts
+let feiertage = {};         // Datum -> Feiertag, für Matrix und Tagesplan
 let drawerId = null;   // offener Rapport in der Schublade
 let maTarget = null;   // offener Mitarbeitender (Login-Name)
 let kuTarget = null;   // offener Kunde (id)
 let enTarget = null;   // offener Einsatz (id)
+let obTarget = null;   // offenes Objekt (id)
+let msTarget = null;   // offene Masterschicht (id)
+let msModus = 'neu';
+let msAlle = false;    // auch abgelaufene Fassungen zeigen
+let vsObjekt = null;   // Objekt der offenen Vorschau
+let pTab = 'uebersicht';
 let kiMode = 'neu';
 const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email'];
 const MA_LABEL = { personalnummer:'Personalnummer', anrede:'Anrede', vorname:'Vorname', nachname:'Nachname',
@@ -944,8 +1196,7 @@ const TITLES = {
   planung:     ['Planung', 'Geplante Einsätze'],
   rapporte:    ['Rapporte', 'Alle erfassten Einsätze'],
   mitarbeiter: ['Mitarbeitende', 'Stammdaten'],
-  kunden:      ['Kunden', 'Stammdaten'],
-  objekte:     ['Objekte', 'Stammdaten']
+  kunden:      ['Kunden', 'Stammdaten']
 };
 
 function go(view) {
@@ -960,9 +1211,13 @@ function go(view) {
   if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
   if (view === 'kunden' && !kunden.length) loadKunden();
   if (view === 'planung') {
-    // Die Planung braucht ausser den Einsätzen auch Personal (Zuteilung)
-    // und Kunden (Eingabehilfe im Formular).
-    einsaetze.length ? renderPlanung() : loadEinsaetze();
+    // Die Planung braucht ausser den Einsätzen auch Objekte, Feiertage,
+    // Personal (Zuteilung) und Kunden (Eingabehilfe im Formular).
+    if (!$('mxM').value) $('mxM').value = isoTag().slice(0, 7);
+    if (!$('tgD').value) $('tgD').value = isoTag();
+    einsaetze.length ? goTab(pTab) : loadEinsaetze().then(() => goTab(pTab));
+    if (!objekte.length) loadObjekte();
+    if (!Object.keys(feiertage).length) ladeFeiertagMap();
     if (!mitarbeiter.length) loadMitarbeiter();
     if (!kunden.length) loadKunden();
   }
@@ -977,6 +1232,7 @@ function reloadAll() {
   if (mitarbeiter.length) loadMitarbeiter();
   if (kunden.length) loadKunden();
   if (einsaetze.length || $('view-planung').classList.contains('on')) loadEinsaetze();
+  if (objekte.length) loadObjekte();
 }
 
 function loadStats() {
@@ -1028,6 +1284,8 @@ function loadEinsaetze() {
     }
     einsaetze = data.einsaetze || [];
     renderPlanung();
+    if ($('pv-uebersicht').classList.contains('on')) renderMatrix();
+    if ($('pv-tag').classList.contains('on')) renderTagesplan();
   });
 }
 
@@ -1252,7 +1510,10 @@ function renderKunden() {
 // Geplant wird hier, rapportiert wird in der Erfassung. Aus einem Einsatz
 // entsteht bewusst KEIN Rapport — den füllen die Mitarbeitenden von Hand aus.
 const WD = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
-const EN_STATUS = { geplant: ['Geplant', 'chip-n'], bestaetigt: ['Bestätigt', 'chip-p'], abgesagt: ['Abgesagt', 'chip-x'] };
+const EN_STATUS = {
+  geplant: ['Geplant', 'chip-n'], bestaetigt: ['Bestätigt', 'chip-p'],
+  provisorisch: ['Provisorisch', 'chip-a'], abgesagt: ['Abgesagt', 'chip-x']
+};
 const EN_FELDER = ['kunde_name', 'titel', 'strasse', 'ort', 'einsatzart', 'datum', 'von', 'bis', 'bedarf', 'bemerkung'];
 const EN_LABEL = { kunde_name: 'Kunde', titel: 'Bezeichnung', strasse: 'Strasse', ort: 'Arbeitsort',
   einsatzart: 'Einsatzart', datum: 'Datum', von: 'Von', bis: 'Bis', bedarf: 'Anzahl', bemerkung: 'Bemerkung' };
@@ -1358,7 +1619,9 @@ function renderPlanung() {
   renderPlKpi();
 
   const d = pFiltered();
-  if ($('view-planung').classList.contains('on')) {
+  // Die Kopfzeile gehört dem gerade offenen Reiter — sie darf nicht von der
+  // Einsatzliste überschrieben werden, während die Übersicht sichtbar ist.
+  if ($('view-planung').classList.contains('on') && $('pv-einsaetze').classList.contains('on')) {
     const offen = d.reduce((s, e) => s + fehlend(e), 0);
     $('pgCrumb').textContent = `${nf(d.length)} von ${nf(einsaetze.length)} Einsätzen`
       + (offen ? ` · ${nf(offen)} offene ${offen === 1 ? 'Stelle' : 'Stellen'}` : '');
@@ -1613,6 +1876,630 @@ function askDeleteEinsatz() {
       closeDrawer();
       loadEinsaetze().then(() => toast('Einsatz gelöscht.'));
     }));
+}
+
+// ══════════════════════════════════════════ PLANUNG: REITER
+function goTab(t) {
+  pTab = t;
+  document.querySelectorAll('#view-planung .ptab').forEach(v => v.classList.remove('on'));
+  document.querySelectorAll('#view-planung .tab').forEach(b => b.classList.remove('on'));
+  $('pv-' + t).classList.add('on');
+  $('ptab-' + t).classList.add('on');
+  $('pgCrumb').textContent = TAB_CRUMB[t] || '';
+  if (t === 'uebersicht') renderMatrix();
+  if (t === 'einsaetze') renderPlanung();
+  if (t === 'objekte') objekte.length ? renderObjekte() : loadObjekte();
+  if (t === 'tag') renderTagesplan();
+}
+const TAB_CRUMB = {
+  uebersicht: 'Besetzung im Monat',
+  einsaetze:  'Alle geplanten Einsätze',
+  objekte:    'Daueraufträge und ihre Masterschichten',
+  tag:        'Der Tag im Detail'
+};
+
+// ══════════════════════════════════════════ OBJEKTE
+function loadObjekte() {
+  return api('objekt_list.php').then(({ ok, status, data }) => {
+    if (status === 401) return doLogout();
+    if (!ok || data.status !== 'ok') {
+      $('oTable').innerHTML = EMPTY('Objekte nicht verfügbar',
+        esc(data.message || 'Die Objekte konnten nicht geladen werden.') +
+        ' Ist schema_planung.sql in der Datenbank schon ausgeführt worden?');
+      return;
+    }
+    objekte = data.objekte || [];
+    renderObjekte();
+    if ($('pv-uebersicht').classList.contains('on')) renderMatrix();
+  });
+}
+
+function renderObjekte() {
+  const q = ($('oQ').value || '').toLowerCase().trim();
+  const mitInaktiv = $('oInaktiv').checked;
+  const d = objekte.filter(o => (mitInaktiv || o.aktiv) &&
+    (!q || [o.name, o.kunde_name, o.ort, o.strasse].some(f => String(f || '').toLowerCase().includes(q))));
+  if (!d.length) {
+    $('oTable').innerHTML = objekte.length
+      ? EMPTY('Keine Treffer', 'Für diese Suche gibt es keine Objekte.')
+      : EMPTY('Noch keine Objekte', 'Ein Objekt ist der feste Einsatzort eines Dauerauftrags. Mit „Neues Objekt“ das erste anlegen.');
+    return;
+  }
+  $('oTable').innerHTML = `<table><thead><tr>
+      <th>Objekt</th><th>Kunde</th><th>Ort</th><th>Kanton</th><th>Einsatzart</th>
+      <th class="num">Masterschichten</th><th class="num">Std. je Durchgang</th><th>Zustand</th>
+    </tr></thead><tbody>` + d.map(o => `
+      <tr class="click" onclick="openObjekt(${Number(o.id)})">
+        <td class="strong">${esc(o.name)}</td>
+        <td>${esc(o.kunde_name)}</td>
+        <td class="nowrap">${esc(o.ort)}${o.strasse ? `<div class="sec">${esc(o.strasse)}</div>` : ''}</td>
+        <td class="nowrap">${esc(o.kanton)}</td>
+        <td><span class="chip chip-n">${esc(o.einsatzart)}</span></td>
+        <td class="num">${o.masterschichten ? nf(o.masterschichten) : '<span style="color:var(--ink-3)">–</span>'}</td>
+        <td class="num nowrap">${o.masterschichten ? nf(o.stunden_je_einsatz, 2) + ' h' : '<span style="color:var(--ink-3)">–</span>'}</td>
+        <td>${o.aktiv ? '<span class="chip chip-p">in Betrieb</span>' : '<span class="chip chip-n">stillgelegt</span>'}</td>
+      </tr>`).join('') + `</tbody></table>`;
+}
+
+const OB_FELDER = ['name', 'kunde_name', 'strasse', 'ort', 'kanton', 'einsatzart', 'bemerkung'];
+
+function openObjektNeu(o) {
+  obTarget = o ? Number(o.id) : null;
+  $('obNeuTitel').textContent = o ? 'Objekt ändern' : 'Neues Objekt';
+  const vorgabe = { kanton: 'SO', einsatzart: 'Revierdienst' };
+  OB_FELDER.forEach(f => {
+    $('ob' + f[0].toUpperCase() + f.slice(1)).value = o ? (o[f] || '') : (vorgabe[f] || '');
+  });
+  $('obAktiv').checked = o ? !!o.aktiv : true;
+  $('obNeuErr').style.display = 'none';
+  openDlg('dlgObNeu');
+  $('obName').focus();
+}
+
+function saveObjekt() {
+  const err = $('obNeuErr'); err.style.display = 'none';
+  const v = f => ($('ob' + f[0].toUpperCase() + f.slice(1)).value || '').trim();
+  const body = { aktiv: $('obAktiv').checked ? 1 : 0 };
+  OB_FELDER.forEach(f => { body[f] = v(f); });
+  body.kanton = (body.kanton || 'SO').toUpperCase();
+  if (obTarget) body.id = obTarget;
+  if (!body.name || !body.kunde_name || !body.ort) {
+    err.textContent = 'Bezeichnung, Kunde und Ort sind Pflicht.'; err.style.display = ''; return;
+  }
+  const k = kunden.find(x => x.name === body.kunde_name);
+  if (k) body.kunde_id = k.id;
+
+  const b = $('obNeuBtn'); b.disabled = true;
+  api('objekt_save.php', { method: 'POST', body }).then(({ ok, data }) => {
+    b.disabled = false;
+    if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Speichern fehlgeschlagen.'; err.style.display = ''; return; }
+    closeDlg('dlgObNeu');
+    const neu = !obTarget;
+    loadObjekte().then(() => {
+      toast(neu ? 'Objekt angelegt.' : 'Objekt gespeichert.');
+      if (neu) openObjekt(Number(data.id));      // direkt weiter zu den Masterschichten
+      else if (obTarget) openObjekt(obTarget);
+    });
+  });
+}
+
+// ── Schublade: Objekt mit seinen Masterschichten
+function openObjekt(id) {
+  const o = objekte.find(x => Number(x.id) === Number(id));
+  if (!o) { toast('Objekt nicht gefunden — bitte aktualisieren.'); return; }
+  drawerId = null; maTarget = null; kuTarget = null; enTarget = null;
+  obTarget = Number(id);
+
+  $('drTitle').textContent = o.name;
+  $('drBody').innerHTML = `
+    <dl class="dl">
+      <dt>Kunde</dt><dd>${esc(o.kunde_name)}</dd>
+      <dt>Adresse</dt><dd>${o.strasse ? esc(o.strasse) + ', ' : ''}${esc(o.ort)}</dd>
+      <dt>Kanton</dt><dd>${esc(o.kanton)} <span style="color:var(--ink-3);font-weight:400">— bestimmt die Feiertage</span></dd>
+      <dt>Einsatzart</dt><dd>${esc(o.einsatzart)}</dd>
+      <dt>Zustand</dt><dd>${o.aktiv ? 'in Betrieb' : 'stillgelegt'}</dd>
+      ${o.bemerkung ? `<dt>Bemerkung</dt><dd>${esc(o.bemerkung)}</dd>` : ''}
+    </dl>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-plain btn-sm" onclick="openObjektNeu(objekte.find(x=>Number(x.id)===${Number(id)}))">Stammdaten ändern</button>
+      <button class="btn btn-plain btn-sm" onclick="openVorschau(${Number(id)})">Schichten erzeugen …</button>
+    </div>
+
+    <div class="zone" style="margin-top:20px">
+      <div class="zone-hd">Masterschichten</div>
+      <div class="zone-note">Vorlagen, aus denen die einzelnen Schichten entstehen. Eine Änderung gilt immer <b>ab einem Stichtag</b> — bereits erzeugte Schichten bleiben unverändert.</div>
+      <div id="msListe"><div class="sk" style="height:52px"></div></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-primary btn-sm" onclick="openMs('neu')">Masterschicht hinzufügen</button>
+        <button class="btn btn-quiet btn-sm" id="msAlleBtn" onclick="msAlleUm()">Auch abgelaufene zeigen</button>
+      </div>
+    </div>
+
+    <div class="zone danger">
+      <div class="zone-hd">Objekt entfernen</div>
+      <div class="zone-note">Sind bereits Schichten daraus entstanden, wird das Objekt nur stillgelegt — geplante und vergangene Einsätze bleiben unverändert erhalten.</div>
+      <button class="btn btn-danger btn-sm" onclick="askDeleteObjekt()">Entfernen</button>
+    </div>`;
+  $('drFoot').innerHTML = `<button class="btn btn-plain" onclick="closeDrawer()">Schliessen</button>`;
+  msAlle = false;
+  loadMasterschichten();
+  showDrawer();
+}
+
+function msAlleUm() { msAlle = !msAlle; loadMasterschichten(); }
+
+function loadMasterschichten() {
+  if (!obTarget) return;
+  return api('masterschicht_list.php?objekt_id=' + obTarget + (msAlle ? '&alle=1' : '')).then(({ ok, data }) => {
+    if (!$('msListe')) return;
+    if (!ok || data.status !== 'ok') { $('msListe').innerHTML = `<p class="zone-note">${esc(data.message || 'Nicht ladbar.')}</p>`; return; }
+    masterschichten = data.masterschichten || [];
+    const btn = $('msAlleBtn');
+    if (btn) btn.textContent = msAlle ? 'Nur laufende zeigen' : 'Auch abgelaufene zeigen';
+    renderMsListe();
+  });
+}
+
+const WD_KURZ = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+
+function renderMsListe() {
+  if (!masterschichten.length) {
+    $('msListe').innerHTML = `<p class="zone-note" style="margin:0">Noch keine Masterschicht. Ohne Vorlage entsteht an diesem Objekt keine Schicht.</p>`;
+    return;
+  }
+  $('msListe').innerHTML = masterschichten.map(m => {
+    const tage = m.rhythmus === 'woche'
+      ? `<div class="ms-tage">` + WD_KURZ.map((w, i) => {
+          const n = m['bedarf_' + ['mo','di','mi','do','fr','sa','so'][i]];
+          return `<span class="${n ? 'hat' : ''}" title="${w}: ${n}">${n ? w + ' ' + n : w}</span>`;
+        }).join('') + `<span class="${m.bedarf_feiertag ? 'fei' : ''}" title="Feiertag: ${m.bedarf_feiertag}" style="width:auto;padding:0 7px">Fei ${m.bedarf_feiertag}</span></div>`
+      : `<div class="ms-meta">Jeden ${m.intervall_tage}. Tag ab ${dmy(m.intervall_start)} · ${m.bedarf_intervall} ${m.bedarf_intervall === 1 ? 'Person' : 'Personen'}</div>`;
+    return `<div class="ms-zeile${m.laeuft ? '' : ' aus'}">
+      <div class="ms-kopf">
+        ${m.kuerzel ? `<span class="chip chip-a">${esc(m.kuerzel)}</span>` : ''}
+        <b>${esc(m.name)}</b>
+        ${m.art === 'fahrtzeit' ? '<span class="chip chip-n">Fahrtzeit</span>' : ''}
+        ${m.auf_abruf ? '<span class="chip chip-w">auf Abruf</span>' : ''}
+        ${m.laeuft ? '' : '<span class="chip chip-n">nicht aktiv</span>'}
+      </div>
+      <div class="ms-meta">
+        ${hm(m.von)}–${hm(m.bis)}${hm(m.bis) <= hm(m.von) ? ' (Folgetag)' : ''}
+        ${m.pause_min ? ` · Pause ${nf(m.pause_min)} Min.` : ''}
+        · <b>${nf(m.arbeitszeit_h, 2)} h</b>
+        <br>gültig ab ${dmy(m.gueltig_ab)}${m.gueltig_bis ? ` bis ${dmy(m.gueltig_bis)}` : ''}
+      </div>
+      ${tage}
+      <div style="display:flex;gap:7px;margin-top:9px">
+        <button class="btn btn-plain btn-sm" onclick="openMs('aenderung',${m.id})">Ändern ab …</button>
+        <button class="btn btn-quiet btn-sm" onclick="openMs('korrektur',${m.id})">Beschriftung</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-quiet btn-sm" onclick="askDeleteMs(${m.id})">Entfernen</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function askDeleteObjekt() {
+  const id = obTarget;
+  if (!id) return;
+  askConfirm('Objekt entfernen?',
+    'Wurden daraus schon Schichten erzeugt, wird das Objekt nur stillgelegt. Bestehende Einsätze bleiben erhalten.',
+    'Entfernen',
+    () => api('objekt_delete.php', { method: 'POST', body: { id } }).then(({ ok, data }) => {
+      if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
+      closeDrawer();
+      loadObjekte().then(() => toast(data.art === 'deaktiviert'
+        ? `Objekt stillgelegt — ${nf(data.einsaetze)} Einsätze bleiben erhalten.`
+        : 'Objekt gelöscht.'));
+    }));
+}
+
+// ══════════════════════════════════════════ MASTERSCHICHTEN
+const MS_TAGE = ['mo', 'di', 'mi', 'do', 'fr', 'sa', 'so', 'feiertag'];
+
+function openMs(modus, id) {
+  msModus = modus;
+  msTarget = id ? Number(id) : null;
+  const m = msTarget ? masterschichten.find(x => Number(x.id) === msTarget) : null;
+
+  const titel = { neu: 'Neue Masterschicht', aenderung: 'Ändern ab einem Stichtag', korrektur: 'Beschriftung richtigstellen' };
+  $('msTitel').textContent = titel[modus];
+  $('msText').textContent = modus === 'korrektur'
+    ? 'Nur Bezeichnung, Kürzel und Farbe. Zeiten und Bedarf bleiben unverändert — dafür „Ändern ab …“ benutzen.'
+    : 'Eine Vorlage, aus der die einzelnen Schichten entstehen.';
+
+  $('msName').value = m ? m.name : '';
+  $('msKuerzel').value = m ? (m.kuerzel || '') : '';
+  $('msArt').value = m ? m.art : 'arbeit';
+  $('msVon').value = m ? hm(m.von) : '';
+  $('msBis').value = m ? hm(m.bis) : '';
+  $('msPauseMin').value = m ? m.pause_min : 0;
+  $('msArbeitszeit').value = m ? m.arbeitszeit_h : '';
+  $('msAufAbruf').checked = m ? !!m.auf_abruf : false;
+  $('msRhythmus').value = m ? m.rhythmus : 'woche';
+  MS_TAGE.forEach(t => { $('msBedarf_' + t).value = m ? m['bedarf_' + t] : 0; });
+  $('msIntervallTage').value = m && m.intervall_tage ? m.intervall_tage : 2;
+  $('msIntervallStart').value = m && m.intervall_start ? String(m.intervall_start).slice(0, 10) : isoTag();
+  $('msBedarf_intervall').value = m ? m.bedarf_intervall : 1;
+  $('msGueltigBis').value = m && m.gueltig_bis ? String(m.gueltig_bis).slice(0, 10) : '';
+
+  // Der Stichtag ist der Kern der Änderbarkeit: Vorgabe ist heute, damit
+  // vergangene Schichten unberührt bleiben (ENT-021).
+  const hinweis = $('msStichtagHint');
+  if (modus === 'aenderung' && m) {
+    $('msGueltigAb').value = isoTag();
+    $('msGueltigAbLbl').textContent = 'Neue Fassung gilt ab *';
+    hinweis.style.display = 'flex';
+    $('msStichtagText').innerHTML = `Ab diesem Tag gilt die neue Fassung. Die bisherige (gültig ab ${esc(dmy(m.gueltig_ab))}) bekommt den Vortag als Enddatum. <b>Bereits erzeugte Schichten bleiben unverändert</b> — die Vergangenheit wird nicht angefasst.`;
+  } else {
+    $('msGueltigAb').value = m ? String(m.gueltig_ab).slice(0, 10) : isoTag();
+    $('msGueltigAbLbl').textContent = 'Gültig ab *';
+    hinweis.style.display = 'none';
+  }
+
+  // Bei der Korrektur bleibt alles andere gesperrt — sonst wäre es doch eine
+  // rückwirkende Änderung.
+  ['msArt','msVon','msBis','msPauseMin','msArbeitszeit','msAufAbruf','msRhythmus','msGueltigAb','msGueltigBis',
+   'msIntervallTage','msIntervallStart','msBedarf_intervall', ...MS_TAGE.map(t => 'msBedarf_' + t)]
+    .forEach(k => { $(k).disabled = (modus === 'korrektur'); });
+
+  msRhythmusUm();
+  $('msErr').style.display = 'none';
+  openDlg('dlgMs');
+  $('msName').focus();
+}
+
+function msRhythmusUm() {
+  const ist = $('msRhythmus').value;
+  $('msWoche').style.display = ist === 'woche' ? '' : 'none';
+  $('msIntervall').style.display = ist === 'intervall' ? '' : 'none';
+}
+
+// Vorschlag für die effektive Arbeitszeit. Übersteuerbar — es ist ein
+// Vorschlag, keine Berechnungsgrundlage.
+function msRechne() {
+  const von = $('msVon').value, bis = $('msBis').value;
+  if (!von || !bis) return;
+  const sp = spanne(isoTag(), von, bis);
+  if (!sp) return;
+  const std = (sp[1] - sp[0]) / 36e5 - (parseInt($('msPauseMin').value, 10) || 0) / 60;
+  $('msArbeitszeit').value = Math.max(0, Math.round(std * 100) / 100);
+}
+
+function saveMs() {
+  const err = $('msErr'); err.style.display = 'none';
+  const body = { modus: msModus };
+  if (msTarget) body.id = msTarget;
+  if (msModus === 'neu') body.objekt_id = obTarget;
+
+  body.name = $('msName').value.trim();
+  body.kuerzel = $('msKuerzel').value.trim();
+  body.farbe = '';
+  if (!body.name) { err.textContent = 'Bezeichnung erforderlich.'; err.style.display = ''; return; }
+
+  if (msModus !== 'korrektur') {
+    body.art = $('msArt').value;
+    body.von = $('msVon').value;
+    body.bis = $('msBis').value;
+    body.pause_min = parseInt($('msPauseMin').value, 10) || 0;
+    body.arbeitszeit_h = parseFloat($('msArbeitszeit').value) || 0;
+    body.auf_abruf = $('msAufAbruf').checked ? 1 : 0;
+    body.rhythmus = $('msRhythmus').value;
+    MS_TAGE.forEach(t => { body['bedarf_' + t] = parseInt($('msBedarf_' + t).value, 10) || 0; });
+    body.intervall_tage = parseInt($('msIntervallTage').value, 10) || 2;
+    body.intervall_start = $('msIntervallStart').value;
+    body.bedarf_intervall = parseInt($('msBedarf_intervall').value, 10) || 0;
+    body.gueltig_ab = $('msGueltigAb').value;
+    body.gueltig_bis = $('msGueltigBis').value;
+    if (!body.von || !body.bis) { err.textContent = 'Von und Bis sind Pflicht.'; err.style.display = ''; return; }
+    if (!body.gueltig_ab) { err.textContent = 'Ein Stichtag ist Pflicht.'; err.style.display = ''; return; }
+  }
+
+  const b = $('msBtn'); b.disabled = true;
+  api('masterschicht_save.php', { method: 'POST', body }).then(({ ok, data }) => {
+    b.disabled = false;
+    if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Speichern fehlgeschlagen.'; err.style.display = ''; return; }
+    closeDlg('dlgMs');
+    Promise.all([loadMasterschichten(), loadObjekte()]).then(() => {
+      toast(data.art === 'neue Fassung'
+        ? `Neue Fassung gespeichert — die bisherige gilt bis ${dmy(data.alt_bis)}.`
+        : 'Masterschicht gespeichert.');
+    });
+  });
+}
+
+function askDeleteMs(id) {
+  askConfirm('Masterschicht entfernen?',
+    'Wurden daraus schon Schichten erzeugt, wird nur die Gültigkeit auf gestern gesetzt. Die erzeugten Einsätze bleiben unverändert bestehen.',
+    'Entfernen',
+    () => api('masterschicht_delete.php', { method: 'POST', body: { id } }).then(({ ok, data }) => {
+      if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
+      Promise.all([loadMasterschichten(), loadObjekte()]).then(() => toast(data.art === 'beendet'
+        ? `Gültigkeit auf ${dmy(data.gueltig_bis)} begrenzt — ${nf(data.einsaetze)} Einsätze bleiben erhalten.`
+        : 'Masterschicht gelöscht.'));
+    }));
+}
+
+// ══════════════════════════════════════════ SCHICHTEN ERZEUGEN (mit Vorschau)
+// Massenbefehl: erst zeigen, was entstehen würde, dann erst schreiben (ENT-021).
+function openVorschau(objektId) {
+  vsObjekt = Number(objektId);
+  const o = objekte.find(x => Number(x.id) === vsObjekt);
+  $('vsText').textContent = o
+    ? `Aus den Masterschichten von „${o.name}“. Es wird nichts gespeichert, bevor du unten bestätigst.`
+    : 'Es wird nichts gespeichert, bevor du unten bestätigst.';
+  const heute = new Date();
+  const ersterNaechster = new Date(heute.getFullYear(), heute.getMonth() + 1, 1);
+  const letzterNaechster = new Date(heute.getFullYear(), heute.getMonth() + 2, 0);
+  $('vsVon').value = isoTag(ersterNaechster);
+  $('vsBis').value = isoTag(letzterNaechster);
+  $('vsErr').style.display = 'none';
+  $('vsInhalt').innerHTML = '';
+  $('vsBtn').disabled = true;
+  openDlg('dlgVorschau');
+  ladeVorschau();
+}
+
+function ladeVorschau() {
+  const von = $('vsVon').value, bis = $('vsBis').value;
+  const err = $('vsErr'); err.style.display = 'none';
+  $('vsBtn').disabled = true;
+  if (!von || !bis) { $('vsInhalt').innerHTML = ''; return; }
+  $('vsInhalt').innerHTML = '<div class="sk" style="height:80px"></div>';
+  api(`schichten_vorschau.php?objekt_id=${vsObjekt}&von=${von}&bis=${bis}`).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') {
+      $('vsInhalt').innerHTML = '';
+      err.textContent = data.message || 'Vorschau nicht möglich.'; err.style.display = '';
+      return;
+    }
+    vsAnzahl = data.anzahl;
+    $('vsBtn').disabled = data.anzahl === 0;
+    $('vsBtn').textContent = data.anzahl ? `${nf(data.anzahl)} Schichten erzeugen` : 'Erzeugen';
+
+    if (!data.vorlagen) {
+      $('vsInhalt').innerHTML = EMPTY('Keine gültige Masterschicht',
+        'In diesem Zeitraum gilt keine Masterschicht dieses Objekts. Ohne Vorlage entsteht keine Schicht.');
+      return;
+    }
+    const kopf = `<div class="vs-kopf">
+        <span class="chip ${data.anzahl ? 'chip-a' : 'chip-n'}">${nf(data.anzahl)} neu</span>
+        ${data.uebersprungen ? `<span class="chip chip-n">${nf(data.uebersprungen)} schon vorhanden</span>` : ''}
+        <span class="chip chip-n">${nf(data.vorlagen)} ${data.vorlagen === 1 ? 'Vorlage' : 'Vorlagen'}</span>
+        ${data.feiertage ? `<span class="chip chip-w">${nf(data.feiertage)} Feiertage im Zeitraum</span>` : ''}
+      </div>`;
+    if (!data.anzahl) {
+      $('vsInhalt').innerHTML = kopf + `<p class="zone-note">Für diesen Zeitraum ist bereits alles angelegt. Es würde nichts geschrieben.</p>`;
+      return;
+    }
+    const liste = data.schichten.map(s => `<div class="z">
+        <span class="dt">${dmy(s.datum)}</span>
+        <span class="nm">${s.kuerzel ? `<b>${esc(s.kuerzel)}</b> ` : ''}${esc(s.name)}${s.feiertag ? ` <span style="color:var(--warn)">· ${esc(s.feiertag)}</span>` : ''}${s.status === 'provisorisch' ? ' <span style="color:var(--accent)">· provisorisch</span>' : ''}</span>
+        <span class="zt">${esc(s.von)}–${esc(s.bis)} · ${s.bedarf} P.</span>
+      </div>`).join('');
+    $('vsInhalt').innerHTML = kopf + `<div class="vs-liste">${liste}</div>` +
+      (data.gezeigt < data.anzahl
+        ? `<p class="zone-note" style="margin-top:8px">Gezeigt sind die ersten ${nf(data.gezeigt)} von ${nf(data.anzahl)}. Erzeugt werden <b>alle ${nf(data.anzahl)}</b>.</p>`
+        : '');
+  });
+}
+
+function schichtenErzeugen() {
+  const von = $('vsVon').value, bis = $('vsBis').value;
+  const b = $('vsBtn'); b.disabled = true; b.textContent = 'Erzeuge …';
+  api('schichten_erzeugen.php', { method: 'POST', body: { objekt_id: vsObjekt, von, bis } }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') {
+      b.disabled = false; b.textContent = 'Erzeugen';
+      $('vsErr').textContent = data.message || 'Fehlgeschlagen.'; $('vsErr').style.display = '';
+      return;
+    }
+    closeDlg('dlgVorschau');
+    loadEinsaetze().then(() => toast(`${nf(data.angelegt)} Schichten angelegt.`));
+  });
+}
+
+// ══════════════════════════════════════════ FEIERTAGE
+function openFeiertage() {
+  $('ftJahr').value = new Date().getFullYear();
+  $('ftErr').style.display = 'none';
+  openDlg('dlgFeiertage');
+  ladeFeiertage();
+}
+
+function ladeFeiertage() {
+  const jahr = parseInt($('ftJahr').value, 10) || new Date().getFullYear();
+  $('ftInhalt').innerHTML = '<div class="sk" style="height:60px"></div>';
+  api(`feiertage_list.php?kanton=SO&von=${jahr}-01-01&bis=${jahr}-12-31`).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') {
+      $('ftInhalt').innerHTML = '';
+      $('ftErr').textContent = data.message || 'Nicht ladbar.'; $('ftErr').style.display = '';
+      return;
+    }
+    if (!data.feiertage.length) {
+      $('ftInhalt').innerHTML = EMPTY('Für dieses Jahr ist nichts hinterlegt',
+        'Mit „Jahr eintragen“ die Feiertage des Kantons Solothurn erfassen. Vorhandene Einträge werden dabei nie überschrieben.');
+      return;
+    }
+    $('ftInhalt').innerHTML = `<table><thead><tr><th>Datum</th><th>Tag</th><th>Feiertag</th><th>Umfang</th></tr></thead><tbody>`
+      + data.feiertage.map(f => `<tr>
+          <td class="nowrap num">${dmy(f.datum)}</td>
+          <td class="nowrap" style="color:var(--ink-3)">${WD[new Date(f.datum + 'T12:00:00').getDay()].slice(0, 2)}</td>
+          <td>${esc(f.name)}</td>
+          <td>${f.halbtags ? `<span class="chip chip-w">ab ${hm(f.ab_zeit)}</span>` : '<span class="chip chip-n">ganzer Tag</span>'}</td>
+        </tr>`).join('') + `</tbody></table>
+      <p class="zone-note" style="margin-top:10px">Quelle: ${esc(data.feiertage[0].quelle || '–')}.
+      Nicht enthalten sind Tage, die nur auf Betriebsübung beruhen (Berchtoldstag, Oster- und Pfingstmontag, Mariä Empfängnis, Stephanstag) — siehe GAV-AUS-006.</p>`;
+  });
+}
+
+function feiertageErzeugen() {
+  const jahr = parseInt($('ftJahr').value, 10) || new Date().getFullYear();
+  $('ftErr').style.display = 'none';
+  api('feiertage_generieren.php', { method: 'POST', body: { kanton: 'SO', von_jahr: jahr, bis_jahr: jahr } })
+    .then(({ ok, data }) => {
+      if (!ok || data.status !== 'ok') {
+        $('ftErr').textContent = data.message || 'Fehlgeschlagen.'; $('ftErr').style.display = ''; return;
+      }
+      toast(data.neu ? `${nf(data.neu)} Feiertage eingetragen.` : 'Alle Tage waren bereits vorhanden.');
+      ladeFeiertage();
+      ladeFeiertagMap();
+    });
+}
+
+// Für die Markierung in Matrix und Tagesplan.
+function ladeFeiertagMap() {
+  const jahr = new Date().getFullYear();
+  return api(`feiertage_list.php?kanton=SO&von=${jahr - 1}-01-01&bis=${jahr + 2}-12-31`).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') return;
+    feiertage = {};
+    (data.feiertage || []).forEach(f => { feiertage[f.datum] = f; });
+    if ($('pv-uebersicht').classList.contains('on')) renderMatrix();
+  });
+}
+
+// ══════════════════════════════════════════ MONATSÜBERSICHT
+function mxSchieben(n) {
+  const m = $('mxM').value || isoTag().slice(0, 7);
+  const [j, mo] = m.split('-').map(Number);
+  const d = new Date(j, mo - 1 + n, 1);
+  $('mxM').value = isoTag(d).slice(0, 7);
+  renderMatrix();
+}
+function mxHeute() { $('mxM').value = isoTag().slice(0, 7); renderMatrix(); }
+
+// Zustand einer Zelle aus den Einsätzen eines Tages. Provisorische zählen
+// bewusst nicht als Lücke (ENT-021).
+function zellenStand(liste) {
+  const aktiv = liste.filter(e => e.status !== 'abgesagt');
+  if (!aktiv.length) return { klasse: liste.length ? 'z-ab' : 'z-nix', text: liste.length ? '–' : '·' };
+  const zug = aktiv.reduce((s, e) => s + (e.mitarbeiter || []).length, 0);
+  const bed = aktiv.reduce((s, e) => s + Number(e.bedarf), 0);
+  if (aktiv.every(e => e.status === 'provisorisch')) return { klasse: 'z-prov', text: String(zug) };
+  if (zug >= bed) return { klasse: 'z-voll', text: String(zug) };
+  return { klasse: zug > 0 ? 'z-teil' : 'z-leer', text: String(zug) };
+}
+
+function renderMatrix() {
+  const m = $('mxM').value || isoTag().slice(0, 7);
+  const [jahr, mon] = m.split('-').map(Number);
+  if (!jahr || !mon) return;
+  const anzTage = new Date(jahr, mon, 0).getDate();
+  const heute = isoTag();
+  const tage = Array.from({ length: anzTage }, (_, i) => `${m}-${String(i + 1).padStart(2, '0')}`);
+
+  // Einsätze des Monats nach Objekt und Tag ordnen
+  const nachObjekt = {};
+  einsaetze.forEach(e => {
+    const d = tagVon(e);
+    if (!d.startsWith(m)) return;
+    const schluessel = e.objekt_id ? 'o' + e.objekt_id : 'einzel';
+    (nachObjekt[schluessel] = nachObjekt[schluessel] || {});
+    (nachObjekt[schluessel][d] = nachObjekt[schluessel][d] || []).push(e);
+  });
+
+  const zeilen = objekte.filter(o => o.aktiv || nachObjekt['o' + o.id])
+    .map(o => ({ schluessel: 'o' + o.id, titel: o.name, unter: o.kunde_name + ' · ' + o.ort }));
+  if (nachObjekt['einzel']) {
+    zeilen.push({ schluessel: 'einzel', titel: 'Einzeleinsätze', unter: 'ohne festes Objekt' });
+  }
+
+  if (!zeilen.length) {
+    $('mxTable').innerHTML = EMPTY('Nichts anzuzeigen',
+      'Für diesen Monat gibt es weder Objekte noch Einzeleinsätze. Objekte legst du im Reiter „Objekte“ an.');
+    return;
+  }
+
+  const kopf = tage.map(d => {
+    const wd = new Date(d + 'T12:00:00').getDay();
+    const kl = [d === heute ? 'heute' : '', feiertage[d] ? 'fei' : (wd === 0 || wd === 6 ? 'we' : '')].filter(Boolean).join(' ');
+    const t = feiertage[d] ? ` — ${feiertage[d].name}` : '';
+    return `<th class="${kl}" title="${esc(dmy(d) + t)}">${Number(d.slice(8))}<span class="wd">${WD[wd].slice(0, 2)}</span></th>`;
+  }).join('');
+
+  const koerper = zeilen.map(z => {
+    const zellen = tage.map(d => {
+      const liste = (nachObjekt[z.schluessel] || {})[d] || [];
+      const st = zellenStand(liste);
+      const wd = new Date(d + 'T12:00:00').getDay();
+      const kl = feiertage[d] ? 'fei' : (wd === 0 || wd === 6 ? 'we' : '');
+      const titel = liste.length
+        ? dmy(d) + '\n' + liste.map(e => `${hm(e.von)}–${hm(e.bis)} ${e.titel || e.kunde_name} — ${(e.mitarbeiter || []).length}/${e.bedarf}${e.status !== 'geplant' ? ' (' + e.status + ')' : ''}`).join('\n')
+        : dmy(d) + ' — nichts geplant';
+      return `<td class="d ${kl}">` +
+        (liste.length
+          ? `<button class="zelle ${st.klasse}" title="${esc(titel)}" onclick="zumTag('${d}')">${st.text}</button>`
+          : `<span class="zelle z-nix" title="${esc(titel)}">·</span>`) +
+        `</td>`;
+    }).join('');
+    return `<tr><td class="obj"><b>${esc(z.titel)}</b><span>${esc(z.unter)}</span></td>${zellen}</tr>`;
+  }).join('');
+
+  $('mxTable').innerHTML = `<table><thead><tr><th class="obj">Objekt</th>${kopf}</tr></thead><tbody>${koerper}</tbody></table>`;
+}
+
+function zumTag(datum) {
+  $('tgD').value = datum;
+  goTab('tag');
+}
+
+// ══════════════════════════════════════════ TAGESPLAN
+function tgSchieben(n) {
+  const d = $('tgD').value || isoTag();
+  $('tgD').value = plusTage(d, n);
+  renderTagesplan();
+}
+function tgHeute() { $('tgD').value = isoTag(); renderTagesplan(); }
+
+function renderTagesplan() {
+  const d = $('tgD').value || isoTag();
+  if (!$('tgD').value) $('tgD').value = d;
+  const nurOffen = $('tgNurOffen').checked;
+
+  let liste = einsaetze.filter(e => tagVon(e) === d);
+  if (nurOffen) liste = liste.filter(e => fehlend(e) > 0);
+  liste.sort((a, b) => String(a.von).localeCompare(String(b.von)) || String(a.kunde_name).localeCompare(String(b.kunde_name)));
+
+  const f = feiertage[d];
+  const wd = WD[new Date(d + 'T12:00:00').getDay()];
+  const kopfKarte = `<div class="card" style="margin-bottom:16px"><div class="card-bd" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-3)">${wd}</div>
+        <div style="font-size:20px;font-weight:700;letter-spacing:-.5px">${dmy(d)}</div>
+      </div>
+      ${d === isoTag() ? '<span class="chip chip-a">heute</span>' : ''}
+      ${f ? `<span class="chip chip-w">${esc(f.name)}${f.halbtags ? ` · ab ${hm(f.ab_zeit)}` : ''}</span>` : ''}
+      <div style="flex:1"></div>
+      <div style="text-align:right">
+        <div style="font-size:20px;font-weight:700;letter-spacing:-.5px">${nf(liste.length)}</div>
+        <div style="font-size:11.5px;color:var(--ink-3)">${liste.length === 1 ? 'Einsatz' : 'Einsätze'}${liste.reduce((s, e) => s + fehlend(e), 0) ? ` · ${nf(liste.reduce((s, e) => s + fehlend(e), 0))} offen` : ''}</div>
+      </div>
+    </div>${f ? `<div class="legende">Feiertag markiert nach Arbeitsgesetz, Kanton SO. Über Zuschläge oder Entschädigung sagt das nichts aus.</div>` : ''}</div>`;
+
+  if (!liste.length) {
+    $('tgBody').innerHTML = kopfKarte + `<div class="card"><div class="card-bd">` +
+      EMPTY(nurOffen ? 'Alles besetzt' : 'Nichts geplant',
+        nurOffen ? 'An diesem Tag gibt es keine unbesetzten Einsätze.' : 'Für diesen Tag ist kein Einsatz geplant.') +
+      `</div></div>`;
+    return;
+  }
+
+  $('tgBody').innerHTML = kopfKarte + `<div class="card"><div class="card-bd flush"><div class="tw">
+    <table><thead><tr>
+      <th>Zeit</th><th>Kunde / Objekt</th><th>Arbeitsort</th><th class="num">Besetzung</th><th>Zugeteilt</th><th>Status</th>
+    </tr></thead><tbody>` + liste.map(e => {
+      const zug = e.mitarbeiter || [];
+      const fehlt = fehlend(e);
+      const st = EN_STATUS[e.status] || EN_STATUS.geplant;
+      const teile = zug.map(mm => `<span class="nm">${esc(fullName(mm) || mm.name)}</span>`);
+      if (fehlt) teile.push(`<span class="nm off">${fehlt} offen</span>`);
+      return `<tr class="click" onclick="openEinsatz(${Number(e.id)})">
+        <td class="nowrap num">${hm(e.von)}–${hm(e.bis)}${ueberNacht(e) ? '<div class="sec">bis Folgetag</div>' : ''}</td>
+        <td class="strong">${esc(e.kunde_name)}${e.titel ? `<div class="sec">${esc(e.titel)}</div>` : ''}</td>
+        <td>${esc(e.ort)}${e.strasse ? `<div class="sec">${esc(e.strasse)}</div>` : ''}</td>
+        <td class="num"><span class="chip ${e.status === 'abgesagt' ? 'chip-n' : (fehlt ? 'chip-w' : 'chip-p')}">${zug.length}/${nf(e.bedarf)}</span></td>
+        <td>${teile.length ? `<div class="crew">${teile.join('')}</div>` : '<span style="color:var(--ink-3)">–</span>'}</td>
+        <td><span class="chip ${st[1]}">${st[0]}</span></td>
+      </tr>`;
+    }).join('') + `</tbody></table></div></div></div>`;
 }
 
 // ══════════════════════════════════════════ SCHUBLADE + DRUCK
