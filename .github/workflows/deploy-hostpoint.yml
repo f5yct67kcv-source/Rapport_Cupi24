@@ -1,0 +1,32 @@
+name: Deploy Rapport-Tool zu Hostpoint
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Platzhalter durch echte Werte ersetzen
+        run: |
+          mkdir -p dist
+          cp index.html dist/index.html
+          sed -i "s|__SHEETS_URL__|${{ secrets.SHEETS_URL }}|g" dist/index.html
+          sed -i "s|__APP_TOKEN__|${{ secrets.APP_TOKEN }}|g" dist/index.html
+
+      - name: Nach Hostpoint hochladen (FTPS)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTPOINT_FTP_HOST }}
+          username: ${{ secrets.HOSTPOINT_FTP_USER }}
+          password: ${{ secrets.HOSTPOINT_FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./dist/
+          # Der FTP-Account "rapport@itufeden.myhostpoint.ch" ist bereits fest
+          # auf /home/itufeden/www/rapport eingeschraenkt (Hostpoint-Vorgabe) --
+          # daher hier nur "/", nicht der volle Pfad.
+          server-dir: /

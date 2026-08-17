@@ -355,7 +355,7 @@ tr:hover td { background: var(--accent-light); }
 <script>
 // ── STATE
 let rapports       = JSON.parse(localStorage.getItem('rv3_rapports') || '[]');
-let maList         = JSON.parse(localStorage.getItem('rv3_ma') || '["Muster Max","Müller Peter","Schmidt Anna"]');
+let maList         = JSON.parse(localStorage.getItem('rv3_ma') || '[]');
 let adminPin       = localStorage.getItem('rv3_pin') || '1234';
 let lang           = localStorage.getItem('rv3_lang') || 'de';
 let sigDirty       = false;
@@ -363,11 +363,13 @@ let deleteTargetId = null;
 let sigCtx, isDrawing = false, lastX = 0, lastY = 0;
 
 // ── GOOGLE SHEETS SYNC
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwoZAU5x9bLNkrBouFMQQZ4Sum53FrI6oJaOdcr0MWEdInx2BGPjdZ0xOccwFUXLRFyXA/exec';
+const SHEETS_URL = '__SHEETS_URL__';
+const APP_TOKEN  = '__APP_TOKEN__';
 
 function sendToSheets(rapport) {
   const data = Object.assign({}, rapport);
   delete data.sig;
+  data.token = APP_TOKEN;
   fetch(SHEETS_URL, {
     method: 'POST', mode: 'no-cors',
     headers: {'Content-Type':'application/json'},
@@ -376,7 +378,7 @@ function sendToSheets(rapport) {
 }
 
 function loadMaFromSheets() {
-  fetch(SHEETS_URL, { method: 'GET', mode: 'cors' })
+  fetch(SHEETS_URL + '?token=' + encodeURIComponent(APP_TOKEN), { method: 'GET', mode: 'cors' })
     .then(r => r.json())
     .then(data => {
       if (data.status === 'ok' && data.mitarbeiter && data.mitarbeiter.length > 0) {
