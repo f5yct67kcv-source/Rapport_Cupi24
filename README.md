@@ -18,17 +18,25 @@ beim Wechsel. Nicht-Admins werden vom Dashboard abgewiesen.
 
 ```
 index.html         Erfassung (mobil, PWA-installierbar)
-dashboard.html     Verwaltungsoberflaeche (Desktop, admin-only, derzeit rein lesend)
+dashboard.html     Verwaltungsoberflaeche (Desktop, admin-only)
 manifest.json      PWA-Manifest
 sw.js              Service Worker (nur fuer die Installierbarkeit)
 icons/             App-Symbole
 
 backend/
-  db.php           PDO-Verbindung + require_session()
-  ai.php           Anthropic-Anbindung (Feldextraktion aus Diktat)
-  schema.sql       Datenbankschema, einmalig in phpMyAdmin ausfuehren
-  api/*.php        Endpunkte, alle ueber X-Auth-Token abgesichert
+  db.php              PDO-Verbindung + require_session()
+  ai.php              Anthropic-Anbindung (Diktat, Kundenrecherche, Planung)
+  schema.sql          Grundschema, einmalig in phpMyAdmin ausfuehren
+  schema_planung.sql  Nachtrag fuer die Einsatzplanung, ebenfalls einmalig
+  api/*.php           Endpunkte, alle ueber X-Auth-Token abgesichert
 ```
+
+## Einmaliger Schritt nach dem Deploy der Planung
+
+`backend/schema_planung.sql` muss einmal im Hostpoint-Datenbank-Tool
+(phpMyAdmin) ausgefuehrt werden — der Deploy legt keine Tabellen an. Solange
+das nicht geschehen ist, zeigt der Bereich „Planung" einen entsprechenden
+Hinweis; alle uebrigen Bereiche arbeiten unveraendert weiter.
 
 Der Produktname des Dashboards steht noch nicht fest (Arbeitstitel „Cockpit",
 siehe OP-18). Er haengt an der Konstante `APP_NAME` am Anfang des Skriptblocks

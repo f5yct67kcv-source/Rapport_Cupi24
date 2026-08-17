@@ -8,11 +8,13 @@ if (!$user['ist_admin']) {
 }
 
 $rows = db()->query(
-    'SELECT name, ist_admin, erstellt_am, personalnummer, anrede, vorname, nachname, geburtsdatum,
+    'SELECT id, name, ist_admin, erstellt_am, personalnummer, anrede, vorname, nachname, geburtsdatum,
             strasse, ort, telefon, mobil, email
      FROM mitarbeiter WHERE aktiv = 1 ORDER BY name'
 )->fetchAll();
 $rows = array_map(fn($r) => [
+    // id wird fuer die Zuteilung in der Einsatzplanung gebraucht (ENT-020).
+    'id' => (int)$r['id'],
     'name' => $r['name'], 'ist_admin' => (bool)$r['ist_admin'], 'erstellt_am' => $r['erstellt_am'],
     'personalnummer' => $r['personalnummer'], 'anrede' => $r['anrede'], 'vorname' => $r['vorname'], 'nachname' => $r['nachname'],
     'geburtsdatum' => $r['geburtsdatum'], 'strasse' => $r['strasse'], 'ort' => $r['ort'],

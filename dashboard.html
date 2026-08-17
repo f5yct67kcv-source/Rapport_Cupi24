@@ -303,6 +303,7 @@ td .sec { font-size: 11.5px; color: var(--ink-3); }
 .dlg-scrim.on { display: flex; }
 .dlg { background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--sh-3); width: 100%; max-width: 460px; max-height: 88vh; display: flex; flex-direction: column; }
 .dlg.narrow { max-width: 380px; }
+.dlg.wide { max-width: 580px; }
 .dlg-hd { padding: 20px 22px 0; flex: none; }
 .dlg-hd h2 { font-size: 16px; font-weight: 660; letter-spacing: -.2px; }
 .dlg-hd p { font-size: 12.5px; color: var(--ink-3); margin-top: 5px; line-height: 1.55; }
@@ -323,6 +324,48 @@ textarea.inp { resize: vertical; min-height: 92px; font-family: inherit; line-he
   #printArea, #printArea * { visibility: visible; }
   #printArea { display: block !important; position: absolute; top: 0; left: 0; width: 100%; padding: 24px; }
 }
+
+/* ══════════════════════════════════════════ PLANUNG */
+/* Tagesueberschrift in der Einsatzliste — trennt den Plan in Tage, ohne dass
+   die Tabelle ihre Spalten verliert. */
+tbody tr.grp td {
+  background: #FBFCFD; padding: 7px 18px;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+tbody tr.grp:first-child td { border-top: none; }
+.grp-in { display: flex; align-items: baseline; gap: 9px; }
+.grp-in b { font-size: 12.5px; font-weight: 680; letter-spacing: -.1px; }
+.grp-in .wd { font-size: 11px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--ink-3); }
+.grp-in .sp { flex: 1; }
+.grp-in .note { font-size: 11.5px; color: var(--ink-3); }
+tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+.chip-w { background: var(--warn-soft); color: var(--warn); }
+.chip-x { background: var(--neg-soft); color: var(--neg); }
+.crew { display: flex; flex-wrap: wrap; gap: 4px; }
+.crew .nm { font-size: 11.5px; font-weight: 600; background: var(--line-soft); color: var(--ink-2); border-radius: var(--r-xs); padding: 2px 7px; white-space: nowrap; }
+.crew .off { background: var(--warn-soft); color: var(--warn); }
+
+/* Zuteilung: Mehrfachauswahl mit Hinweis auf zeitliche Ueberschneidungen. */
+.ma-pick { border: 1px solid var(--line); border-radius: var(--r-sm); max-height: 236px; overflow-y: auto; }
+/* Die Liste steht in einem .f-Block — dessen Beschriftungsstil (Grossbuchstaben,
+   11px) darf hier nicht auf die Namen durchschlagen. */
+.ma-pick label {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  border-bottom: 1px solid var(--line-soft); cursor: pointer;
+  font-size: 14px; font-weight: 400; letter-spacing: normal;
+  text-transform: none; color: var(--ink); margin-bottom: 0;
+}
+.ma-pick label:last-child { border-bottom: none; }
+.ma-pick label:hover { background: var(--bg); }
+.ma-pick input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex: none; }
+.ma-pick .who { flex: 1; min-width: 0; }
+.ma-pick .who b { display: block; font-size: 13px; font-weight: 600; }
+.ma-pick .who span { font-size: 11.5px; color: var(--ink-3); }
+/* Muss die Regel für .who span oben überstimmen, sonst bliebe der Hinweis grau. */
+.ma-pick .who .clash { display: block; font-size: 11.5px; color: var(--warn); font-weight: 600; }
+.ma-pick .leer { padding: 14px 12px; font-size: 12.5px; color: var(--ink-3); }
+.pick-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--ink-3); }
 
 /* ══════════════════════════════════════════ RESPONSIV */
 @media (max-width: 1180px) {
@@ -404,6 +447,10 @@ textarea.inp { resize: vertical; min-height: 92px; font-family: inherit; line-he
       <button class="nav-item on" id="nav-uebersicht" onclick="go('uebersicht')">
         <svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
         Übersicht
+      </button>
+      <button class="nav-item" id="nav-planung" onclick="go('planung')">
+        <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/><line x1="7.5" y1="14" x2="12" y2="14"/><line x1="7.5" y1="17.5" x2="15" y2="17.5"/></svg>
+        Planung
       </button>
       <button class="nav-item" id="nav-rapporte" onclick="go('rapporte')">
         <svg class="i" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -506,6 +553,42 @@ textarea.inp { resize: vertical; min-height: 92px; font-family: inherit; line-he
             <div class="card-bd flush"><div id="proMa"></div></div>
           </div>
         </div>
+      </section>
+
+      <!-- ─────────── PLANUNG ─────────── -->
+      <section class="view" id="view-planung">
+        <div class="grid g-kpi" id="plKpi"></div>
+
+        <div class="bar-tools">
+          <div class="search">
+            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="inp" type="search" id="pQ" placeholder="Kunde, Ort, Bezeichnung oder Mitarbeitende …" oninput="renderPlanung()">
+          </div>
+          <select class="inp" id="pZeit" style="width:auto" onchange="renderPlanung()">
+            <option value="kommend">Ab heute</option>
+            <option value="woche">Nächste 7 Tage</option>
+            <option value="monat">Bestimmter Monat</option>
+            <option value="alle">Alle, auch vergangene</option>
+          </select>
+          <input class="inp" type="month" id="pM" style="width:auto;display:none" onchange="renderPlanung()">
+          <select class="inp" id="pStatus" style="width:auto" onchange="renderPlanung()">
+            <option value="">Jeder Status</option>
+            <option value="geplant">Nur geplant</option>
+            <option value="bestaetigt">Nur bestätigt</option>
+            <option value="offen">Nur unterbesetzt</option>
+            <option value="abgesagt">Nur abgesagt</option>
+          </select>
+          <div class="sp" style="flex:1"></div>
+          <button class="btn btn-plain btn-sm" onclick="openKi('einsatz')" title="Einsatz diktieren statt tippen">
+            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+            Diktat: Einsatz
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="openEinsatzNeu()">
+            <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Neuer Einsatz
+          </button>
+        </div>
+        <div class="card"><div class="card-bd flush"><div class="tw" id="plTable"></div></div></div>
       </section>
 
       <!-- ─────────── RAPPORTE ─────────── -->
@@ -671,6 +754,58 @@ textarea.inp { resize: vertical; min-height: 92px; font-family: inherit; line-he
   </div>
 </div>
 
+<!-- Neuer Einsatz. Auch das Ziel des Planungs-Diktats — gespeichert wird erst
+     durch den Knopf unten. -->
+<div class="dlg-scrim" id="dlgEnNeu">
+  <div class="dlg wide">
+    <div class="dlg-hd">
+      <h2 id="enNeuTitel">Neuer Einsatz</h2>
+      <p id="enNeuText">Kunde, Arbeitsort, Datum und Zeit sind Pflicht.</p>
+    </div>
+    <div class="dlg-bd">
+      <div class="ki-hint" id="enNeuKiHint">
+        <svg class="i i-sm" viewBox="0 0 24 24" style="margin-top:1px;flex:none"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        <span id="enNeuKiText"></span>
+      </div>
+      <div class="msg-err" id="enNeuErr" style="display:none"></div>
+      <div class="form-grid">
+        <div class="f wide">
+          <label for="enNKunde_name">Kunde *</label>
+          <input class="inp" id="enNKunde_name" list="dlKunden" autocomplete="off" placeholder="Firma aus der Kundendatei oder frei eingeben">
+        </div>
+        <div class="f wide">
+          <label for="enNTitel">Bezeichnung</label>
+          <input class="inp" id="enNTitel" placeholder="z. B. Fasnachtsumzug, Baustelle Kreisel">
+        </div>
+        <div class="f wide">
+          <label for="enNStrasse">Arbeitsort — Strasse</label>
+          <input class="inp" id="enNStrasse" placeholder="nicht der Firmensitz des Kunden">
+        </div>
+        <div class="f"><label for="enNOrt">Arbeitsort — PLZ / Ort *</label><input class="inp" id="enNOrt"></div>
+        <div class="f"><label for="enNEinsatzart">Einsatzart</label><input class="inp" id="enNEinsatzart" value="Verkehrsdienst"></div>
+        <div class="f"><label for="enNDatum">Datum *</label><input class="inp" id="enNDatum" type="date" onchange="pickRefresh('enN')"></div>
+        <div class="f"><label for="enNBedarf">Benötigte Mitarbeitende</label><input class="inp" id="enNBedarf" type="number" min="0" max="99" value="1" oninput="pickFoot('enN')"></div>
+        <div class="f"><label for="enNVon">Von *</label><input class="inp" id="enNVon" type="time" onchange="pickRefresh('enN')"></div>
+        <div class="f"><label for="enNBis">Bis *</label><input class="inp" id="enNBis" type="time" onchange="pickRefresh('enN')"></div>
+        <div class="f wide">
+          <label>Zugeteilte Mitarbeitende</label>
+          <div class="ma-pick" id="enNMa"></div>
+          <div class="pick-foot" id="enNMaFoot"></div>
+        </div>
+        <div class="f"><label for="enNStatus">Status</label><select class="inp" id="enNStatus"><option value="geplant">Geplant</option><option value="bestaetigt">Bestätigt</option><option value="abgesagt">Abgesagt</option></select></div>
+        <div class="f wide"><label for="enNBemerkung">Bemerkung</label><textarea class="inp" id="enNBemerkung" rows="2" style="min-height:60px"></textarea></div>
+      </div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgEnNeu')">Abbrechen</button>
+      <button class="btn btn-primary" id="enNeuBtn" onclick="createEinsatz()">Einsatz anlegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Kundennamen für die Eingabehilfe in der Planung -->
+<datalist id="dlKunden"></datalist>
+
 <!-- Diktat: anlegen oder ändern -->
 <div class="dlg-scrim" id="dlgKi">
   <div class="dlg narrow">
@@ -719,9 +854,11 @@ let stats = null;
 let rapporte = [];
 let mitarbeiter = [];
 let kunden = [];
+let einsaetze = [];
 let drawerId = null;   // offener Rapport in der Schublade
 let maTarget = null;   // offener Mitarbeitender (Login-Name)
 let kuTarget = null;   // offener Kunde (id)
+let enTarget = null;   // offener Einsatz (id)
 let kiMode = 'neu';
 const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email'];
 const MA_LABEL = { personalnummer:'Personalnummer', anrede:'Anrede', vorname:'Vorname', nachname:'Nachname',
@@ -804,6 +941,7 @@ function enter() {
 // ══════════════════════════════════════════ NAVIGATION
 const TITLES = {
   uebersicht:  ['Übersicht', 'Laufender Monat'],
+  planung:     ['Planung', 'Geplante Einsätze'],
   rapporte:    ['Rapporte', 'Alle erfassten Einsätze'],
   mitarbeiter: ['Mitarbeitende', 'Stammdaten'],
   kunden:      ['Kunden', 'Stammdaten'],
@@ -821,6 +959,13 @@ function go(view) {
   if (view === 'rapporte') renderRapporte();
   if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
   if (view === 'kunden' && !kunden.length) loadKunden();
+  if (view === 'planung') {
+    // Die Planung braucht ausser den Einsätzen auch Personal (Zuteilung)
+    // und Kunden (Eingabehilfe im Formular).
+    einsaetze.length ? renderPlanung() : loadEinsaetze();
+    if (!mitarbeiter.length) loadMitarbeiter();
+    if (!kunden.length) loadKunden();
+  }
   history.replaceState(null, '', '#' + view);
 }
 function toggleSide() { $('side').classList.toggle('on'); }
@@ -831,6 +976,7 @@ function reloadAll() {
   Promise.all([loadStats(), loadRapporte()]).then(() => { b.disabled = false; });
   if (mitarbeiter.length) loadMitarbeiter();
   if (kunden.length) loadKunden();
+  if (einsaetze.length || $('view-planung').classList.contains('on')) loadEinsaetze();
 }
 
 function loadStats() {
@@ -865,6 +1011,23 @@ function loadKunden() {
     if (!ok || data.status !== 'ok') return;
     kunden = data.kunden || [];
     renderKunden();
+    // Eingabehilfe der Planung mitführen
+    $('dlKunden').innerHTML = kunden.map(k => `<option value="${esc(k.name)}"></option>`).join('');
+  });
+}
+
+function loadEinsaetze() {
+  return api('einsatz_list.php').then(({ ok, status, data }) => {
+    if (status === 401) return doLogout();
+    if (!ok || data.status !== 'ok') {
+      // Fehlt die Tabelle noch, ist das kein Grund für einen leeren Bildschirm.
+      $('plTable').innerHTML = EMPTY('Planung nicht verfügbar',
+        esc(data.message || 'Die Einsätze konnten nicht geladen werden.') +
+        ' Ist schema_planung.sql in der Datenbank schon ausgeführt worden?');
+      return;
+    }
+    einsaetze = data.einsaetze || [];
+    renderPlanung();
   });
 }
 
@@ -1085,6 +1248,373 @@ function renderKunden() {
       </tr>`).join('') + `</tbody></table>`;
 }
 
+// ══════════════════════════════════════════ PLANUNG
+// Geplant wird hier, rapportiert wird in der Erfassung. Aus einem Einsatz
+// entsteht bewusst KEIN Rapport — den füllen die Mitarbeitenden von Hand aus.
+const WD = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+const EN_STATUS = { geplant: ['Geplant', 'chip-n'], bestaetigt: ['Bestätigt', 'chip-p'], abgesagt: ['Abgesagt', 'chip-x'] };
+const EN_FELDER = ['kunde_name', 'titel', 'strasse', 'ort', 'einsatzart', 'datum', 'von', 'bis', 'bedarf', 'bemerkung'];
+const EN_LABEL = { kunde_name: 'Kunde', titel: 'Bezeichnung', strasse: 'Strasse', ort: 'Arbeitsort',
+  einsatzart: 'Einsatzart', datum: 'Datum', von: 'Von', bis: 'Bis', bedarf: 'Anzahl', bemerkung: 'Bemerkung' };
+// enN… für den Dialog, enE… für die Schublade — beide nach demselben Muster.
+const enId = (prefix, f) => prefix + f[0].toUpperCase() + f.slice(1);
+
+// Lokales Datum als JJJJ-MM-TT. toISOString() allein wäre UTC und läge abends
+// einen Tag daneben.
+function isoTag(d) {
+  d = d || new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+function plusTage(iso, n) {
+  const d = new Date(iso + 'T12:00:00');   // Mittag: unempfindlich gegen Zeitumstellung
+  d.setDate(d.getDate() + n);
+  return isoTag(d);
+}
+const tagVon = e => String(e.datum || '').slice(0, 10);
+const ueberNacht = e => hm(e.bis) <= hm(e.von);
+
+// Zeitfenster eines Einsatzes in Millisekunden. Liegt „bis“ vor „von“, läuft
+// der Einsatz über Mitternacht in den Folgetag.
+function spanne(datum, von, bis) {
+  const tag = String(datum || '').slice(0, 10);
+  const a = Date.parse(tag + 'T' + hm(von) + ':00Z');
+  let b = Date.parse(tag + 'T' + hm(bis) + ':00Z');
+  if (isNaN(a) || isNaN(b)) return null;
+  if (b <= a) b += 864e5;
+  return [a, b];
+}
+
+// Wer ist im selben Zeitfenster schon anderswo eingeteilt?
+// Das ist eine reine Zeitüberschneidung — KEINE Prüfung von Ruhezeiten oder
+// Höchstarbeitszeiten nach GAV. Diese Auslegung ist offen (OP-20) und wird
+// hier bewusst nicht vorweggenommen.
+function konflikte(datum, von, bis, ausserId) {
+  const sp = spanne(datum, von, bis);
+  const map = {};
+  if (!sp) return map;
+  einsaetze.forEach(e => {
+    if (Number(e.id) === Number(ausserId) || e.status === 'abgesagt') return;
+    const o = spanne(e.datum, e.von, e.bis);
+    if (!o || o[0] >= sp[1] || sp[0] >= o[1]) return;
+    (e.mitarbeiter || []).forEach(m => { (map[m.id] = map[m.id] || []).push(e); });
+  });
+  return map;
+}
+
+const fehlend = e => (e.status === 'abgesagt' ? 0 : Math.max(0, Number(e.bedarf) - (e.mitarbeiter || []).length));
+
+function pFiltered() {
+  const q = ($('pQ').value || '').toLowerCase().trim();
+  const zeit = $('pZeit').value;
+  const st = $('pStatus').value;
+  const monat = $('pM').value || '';
+  const heute = isoTag();
+  return einsaetze.filter(e => {
+    const d = tagVon(e);
+    if (zeit === 'kommend' && d < heute) return false;
+    if (zeit === 'woche' && (d < heute || d > plusTage(heute, 6))) return false;
+    if (zeit === 'monat' && monat && !d.startsWith(monat)) return false;
+    if (st === 'offen') { if (!fehlend(e)) return false; }
+    else if (st && e.status !== st) return false;
+    if (!q) return true;
+    return [e.kunde_name, e.titel, e.ort, e.strasse, e.einsatzart, e.bemerkung]
+      .concat((e.mitarbeiter || []).map(m => fullName(m) + ' ' + m.name))
+      .some(f => String(f || '').toLowerCase().includes(q));
+  }).sort((a, b) => {
+    const dd = tagVon(a).localeCompare(tagVon(b));
+    if (dd) return zeit === 'alle' ? -dd : dd;   // „Alle“ zeigt das Neueste zuoberst
+    return String(a.von).localeCompare(String(b.von));
+  });
+}
+
+function renderPlKpi() {
+  const heute = isoTag(), bis7 = plusTage(heute, 6);
+  const kommend = einsaetze.filter(e => tagVon(e) >= heute && e.status !== 'abgesagt');
+  const woche = kommend.filter(e => tagVon(e) <= bis7);
+  const offen = kommend.reduce((s, e) => s + fehlend(e), 0);
+  const unbestaetigt = kommend.filter(e => e.status === 'geplant').length;
+  const ic = {
+    cal:   '<rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/>',
+    week:  '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>',
+    gap:   '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/>',
+    check: '<path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><polyline points="22 4 12 14.01 9 11.01"/>'
+  };
+  const cards = [
+    { i: ic.cal,   l: 'Kommende Einsätze', v: nf(kommend.length), f: '<span>ab heute, ohne abgesagte</span>' },
+    { i: ic.week,  l: 'Nächste 7 Tage',    v: nf(woche.length),   f: '<span>bis ' + dmy(bis7) + '</span>' },
+    { i: ic.gap,   l: 'Offene Stellen',    v: nf(offen),          f: offen ? '<span class="delta down">nicht besetzt</span>' : '<span class="delta up">alles besetzt</span>' },
+    { i: ic.check, l: 'Nicht bestätigt',   v: nf(unbestaetigt),   f: '<span>Status „geplant“</span>' }
+  ];
+  $('plKpi').innerHTML = cards.map(c => `
+    <div class="kpi">
+      <div class="kpi-top"><svg class="i i-sm" viewBox="0 0 24 24">${c.i}</svg><span>${c.l}</span></div>
+      <div class="kpi-val">${c.v}</div>
+      <div class="kpi-foot">${c.f}</div>
+    </div>`).join('');
+}
+
+function renderPlanung() {
+  $('pM').style.display = $('pZeit').value === 'monat' ? '' : 'none';
+  renderPlKpi();
+
+  const d = pFiltered();
+  if ($('view-planung').classList.contains('on')) {
+    const offen = d.reduce((s, e) => s + fehlend(e), 0);
+    $('pgCrumb').textContent = `${nf(d.length)} von ${nf(einsaetze.length)} Einsätzen`
+      + (offen ? ` · ${nf(offen)} offene ${offen === 1 ? 'Stelle' : 'Stellen'}` : '');
+  }
+  if (!d.length) {
+    $('plTable').innerHTML = einsaetze.length
+      ? EMPTY('Keine Treffer', 'Für diesen Filter gibt es keine Einsätze. Zeitraum auf „Alle“ stellen oder Suche leeren.')
+      : EMPTY('Noch nichts geplant', 'Mit „Neuer Einsatz“ den ersten Einsatz anlegen — oder ihn diktieren.');
+    return;
+  }
+
+  const heute = isoTag();
+  let letzterTag = '';
+  const zeilen = d.map(e => {
+    let kopf = '';
+    const tag = tagVon(e);
+    if (tag !== letzterTag) {
+      letzterTag = tag;
+      const amTag = d.filter(x => tagVon(x) === tag);
+      const offenTag = amTag.reduce((s, x) => s + fehlend(x), 0);
+      kopf = `<tr class="grp"><td colspan="7"><div class="grp-in">
+          <span class="wd">${WD[new Date(tag + 'T12:00:00').getDay()]}</span>
+          <b>${dmy(tag)}</b>
+          ${tag === heute ? '<span class="chip chip-a">heute</span>' : ''}
+          <span class="sp"></span>
+          <span class="note">${amTag.length} ${amTag.length === 1 ? 'Einsatz' : 'Einsätze'}${offenTag ? ` · ${offenTag} offen` : ''}</span>
+        </div></td></tr>`;
+    }
+
+    const zug = e.mitarbeiter || [];
+    const fehlt = fehlend(e);
+    const teile = zug.slice(0, 3).map(m => `<span class="nm">${esc(fullName(m) || m.name)}</span>`);
+    if (zug.length > 3) teile.push(`<span class="nm">+${zug.length - 3}</span>`);
+    if (fehlt) teile.push(`<span class="nm off">${fehlt} offen</span>`);
+    const st = EN_STATUS[e.status] || EN_STATUS.geplant;
+
+    return kopf + `
+      <tr class="click${tag === heute ? ' heute' : ''}" onclick="openEinsatz(${Number(e.id)})">
+        <td class="nowrap num">${hm(e.von)}–${hm(e.bis)}${ueberNacht(e) ? '<div class="sec">bis Folgetag</div>' : ''}</td>
+        <td class="strong">${esc(e.kunde_name)}${e.titel ? `<div class="sec">${esc(e.titel)}</div>` : ''}</td>
+        <td>${esc(e.ort)}${e.strasse ? `<div class="sec">${esc(e.strasse)}</div>` : ''}</td>
+        <td><span class="chip chip-n">${esc(e.einsatzart)}</span></td>
+        <td class="num"><span class="chip ${e.status === 'abgesagt' ? 'chip-n' : (fehlt ? 'chip-w' : 'chip-p')}">${zug.length}/${nf(e.bedarf)}</span></td>
+        <td>${teile.length ? `<div class="crew">${teile.join('')}</div>` : '<span style="color:var(--ink-3)">–</span>'}</td>
+        <td><span class="chip ${st[1]}">${st[0]}</span></td>
+      </tr>`;
+  }).join('');
+
+  $('plTable').innerHTML = `<table><thead><tr>
+      <th>Zeit</th><th>Kunde</th><th>Arbeitsort</th><th>Einsatzart</th>
+      <th class="num">Besetzung</th><th>Zugeteilt</th><th>Status</th>
+    </tr></thead><tbody>${zeilen}</tbody></table>`;
+}
+
+// ── Zuteilung (gemeinsam für Dialog und Schublade)
+function pickIds(prefix) {
+  return Array.from(document.querySelectorAll('#' + prefix + 'Ma input[type=checkbox]'))
+    .filter(i => i.checked).map(i => Number(i.value));
+}
+
+function pickRender(prefix, ids, ausserId) {
+  const box = $(prefix + 'Ma');
+  if (!box) return;
+  const gewaehlt = new Set((ids || []).map(Number));
+  if (!mitarbeiter.length) {
+    box.innerHTML = '<div class="leer">Keine aktiven Mitarbeitenden vorhanden.</div>';
+    pickFoot(prefix);
+    return;
+  }
+  const k = konflikte($(enId(prefix, 'datum')).value, $(enId(prefix, 'von')).value, $(enId(prefix, 'bis')).value, ausserId);
+  box.innerHTML = mitarbeiter.map(m => {
+    const c = k[m.id] || [];
+    const clash = c.map(x => `${x.kunde_name} ${hm(x.von)}–${hm(x.bis)}`).join(', ');
+    return `<label>
+      <input type="checkbox" value="${Number(m.id)}"${gewaehlt.has(Number(m.id)) ? ' checked' : ''} onchange="pickFoot('${prefix}')">
+      <span class="who">
+        <b>${esc(fullName(m) || m.name)}</b>
+        <span>${esc(m.name)}</span>
+        ${c.length ? `<span class="clash">Gleichzeitig eingeteilt: ${esc(clash)}</span>` : ''}
+      </span>
+    </label>`;
+  }).join('');
+  pickFoot(prefix);
+}
+
+// Datum oder Zeit geändert → Überschneidungen neu bestimmen, Auswahl behalten.
+function pickRefresh(prefix) {
+  pickRender(prefix, pickIds(prefix), prefix === 'enE' ? enTarget : null);
+}
+
+function pickFoot(prefix) {
+  const el = $(prefix + 'MaFoot');
+  if (!el) return;
+  const n = pickIds(prefix).length;
+  const bedarf = Math.max(0, parseInt(($(enId(prefix, 'bedarf')) || {}).value, 10) || 0);
+  const fehlt = Math.max(0, bedarf - n);
+  el.innerHTML = `<span class="chip ${fehlt ? 'chip-w' : 'chip-p'}">${n}/${bedarf}</span>`
+    + `<span>${fehlt ? `noch ${fehlt} ${fehlt === 1 ? 'Person' : 'Personen'} offen` : 'Bedarf gedeckt'}</span>`;
+}
+
+// ── Anlegen
+function openEinsatzNeu(felder, maNamen) {
+  felder = felder || {};
+  maNamen = maNamen || [];
+  const ausDiktat = Object.keys(felder).length > 0 || maNamen.length > 0;
+  const erkannt = EN_FELDER.filter(f => felder[f] !== undefined && felder[f] !== '');
+
+  $('enNeuTitel').textContent = ausDiktat ? 'Erkannt — bitte prüfen' : 'Neuer Einsatz';
+  $('enNeuText').textContent = ausDiktat
+    ? 'Aus dem Diktat übernommen. Es ist noch nichts gespeichert.'
+    : 'Kunde, Arbeitsort, Datum und Zeit sind Pflicht.';
+
+  const vorgabe = { einsatzart: 'Verkehrsdienst', bedarf: 1, datum: isoTag() };
+  EN_FELDER.forEach(f => {
+    const el = $(enId('enN', f));
+    const hat = felder[f] !== undefined && felder[f] !== '';
+    el.value = hat ? felder[f] : (vorgabe[f] !== undefined ? vorgabe[f] : '');
+    el.classList.toggle('ki', ausDiktat && hat);
+  });
+  $('enNStatus').value = 'geplant';
+
+  const ids = maNamen.map(n => (mitarbeiter.find(m => m.name === n) || {}).id).filter(Boolean);
+  pickRender('enN', ids, null);
+  // Wird die Planung als erste Ansicht geöffnet, ist das Personal womöglich
+  // noch unterwegs — dann die Auswahl nachziehen.
+  if (!mitarbeiter.length) loadMitarbeiter().then(() => pickRender('enN', ids, null));
+
+  $('enNeuKiHint').classList.toggle('on', ausDiktat);
+  if (ausDiktat) {
+    let t = erkannt.length
+      ? `Blau markiert wurde aus dem Diktat übernommen: ${esc(erkannt.map(f => EN_LABEL[f]).join(', '))}.`
+      : 'Aus dem Diktat liess sich kein Feld zuordnen.';
+    const namen = ids.map(i => {
+      const m = mitarbeiter.find(x => Number(x.id) === Number(i));
+      return m ? (fullName(m) || m.name) : '';
+    }).filter(Boolean);
+    if (namen.length) t += ` Vorgeschlagene Zuteilung: ${esc(namen.join(', '))}.`;
+    const fehlt = ['kunde_name', 'ort', 'von', 'bis'].filter(f => !felder[f]).map(f => EN_LABEL[f]);
+    if (fehlt.length) t += ` Noch offen als Pflichtfeld: ${esc(fehlt.join(', '))}.`;
+    $('enNeuKiText').innerHTML = t;
+  }
+  $('enNeuErr').style.display = 'none';
+  openDlg('dlgEnNeu');
+  $('enNKunde_name').focus();
+}
+
+// Formularwerte einsammeln. Gibt null zurück, wenn ein Pflichtfeld fehlt.
+function enSammeln(prefix) {
+  const v = f => ($(enId(prefix, f)).value || '').trim();
+  const body = {
+    kunde_name: v('kunde_name'), titel: v('titel'), strasse: v('strasse'), ort: v('ort'),
+    einsatzart: v('einsatzart') || 'Verkehrsdienst',
+    datum: v('datum'), von: v('von'), bis: v('bis'),
+    bedarf: Math.min(99, Math.max(0, parseInt(v('bedarf'), 10) || 0)),
+    status: v('status') || 'geplant',
+    bemerkung: v('bemerkung'),
+    mitarbeiter: pickIds(prefix)
+  };
+  if (!body.kunde_name || !body.ort || !body.datum || !body.von || !body.bis) return null;
+  // Nur verknüpfen, wenn der Name exakt einem Kunden entspricht. Sonst bleibt
+  // er reiner Text — ein Einsatz darf auch für einen noch nicht erfassten
+  // Kunden geplant werden.
+  const k = kunden.find(x => x.name === body.kunde_name);
+  if (k) body.kunde_id = k.id;
+  return body;
+}
+
+function createEinsatz() {
+  const err = $('enNeuErr'); err.style.display = 'none';
+  const body = enSammeln('enN');
+  if (!body) { err.textContent = 'Kunde, Arbeitsort, Datum, Von und Bis sind Pflicht.'; err.style.display = ''; return; }
+  const b = $('enNeuBtn'); b.disabled = true;
+  api('einsatz_save.php', { method: 'POST', body }).then(({ ok, data }) => {
+    b.disabled = false;
+    if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Anlegen fehlgeschlagen.'; err.style.display = ''; return; }
+    closeDlg('dlgEnNeu');
+    loadEinsaetze().then(() => toast('Einsatz angelegt.'));
+  });
+}
+
+// ── Bearbeiten
+function openEinsatz(id) {
+  const e = einsaetze.find(x => Number(x.id) === Number(id));
+  if (!e) { toast('Einsatz nicht gefunden — bitte aktualisieren.'); return; }
+  drawerId = null; maTarget = null; kuTarget = null;
+  enTarget = Number(id);
+
+  const opt = Object.keys(EN_STATUS)
+    .map(s => `<option value="${s}"${e.status === s ? ' selected' : ''}>${EN_STATUS[s][0]}</option>`).join('');
+
+  $('drTitle').textContent = e.kunde_name;
+  $('drBody').innerHTML = `
+    <div class="form-grid">
+      <div class="f wide"><label for="enEKunde_name">Kunde *</label><input class="inp" id="enEKunde_name" list="dlKunden" value="${esc(e.kunde_name)}"></div>
+      <div class="f wide"><label for="enETitel">Bezeichnung</label><input class="inp" id="enETitel" value="${esc(e.titel || '')}"></div>
+      <div class="f wide"><label for="enEStrasse">Arbeitsort — Strasse</label><input class="inp" id="enEStrasse" value="${esc(e.strasse || '')}"></div>
+      <div class="f"><label for="enEOrt">Arbeitsort — PLZ / Ort *</label><input class="inp" id="enEOrt" value="${esc(e.ort)}"></div>
+      <div class="f"><label for="enEEinsatzart">Einsatzart</label><input class="inp" id="enEEinsatzart" value="${esc(e.einsatzart)}"></div>
+      <div class="f"><label for="enEDatum">Datum *</label><input class="inp" id="enEDatum" type="date" value="${esc(tagVon(e))}" onchange="pickRefresh('enE')"></div>
+      <div class="f"><label for="enEBedarf">Benötigte Mitarbeitende</label><input class="inp" id="enEBedarf" type="number" min="0" max="99" value="${Number(e.bedarf)}" oninput="pickFoot('enE')"></div>
+      <div class="f"><label for="enEVon">Von *</label><input class="inp" id="enEVon" type="time" value="${hm(e.von)}" onchange="pickRefresh('enE')"></div>
+      <div class="f"><label for="enEBis">Bis *</label><input class="inp" id="enEBis" type="time" value="${hm(e.bis)}" onchange="pickRefresh('enE')"></div>
+      <div class="f"><label for="enEStatus">Status</label><select class="inp" id="enEStatus">${opt}</select></div>
+      <div class="f wide">
+        <label>Zugeteilte Mitarbeitende</label>
+        <div class="ma-pick" id="enEMa"></div>
+        <div class="pick-foot" id="enEMaFoot"></div>
+      </div>
+      <div class="f wide"><label for="enEBemerkung">Bemerkung</label><textarea class="inp" id="enEBemerkung" rows="2" style="min-height:60px">${esc(e.bemerkung || '')}</textarea></div>
+    </div>
+    <div class="zone">
+      <div class="zone-hd">Was der gelbe Hinweis bedeutet</div>
+      <div class="zone-note">
+        Er zeigt ausschliesslich eine zeitliche Überschneidung mit einem anderen Einsatz.
+        Ruhezeiten und Höchstarbeitszeiten nach GAV werden hier <b>nicht</b> geprüft —
+        diese Auslegung ist noch offen und wird nicht vorweggenommen.
+      </div>
+    </div>
+    <div class="zone danger">
+      <div class="zone-hd">Einsatz löschen</div>
+      <div class="zone-note">Der geplante Einsatz und seine Zuteilung werden entfernt. Bereits erfasste Rapporte sind davon nicht betroffen — sie hängen nicht am Einsatz.</div>
+      <button class="btn btn-danger btn-sm" onclick="askDeleteEinsatz()">Löschen</button>
+    </div>`;
+  $('drFoot').innerHTML =
+    `<button class="btn btn-plain" onclick="closeDrawer()">Schliessen</button>
+     <div style="flex:1"></div>
+     <button class="btn btn-primary" onclick="saveEinsatz()">Speichern</button>`;
+  pickRender('enE', (e.mitarbeiter || []).map(m => m.id), Number(id));
+  showDrawer();
+}
+
+function saveEinsatz() {
+  if (!enTarget) return;
+  const body = enSammeln('enE');
+  if (!body) { toast('Kunde, Arbeitsort, Datum, Von und Bis sind Pflicht.'); return; }
+  body.id = enTarget;
+  api('einsatz_save.php', { method: 'POST', body }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { toast(data.message || 'Speichern fehlgeschlagen.'); return; }
+    closeDrawer();
+    loadEinsaetze().then(() => toast('Einsatz gespeichert.'));
+  });
+}
+
+function askDeleteEinsatz() {
+  const id = enTarget;
+  if (!id) return;
+  askConfirm('Einsatz löschen?',
+    'Der geplante Einsatz und seine Zuteilung werden entfernt. Erfasste Rapporte bleiben unverändert.',
+    'Löschen',
+    () => api('einsatz_delete.php', { method: 'POST', body: { id } }).then(({ ok, data }) => {
+      if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
+      closeDrawer();
+      loadEinsaetze().then(() => toast('Einsatz gelöscht.'));
+    }));
+}
+
 // ══════════════════════════════════════════ SCHUBLADE + DRUCK
 function openDrawer(id) {
   const r = rapporte.find(x => Number(x.id) === Number(id));
@@ -1131,7 +1661,7 @@ function closeDrawer() {
   $('scrim').classList.remove('on');
   $('drawer').classList.remove('on');
   $('drawer').setAttribute('aria-hidden', 'true');
-  drawerId = null; maTarget = null; kuTarget = null;
+  drawerId = null; maTarget = null; kuTarget = null; enTarget = null;
 }
 
 function askDeleteRapport(id) {
@@ -1436,7 +1966,9 @@ const KI_TEXTE = {
   edit: ['Änderung diktieren',
     'Sagen, wen du meinst und was sich ändert. Zum Beispiel: „Ändere die Adresse von Daniele Ciardo zu Musterstrasse 1, 3000 Bern.“ Tippfehler beim Namen sind kein Problem.'],
   kunde: ['Kunden diktieren',
-    'Tippen — oder das Mikrofon der Tastatur benutzen. Vollständig: „Neuer Kunde Studer Immobilien AG, Gerolagstrasse 12, 4632 Trimbach, Telefon 062 111 22 33.“ Mit Recherche genügt: „Leg mir die Borner AG mit Sitz in Winznau an.“']
+    'Tippen — oder das Mikrofon der Tastatur benutzen. Vollständig: „Neuer Kunde Studer Immobilien AG, Gerolagstrasse 12, 4632 Trimbach, Telefon 062 111 22 33.“ Mit Recherche genügt: „Leg mir die Borner AG mit Sitz in Winznau an.“'],
+  einsatz: ['Einsatz diktieren',
+    'Tippen — oder das Mikrofon der Tastatur benutzen. Zum Beispiel: „Neuer Einsatz für die Borner AG am nächsten Freitag von 7 bis 17 Uhr, Baustelle Hauptstrasse 4 in 4632 Trimbach, zwei Mitarbeitende, Hans Meier und Peter Muster.“ Der Ort ist der Arbeitsort, nicht der Firmensitz.']
 };
 
 function openKi(mode) {
@@ -1461,12 +1993,22 @@ function submitKi() {
   b.textContent = mitRecherche ? 'Suche … (bis zu 1 Min.)' : 'Erkenne …';
   const reset = () => { b.disabled = false; b.textContent = 'Erkennen'; };
   const endpoint = mitRecherche ? 'ki_kunden_recherche.php'
-    : { neu: 'ki_mitarbeiter_parse.php', edit: 'ki_mitarbeiter_edit_parse.php', kunde: 'ki_kunden_parse.php' }[kiMode];
+    : { neu: 'ki_mitarbeiter_parse.php', edit: 'ki_mitarbeiter_edit_parse.php',
+        kunde: 'ki_kunden_parse.php', einsatz: 'ki_einsatz_parse.php' }[kiMode];
 
-  api(endpoint, { method: 'POST', body: { text } }).then(({ ok, data }) => {
+  const body = { text };
+  // „morgen“ richtet sich nach der Uhr des Admins, nicht nach der des Servers.
+  if (kiMode === 'einsatz') body.heute = isoTag();
+
+  api(endpoint, { method: 'POST', body }).then(({ ok, data }) => {
     reset();
     if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Erkennung fehlgeschlagen.'; err.style.display = ''; return; }
     if (kiMode === 'neu') { closeDlg('dlgKi'); openMaNeu(data.felder || {}); return; }
+    if (kiMode === 'einsatz') {
+      closeDlg('dlgKi');
+      openEinsatzNeu(data.felder || {}, data.mitarbeiter_login_namen || []);
+      return;
+    }
     if (kiMode === 'kunde') {
       closeDlg('dlgKi');
       openKundeNeu(data.felder || {}, { recherchiert: data.recherchiert, quellen: data.quellen });

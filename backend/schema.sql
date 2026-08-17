@@ -1,6 +1,9 @@
 -- Schema fuer das gemeinsame Backend (ENT-010)
 -- Ausfuehren im Hostpoint-Datenbank-Tool (phpMyAdmin), einmalig.
 -- Ersetzt die vorherige Version (Sessions-Tabelle ergaenzt).
+--
+-- Die Tabellen der Einsatzplanung stehen bewusst NICHT hier, sondern in
+-- schema_planung.sql -- damit nichts doppelt ausgefuehrt wird.
 
 CREATE TABLE mitarbeiter (
   id INT AUTO_INCREMENT PRIMARY KEY,

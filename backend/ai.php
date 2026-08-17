@@ -140,6 +140,77 @@ function anthropic_extract_kunde(string $text): ?array
     return anthropic_tool_call($tool, $text);
 }
 
+// Einsatzplanung per Diktat (ENT-020). Wieder reine Extraktion: das Modell
+// ordnet zu, gespeichert wird erst nach Pruefung im Formular.
+//
+// Bewusst OHNE Internetrecherche. Kunde und Mitarbeitende stehen bereits in
+// der eigenen Datei -- was fehlt, wird nicht erraten, sondern leer gelassen.
+function anthropic_extract_einsatz(string $text, array $kunden, array $mitarbeiter, string $heute): ?array
+{
+    $tool = [
+        'name' => 'extract_einsatz',
+        'description' => 'Extrahiert einen geplanten Einsatz aus einem deutschen Satz.',
+        'input_schema' => [
+            'type' => 'object',
+            'properties' => [
+                'kunde_name' => [
+                    'type' => 'string',
+                    'description' => 'Der Kunde. Steht er in der Kundenliste, exakt so schreiben wie dort -- '
+                        . 'auch bei Tippfehlern oder Abkuerzungen im Befehl. Sonst so, wie genannt.',
+                ],
+                'titel' => [
+                    'type' => 'string',
+                    'description' => 'Kurze Bezeichnung des Einsatzes, z.B. "Fasnachtsumzug" oder '
+                        . '"Baustelle Kreisel". Nur eintragen, wenn im Befehl genannt.',
+                ],
+                'strasse' => [
+                    'type' => 'string',
+                    'description' => 'Strasse und Hausnummer des ARBEITSORTES, ohne Ort. Nicht der Firmensitz des Kunden.',
+                ],
+                'ort' => [
+                    'type' => 'string',
+                    'description' => 'PLZ und Ort des ARBEITSORTES, z.B. "4632 Trimbach". Nicht der Firmensitz des Kunden.',
+                ],
+                'datum' => ['type' => 'string', 'description' => 'Format JJJJ-MM-TT'],
+                'von'   => ['type' => 'string', 'description' => 'Startzeit im Format HH:MM'],
+                'bis'   => ['type' => 'string', 'description' => 'Endzeit im Format HH:MM'],
+                'bedarf' => [
+                    'type' => 'integer',
+                    'description' => 'Wie viele Mitarbeitende der Einsatz braucht. Werden Personen namentlich '
+                        . 'genannt, ohne dass eine Anzahl gesagt wurde, ist das deren Anzahl.',
+                ],
+                'einsatzart' => ['type' => 'string', 'description' => 'z.B. Verkehrsdienst. Nur wenn genannt.'],
+                'mitarbeiter_login_namen' => [
+                    'type' => 'array',
+                    'items' => ['type' => 'string'],
+                    'description' => 'Login-Namen der namentlich genannten Mitarbeitenden -- exakt wie in der '
+                        . 'Personalliste. Wird niemand namentlich genannt, leer lassen.',
+                ],
+                'bemerkung' => ['type' => 'string', 'description' => 'Zusatzangaben, die in kein anderes Feld passen.'],
+            ],
+        ],
+    ];
+
+    $kundenText = $kunden
+        ? implode("\n", array_map(fn($k) => '- ' . $k, $kunden))
+        : '(keine Kunden erfasst)';
+    $maText = $mitarbeiter
+        ? implode("\n", array_map(
+            fn($m) => "- {$m['name']}: " . trim(($m['vorname'] ?? '') . ' ' . ($m['nachname'] ?? '')),
+            $mitarbeiter))
+        : '(keine Mitarbeitenden erfasst)';
+
+    $userContent =
+        "Heutiges Datum: {$heute}. Relative Angaben wie \"morgen\" oder \"naechsten Freitag\" darauf beziehen.\n\n"
+        . "Bekannte Kunden:\n{$kundenText}\n\n"
+        . "Bekannte Mitarbeitende (Login-Name: Vorname Nachname):\n{$maText}\n\n"
+        . "Regeln: Erfinde nichts. Ein Feld, das im Befehl nicht vorkommt, laesst du weg. "
+        . "Der Ort ist der Arbeitsort des Einsatzes, nicht die Rechnungsadresse des Kunden.\n\n"
+        . "Befehl: {$text}";
+
+    return anthropic_tool_call($tool, $userContent);
+}
+
 // Kunden-Recherche (ENT-019). Anders als die Funktionen oben: hier darf das
 // Modell zuerst im Internet suchen und uebergibt erst danach die Felder.
 // Deshalb kein erzwungenes tool_choice (das wuerde die Suche blockieren) und
