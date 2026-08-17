@@ -117,3 +117,25 @@ function anthropic_extract_mitarbeiter_edit(string $text, array $mitarbeiterList
 
     return anthropic_tool_call($tool, $userContent);
 }
+
+// Ausweitung des Piloten auf das Kundenformular (ENT-018). Gleiche Regel wie
+// oben: nur Extraktion, gespeichert wird erst nach Pruefung durch den Admin.
+function anthropic_extract_kunde(string $text): ?array
+{
+    $tool = [
+        'name' => 'extract_kunde',
+        'description' => 'Extrahiert Kunden-Stammdaten aus einem deutschen Satz.',
+        'input_schema' => [
+            'type' => 'object',
+            'properties' => [
+                'name' => ['type' => 'string', 'description' => 'Firmen- oder Kundenname, inkl. Rechtsform wie GmbH oder AG'],
+                'strasse' => ['type' => 'string', 'description' => 'Strasse mit Hausnummer, ohne Ort'],
+                'ort' => ['type' => 'string', 'description' => 'Postleitzahl und Ort zusammen, z.B. "4632 Trimbach"'],
+                'telefon' => ['type' => 'string', 'description' => 'Telefonnummer in der genannten Schreibweise'],
+                'email' => ['type' => 'string', 'description' => 'E-Mail-Adresse'],
+            ],
+        ],
+    ];
+
+    return anthropic_tool_call($tool, $text);
+}
