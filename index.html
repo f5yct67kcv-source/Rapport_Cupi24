@@ -179,7 +179,7 @@ tr:hover td { background: var(--accent-light); }
 <div class="tabs">
   <div class="tab active" onclick="showTab('erfassen')" id="tab-erfassen">Erfassen</div>
   <div class="tab" onclick="showTab('uebersicht')" id="tab-uebersicht">Übersicht</div>
-  <div class="tab" onclick="showTab('mitarbeiter')" id="tab-mitarbeiter">Mitarbeiter</div>
+  <div class="tab" onclick="showTab('mitarbeiter')" id="tab-mitarbeiter" style="display:none">Mitarbeiter</div>
   <div class="tab" onclick="showTab('admin')" id="tab-admin" style="display:none">Admin</div>
 </div>
 
@@ -440,6 +440,7 @@ function afterLogin() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('maDisplay').value = currentUser.name;
   document.getElementById('tab-admin').style.display = currentUser.ist_admin ? '' : 'none';
+  document.getElementById('tab-mitarbeiter').style.display = currentUser.ist_admin ? '' : 'none';
   loadAll();
 }
 
