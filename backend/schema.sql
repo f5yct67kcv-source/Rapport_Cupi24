@@ -8,6 +8,16 @@ CREATE TABLE mitarbeiter (
   password_hash VARCHAR(255) NOT NULL,
   ist_admin TINYINT(1) NOT NULL DEFAULT 0,
   aktiv TINYINT(1) NOT NULL DEFAULT 1,
+  personalnummer VARCHAR(20),
+  anrede VARCHAR(20),
+  vorname VARCHAR(100),
+  nachname VARCHAR(100),
+  geburtsdatum DATE,
+  strasse VARCHAR(200),
+  ort VARCHAR(200),
+  telefon VARCHAR(50),
+  mobil VARCHAR(50),
+  email VARCHAR(200),
   erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

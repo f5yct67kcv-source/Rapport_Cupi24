@@ -417,9 +417,61 @@ tr:hover td { background: var(--accent-light); }
 
 <!-- MITARBEITER DETAIL MODAL -->
 <div class="modal-overlay" id="maDetailModal">
-  <div class="modal" style="max-width:380px">
+  <div class="modal" style="max-width:420px;max-height:90vh;overflow-y:auto">
     <h3>Mitarbeiter-Details</h3>
-    <div id="maDetailBody" style="margin-top:10px"></div>
+    <div id="maDetailBody" style="margin:10px 0"></div>
+    <div class="row2">
+      <div class="field">
+        <label>Personalnummer</label>
+        <input type="text" id="maEditPersonalnummer">
+      </div>
+      <div class="field">
+        <label>Anrede</label>
+        <select id="maEditAnrede">
+          <option value="">–</option>
+          <option value="Herr">Herr</option>
+          <option value="Frau">Frau</option>
+          <option value="Divers">Divers</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Vorname</label>
+        <input type="text" id="maEditVorname">
+      </div>
+      <div class="field">
+        <label>Nachname</label>
+        <input type="text" id="maEditNachname">
+      </div>
+    </div>
+    <div class="field">
+      <label>Geburtsdatum</label>
+      <input type="date" id="maEditGeburtsdatum">
+    </div>
+    <div class="field">
+      <label>Strasse</label>
+      <input type="text" id="maEditStrasse">
+    </div>
+    <div class="field">
+      <label>Ort / PLZ</label>
+      <input type="text" id="maEditOrt">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Telefon</label>
+        <input type="text" id="maEditTelefon">
+      </div>
+      <div class="field">
+        <label>Mobil</label>
+        <input type="text" id="maEditMobil">
+      </div>
+    </div>
+    <div class="field">
+      <label>E-Mail</label>
+      <input type="email" id="maEditEmail">
+    </div>
+    <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px" onclick="saveMaEdit()">Angaben speichern</button>
     <hr class="divider">
     <div class="field" style="margin-bottom:10px">
       <label>Neues Passwort setzen</label>
@@ -976,11 +1028,14 @@ function renderMaChips(){
   apiCall('mitarbeiter_list.php').then(({ok,data})=>{
     if(!ok||data.status!=='ok') return;
     maListData = data.mitarbeiter.slice().sort((a,b)=>a.name.localeCompare(b.name));
-    document.getElementById('maChipList').innerHTML = maListData.map((m,i)=>
-      `<div class="ma-chip" style="cursor:pointer" onclick="showMaDetail(${i})">
-         <span class="ma-chip-name">${m.name}${m.ist_admin?' <span class="badge badge-blue" style="margin-left:6px;font-size:9px;vertical-align:middle">Admin</span>':''}</span>
+    document.getElementById('maChipList').innerHTML = maListData.map((m,i)=>{
+      const vollname = (m.vorname||m.nachname) ? `${m.vorname||''} ${m.nachname||''}`.trim() : '';
+      const meta = [m.personalnummer?`Nr. ${m.personalnummer}`:'', vollname].filter(Boolean).join(' · ');
+      return `<div class="ma-chip" style="cursor:pointer" onclick="showMaDetail(${i})">
+         <span class="ma-chip-name">${m.name}${m.ist_admin?' <span class="badge badge-blue" style="margin-left:6px;font-size:9px;vertical-align:middle">Admin</span>':''}${meta?`<br><small style="color:var(--sub);font-weight:400">${meta}</small>`:''}</span>
          <span style="color:var(--sub);font-size:18px">›</span>
-       </div>`).join('');
+       </div>`;
+    }).join('');
   });
 }
 function addMa(){
@@ -998,16 +1053,46 @@ function showMaDetail(i){
   if(!m) return;
   maDetailTarget = m.name;
   const rows = [
-    ['Name', m.name],
+    ['Login-Name', m.name],
     ['Rolle', m.ist_admin ? 'Admin' : 'Mitarbeiter'],
     ['Erstellt am', m.erstellt_am ? fmtDate(m.erstellt_am.split(' ')[0]) : '–'],
   ];
   document.getElementById('maDetailBody').innerHTML = rows.map(([k,v]) => `<div class="detail-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+  document.getElementById('maEditPersonalnummer').value = m.personalnummer || '';
+  document.getElementById('maEditAnrede').value = m.anrede || '';
+  document.getElementById('maEditVorname').value = m.vorname || '';
+  document.getElementById('maEditNachname').value = m.nachname || '';
+  document.getElementById('maEditGeburtsdatum').value = m.geburtsdatum || '';
+  document.getElementById('maEditStrasse').value = m.strasse || '';
+  document.getElementById('maEditOrt').value = m.ort || '';
+  document.getElementById('maEditTelefon').value = m.telefon || '';
+  document.getElementById('maEditMobil').value = m.mobil || '';
+  document.getElementById('maEditEmail').value = m.email || '';
   document.getElementById('btn-ma-remove').style.display = (m.name === currentUser.name) ? 'none' : '';
   document.getElementById('maResetPassword').value = '';
   document.getElementById('maDetailModal').classList.add('show');
 }
 function closeMaDetailModal(){document.getElementById('maDetailModal').classList.remove('show');maDetailTarget=null;}
+function saveMaEdit(){
+  if(!maDetailTarget) return;
+  const body = {
+    name: maDetailTarget,
+    personalnummer: document.getElementById('maEditPersonalnummer').value.trim(),
+    anrede: document.getElementById('maEditAnrede').value,
+    vorname: document.getElementById('maEditVorname').value.trim(),
+    nachname: document.getElementById('maEditNachname').value.trim(),
+    geburtsdatum: document.getElementById('maEditGeburtsdatum').value,
+    strasse: document.getElementById('maEditStrasse').value.trim(),
+    ort: document.getElementById('maEditOrt').value.trim(),
+    telefon: document.getElementById('maEditTelefon').value.trim(),
+    mobil: document.getElementById('maEditMobil').value.trim(),
+    email: document.getElementById('maEditEmail').value.trim(),
+  };
+  apiCall('mitarbeiter_update.php',{method:'POST',body}).then(({ok,data})=>{
+    if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
+    renderMaChips();showToast('✓ Angaben gespeichert.');
+  });
+}
 function resetMaPassword(){
   if(!maDetailTarget) return;
   const password = document.getElementById('maResetPassword').value;
