@@ -364,6 +364,18 @@ tr:hover td { background: var(--accent-light); }
   </div>
 </div>
 
+<!-- MITARBEITER DETAIL MODAL -->
+<div class="modal-overlay" id="maDetailModal">
+  <div class="modal" style="max-width:380px">
+    <h3>Mitarbeiter-Details</h3>
+    <div id="maDetailBody" style="margin-top:10px"></div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeMaDetailModal()">Schliessen</button>
+    </div>
+    <button class="btn btn-red" style="width:100%;margin-top:10px" id="btn-ma-remove" onclick="confirmRemoveMa()">Mitarbeiter entfernen</button>
+  </div>
+</div>
+
 <!-- DETAIL MODAL -->
 <div class="modal-overlay" id="detailModal">
   <div class="modal" style="max-width:420px">
@@ -849,10 +861,18 @@ function exportCSV() {
 }
 
 // ── ADMIN
+let maListData = [];
+let maDetailTarget = null;
+
 function renderMaChips(){
   apiCall('mitarbeiter_list.php').then(({ok,data})=>{
     if(!ok||data.status!=='ok') return;
-    document.getElementById('maChipList').innerHTML=data.mitarbeiter.sort().map(n=>`<div class="ma-chip"><span class="ma-chip-name">${n}</span>${n===currentUser.name?'':`<button class="ma-chip-remove" onclick="removeMa('${n.replace(/'/g,"\\'")}')">×</button>`}</div>`).join('');
+    maListData = data.mitarbeiter.slice().sort((a,b)=>a.name.localeCompare(b.name));
+    document.getElementById('maChipList').innerHTML = maListData.map((m,i)=>
+      `<div class="ma-chip" style="cursor:pointer" onclick="showMaDetail(${i})">
+         <span class="ma-chip-name">${m.name}${m.ist_admin?' <span class="badge badge-blue" style="margin-left:6px;font-size:9px;vertical-align:middle">Admin</span>':''}</span>
+         <span style="color:var(--sub);font-size:18px">›</span>
+       </div>`).join('');
   });
 }
 function addMa(){
@@ -865,11 +885,27 @@ function addMa(){
     nameInp.value='';passInp.value='';renderMaChips();showToast(t('tMaAdd'));
   });
 }
-function removeMa(name){
-  if(!confirm(lang==='sq'?`Çaktivizo "${name}"?`:`"${name}" deaktivieren?`))return;
+function showMaDetail(i){
+  const m = maListData[i];
+  if(!m) return;
+  maDetailTarget = m.name;
+  const rows = [
+    ['Name', m.name],
+    ['Rolle', m.ist_admin ? 'Admin' : 'Mitarbeiter'],
+    ['Erstellt am', m.erstellt_am ? fmtDate(m.erstellt_am.split(' ')[0]) : '–'],
+  ];
+  document.getElementById('maDetailBody').innerHTML = rows.map(([k,v]) => `<div class="detail-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+  document.getElementById('btn-ma-remove').style.display = (m.name === currentUser.name) ? 'none' : '';
+  document.getElementById('maDetailModal').classList.add('show');
+}
+function closeMaDetailModal(){document.getElementById('maDetailModal').classList.remove('show');maDetailTarget=null;}
+function confirmRemoveMa(){
+  if(!maDetailTarget) return;
+  const name = maDetailTarget;
+  if(!confirm(lang==='sq'?`Çaktivizo "${name}"?`:`"${name}" wirklich als Mitarbeiter entfernen?`)) return;
   apiCall('mitarbeiter_deactivate.php',{method:'POST',body:{name}}).then(({ok,data})=>{
     if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
-    renderMaChips();showToast(t('tMaRem'));
+    closeMaDetailModal();renderMaChips();showToast(t('tMaRem'));
   });
 }
 
