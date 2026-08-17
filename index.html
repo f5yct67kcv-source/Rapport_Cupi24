@@ -452,6 +452,82 @@ tr:hover td { background: var(--accent-light); }
   </div>
 </div>
 
+<!-- KI-DIKTAT MITARBEITER: PRUEFEN VOR DEM ANLEGEN -->
+<div class="modal-overlay" id="kiMaReviewModal">
+  <div class="modal" style="max-width:420px;max-height:90vh;overflow-y:auto">
+    <h3>Neuer Mitarbeiter — bitte prüfen</h3>
+    <p style="font-size:12px;color:var(--sub);margin:8px 0 12px">Erkannt aus dem Diktat. Nichts ist gespeichert — bitte prüfen, korrigieren und Passwort setzen.</p>
+    <div class="field">
+      <label>Login-Name</label>
+      <input type="text" id="kiReviewLoginName">
+    </div>
+    <div class="field">
+      <label>Passwort</label>
+      <div class="pw-wrap">
+        <input type="password" id="kiReviewPassword" placeholder="min. 6 Zeichen">
+        <button type="button" class="pw-toggle" onclick="togglePw('kiReviewPassword',this)">👁</button>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="row2">
+      <div class="field">
+        <label>Personalnummer</label>
+        <input type="text" id="kiReviewPersonalnummer">
+      </div>
+      <div class="field">
+        <label>Anrede</label>
+        <select id="kiReviewAnrede">
+          <option value="">–</option>
+          <option value="Herr">Herr</option>
+          <option value="Frau">Frau</option>
+          <option value="Divers">Divers</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Vorname</label>
+        <input type="text" id="kiReviewVorname">
+      </div>
+      <div class="field">
+        <label>Nachname</label>
+        <input type="text" id="kiReviewNachname">
+      </div>
+    </div>
+    <div class="field">
+      <label>Geburtsdatum</label>
+      <input type="date" id="kiReviewGeburtsdatum">
+    </div>
+    <div class="field">
+      <label>Strasse</label>
+      <input type="text" id="kiReviewStrasse">
+    </div>
+    <div class="field">
+      <label>Ort / PLZ</label>
+      <input type="text" id="kiReviewOrt">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Telefon</label>
+        <input type="text" id="kiReviewTelefon">
+      </div>
+      <div class="field">
+        <label>Mobil</label>
+        <input type="text" id="kiReviewMobil">
+      </div>
+    </div>
+    <div class="field">
+      <label>E-Mail</label>
+      <input type="email" id="kiReviewEmail">
+    </div>
+    <div class="err-msg" id="kiReviewError" style="display:none;margin-bottom:10px"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="confirmKiMaCreate()">Mitarbeiter jetzt anlegen</button>
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeKiMaReviewModal()">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="maDetailModal">
   <div class="modal" style="max-width:420px;max-height:90vh;overflow-y:auto">
     <h3>Mitarbeiter-Details</h3>
@@ -1059,7 +1135,6 @@ function exportCSV() {
 // ── ADMIN
 let maListData = [];
 let maDetailTarget = null;
-let kiParsedFields = null;
 
 function openKiMaModal(){
   document.getElementById('kiMaText').value = '';
@@ -1076,14 +1151,59 @@ function submitKiMaParse(){
   apiCall('ki_mitarbeiter_parse.php',{method:'POST',body:{text}}).then(({ok,data})=>{
     btn.disabled = false;
     if (!ok || data.status!=='ok') { errEl.textContent = data.message || 'Erkennung fehlgeschlagen.'; errEl.style.display = ''; return; }
-    kiParsedFields = data.felder || {};
     closeKiMaModal();
-    const vorname = (kiParsedFields.vorname||'').toLowerCase().trim();
-    const nachname = (kiParsedFields.nachname||'').toLowerCase().trim();
-    document.getElementById('newMaInput').value = (vorname && nachname) ? `${vorname}.${nachname}`.replace(/\s+/g,'') : '';
-    document.getElementById('newMaPassword').focus();
-    showToast('✓ Felder erkannt — bitte prüfen, Passwort setzen und speichern.');
+    openKiMaReviewModal(data.felder || {});
   }).catch(()=>{ btn.disabled=false; errEl.textContent='Netzwerkfehler.'; errEl.style.display=''; });
+}
+
+// Echter Pruef-Schritt vor dem Anlegen: nichts wird gespeichert, bevor der
+// Admin hier alle erkannten Felder gesehen, ggf. korrigiert und ein
+// Passwort gesetzt hat.
+function openKiMaReviewModal(felder){
+  const vorname = (felder.vorname||'').toLowerCase().trim();
+  const nachname = (felder.nachname||'').toLowerCase().trim();
+  document.getElementById('kiReviewLoginName').value = (vorname && nachname) ? `${vorname}.${nachname}`.replace(/\s+/g,'') : '';
+  document.getElementById('kiReviewPassword').value = '';
+  document.getElementById('kiReviewPersonalnummer').value = felder.personalnummer || '';
+  document.getElementById('kiReviewAnrede').value = felder.anrede || '';
+  document.getElementById('kiReviewVorname').value = felder.vorname || '';
+  document.getElementById('kiReviewNachname').value = felder.nachname || '';
+  document.getElementById('kiReviewGeburtsdatum').value = felder.geburtsdatum || '';
+  document.getElementById('kiReviewStrasse').value = felder.strasse || '';
+  document.getElementById('kiReviewOrt').value = felder.ort || '';
+  document.getElementById('kiReviewTelefon').value = felder.telefon || '';
+  document.getElementById('kiReviewMobil').value = felder.mobil || '';
+  document.getElementById('kiReviewEmail').value = felder.email || '';
+  document.getElementById('kiReviewError').style.display = 'none';
+  document.getElementById('kiMaReviewModal').classList.add('show');
+}
+function closeKiMaReviewModal(){ document.getElementById('kiMaReviewModal').classList.remove('show'); }
+function confirmKiMaCreate(){
+  const errEl = document.getElementById('kiReviewError');
+  errEl.style.display = 'none';
+  const name = document.getElementById('kiReviewLoginName').value.trim();
+  const password = document.getElementById('kiReviewPassword').value;
+  if (!name) { errEl.textContent = 'Login-Name erforderlich.'; errEl.style.display = ''; return; }
+  if (password.length < 6) { errEl.textContent = 'Passwort mindestens 6 Zeichen.'; errEl.style.display = ''; return; }
+  const body = {
+    name, password,
+    personalnummer: document.getElementById('kiReviewPersonalnummer').value.trim(),
+    anrede: document.getElementById('kiReviewAnrede').value,
+    vorname: document.getElementById('kiReviewVorname').value.trim(),
+    nachname: document.getElementById('kiReviewNachname').value.trim(),
+    geburtsdatum: document.getElementById('kiReviewGeburtsdatum').value,
+    strasse: document.getElementById('kiReviewStrasse').value.trim(),
+    ort: document.getElementById('kiReviewOrt').value.trim(),
+    telefon: document.getElementById('kiReviewTelefon').value.trim(),
+    mobil: document.getElementById('kiReviewMobil').value.trim(),
+    email: document.getElementById('kiReviewEmail').value.trim(),
+  };
+  apiCall('mitarbeiter_create.php',{method:'POST',body}).then(({ok,data})=>{
+    if (!ok || data.status!=='ok') { errEl.textContent = data.message || 'Fehler.'; errEl.style.display = ''; return; }
+    closeKiMaReviewModal();
+    renderMaChips();
+    showToast(t('tMaAdd'));
+  });
 }
 
 function openKiMaEditModal(){
@@ -1136,12 +1256,7 @@ function addMa(){
   apiCall('mitarbeiter_create.php',{method:'POST',body:{name,password}}).then(({ok,data})=>{
     if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
     nameInp.value='';passInp.value='';
-    if (kiParsedFields) {
-      const felder = Object.assign({name}, kiParsedFields);
-      apiCall('mitarbeiter_update.php',{method:'POST',body:felder}).finally(()=>{ kiParsedFields=null; renderMaChips(); });
-    } else {
-      renderMaChips();
-    }
+    renderMaChips();
     showToast(t('tMaAdd'));
   });
 }
