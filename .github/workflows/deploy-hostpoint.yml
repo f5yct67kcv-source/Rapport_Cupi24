@@ -13,8 +13,11 @@ jobs:
 
       - name: Platzhalter durch echte Werte ersetzen
         run: |
-          mkdir -p dist/api
+          mkdir -p dist/api dist/icons
           cp index.html dist/index.html
+          cp manifest.json dist/manifest.json
+          cp sw.js dist/sw.js
+          cp icons/*.png dist/icons/
           cp backend/db.php dist/db.php
           cp backend/api/*.php dist/api/
           # setup.php / setup.html bewusst NICHT hier -- Ersteinrichtung ist ein
