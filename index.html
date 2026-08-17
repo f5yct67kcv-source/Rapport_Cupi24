@@ -372,8 +372,9 @@ tr:hover td { background: var(--accent-light); }
         <input type="password" id="newMaPassword" placeholder="Passwort (min. 6 Zeichen)" style="min-width:120px" onkeydown="if(event.key==='Enter')addMa()">
         <button class="btn btn-green btn-sm" onclick="addMa()" id="btn-add-ma">+ Hinzufügen</button>
       </div>
-      <div style="margin-top:10px">
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="openKiMaModal()">🎙️ Per Sprache/Diktat anlegen</button>
+        <button class="btn btn-ghost btn-sm" onclick="openKiMaEditModal()">🎙️ Per Diktat bearbeiten</button>
       </div>
     </div>
   </div>
@@ -431,6 +432,22 @@ tr:hover td { background: var(--accent-light); }
     <button class="btn btn-primary" style="width:100%" id="btn-ki-ma-submit" onclick="submitKiMaParse()">Felder erkennen</button>
     <div class="btn-row" style="margin-top:16px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeKiMaModal()">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<!-- KI-DIKTAT MITARBEITER BEARBEITEN -->
+<div class="modal-overlay" id="kiMaEditModal">
+  <div class="modal" style="max-width:420px">
+    <h3>Mitarbeiter per Diktat bearbeiten</h3>
+    <p style="font-size:12px;color:var(--sub);margin:8px 0 12px">Tippe oder diktiere, wen du meinst und was sich ändern soll, z.B. „Ändere die Adresse von Daniele Ciardo zu Musterstrasse 1, 3000 Bern". Tippfehler beim Namen sind kein Problem.</p>
+    <div class="field">
+      <textarea id="kiMaEditText" rows="4" placeholder="Text eingeben oder diktieren..."></textarea>
+    </div>
+    <div class="err-msg" id="kiMaEditError" style="display:none;margin-bottom:10px"></div>
+    <button class="btn btn-primary" style="width:100%" id="btn-ki-ma-edit-submit" onclick="submitKiMaEditParse()">Änderung erkennen</button>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeKiMaEditModal()">Abbrechen</button>
     </div>
   </div>
 </div>
@@ -1066,6 +1083,34 @@ function submitKiMaParse(){
     document.getElementById('newMaInput').value = (vorname && nachname) ? `${vorname}.${nachname}`.replace(/\s+/g,'') : '';
     document.getElementById('newMaPassword').focus();
     showToast('✓ Felder erkannt — bitte prüfen, Passwort setzen und speichern.');
+  }).catch(()=>{ btn.disabled=false; errEl.textContent='Netzwerkfehler.'; errEl.style.display=''; });
+}
+
+function openKiMaEditModal(){
+  document.getElementById('kiMaEditText').value = '';
+  document.getElementById('kiMaEditError').style.display = 'none';
+  document.getElementById('kiMaEditModal').classList.add('show');
+}
+function closeKiMaEditModal(){ document.getElementById('kiMaEditModal').classList.remove('show'); }
+function submitKiMaEditParse(){
+  const text = document.getElementById('kiMaEditText').value.trim();
+  const errEl = document.getElementById('kiMaEditError');
+  errEl.style.display = 'none';
+  if (!text) { errEl.textContent = 'Bitte Text eingeben.'; errEl.style.display = ''; return; }
+  const btn = document.getElementById('btn-ki-ma-edit-submit'); btn.disabled = true;
+  apiCall('ki_mitarbeiter_edit_parse.php',{method:'POST',body:{text}}).then(({ok,data})=>{
+    btn.disabled = false;
+    if (!ok || data.status!=='ok') { errEl.textContent = data.message || 'Erkennung fehlgeschlagen.'; errEl.style.display = ''; return; }
+    const idx = maListData.findIndex(m => m.name === data.mitarbeiter_login_name);
+    if (idx === -1) { errEl.textContent = 'Erkannter Mitarbeiter nicht gefunden.'; errEl.style.display = ''; return; }
+    closeKiMaEditModal();
+    showMaDetail(idx);
+    const felder = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email'];
+    const idPrefix = { personalnummer:'maEditPersonalnummer', anrede:'maEditAnrede', vorname:'maEditVorname', nachname:'maEditNachname',
+      geburtsdatum:'maEditGeburtsdatum', strasse:'maEditStrasse', ort:'maEditOrt', telefon:'maEditTelefon', mobil:'maEditMobil', email:'maEditEmail' };
+    const geaendert = [];
+    felder.forEach(f => { if (data.aenderungen && data.aenderungen[f] !== undefined) { document.getElementById(idPrefix[f]).value = data.aenderungen[f]; geaendert.push(f); } });
+    showToast(geaendert.length ? `✓ Erkannt: ${geaendert.join(', ')} — bitte prüfen und speichern.` : 'Mitarbeiter erkannt, aber keine Änderung gefunden.');
   }).catch(()=>{ btn.disabled=false; errEl.textContent='Netzwerkfehler.'; errEl.style.display=''; });
 }
 
