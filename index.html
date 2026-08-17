@@ -131,6 +131,10 @@ tr:hover td { background: var(--accent-light); }
 .detail-row .v { text-align: right; font-weight: 600; }
 .detail-sig-img { max-width: 100%; max-height: 100px; border: 1px solid var(--border); border-radius: 6px; margin-top: 6px; background: #fff; }
 
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 42px; }
+.pw-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 17px; padding: 6px; color: var(--sub); line-height: 1; }
+
 #printArea { display: none; }
 @media print {
   body * { visibility: hidden; }
@@ -155,7 +159,13 @@ tr:hover td { background: var(--accent-light); }
     </div>
     <div class="field">
       <label>Passwort</label>
-      <input type="password" id="loginPassword" autocomplete="current-password" onkeydown="if(event.key==='Enter')submitLogin()">
+      <div class="pw-wrap">
+        <input type="password" id="loginPassword" autocomplete="current-password" onkeydown="if(event.key==='Enter')submitLogin()">
+        <button type="button" class="pw-toggle" onclick="togglePw('loginPassword',this)">👁</button>
+      </div>
+    </div>
+    <div style="text-align:right;margin:-4px 0 12px">
+      <a href="#" style="font-size:12px;color:var(--accent);text-decoration:none" onclick="event.preventDefault();showForgotPw()">Passwort vergessen?</a>
     </div>
     <div class="err-msg" id="loginError" style="display:none;margin-bottom:10px"></div>
     <button class="btn btn-primary" onclick="submitLogin()" id="btn-login">Anmelden</button>
@@ -369,6 +379,15 @@ tr:hover td { background: var(--accent-light); }
   <div class="modal" style="max-width:380px">
     <h3>Mitarbeiter-Details</h3>
     <div id="maDetailBody" style="margin-top:10px"></div>
+    <hr class="divider">
+    <div class="field" style="margin-bottom:10px">
+      <label>Neues Passwort setzen</label>
+      <div class="pw-wrap">
+        <input type="password" id="maResetPassword" placeholder="min. 6 Zeichen">
+        <button type="button" class="pw-toggle" onclick="togglePw('maResetPassword',this)">👁</button>
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-sm" style="width:100%" onclick="resetMaPassword()">Passwort setzen</button>
     <div class="btn-row" style="margin-top:16px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeMaDetailModal()">Schliessen</button>
     </div>
@@ -447,6 +466,17 @@ function submitLogin() {
     btn.disabled = false;
     errEl.textContent = err.message; errEl.style.display = '';
   });
+}
+
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+}
+
+function showForgotPw() {
+  alert('Passwort vergessen? Bitte beim Admin melden — er kann direkt ein neues Passwort setzen.');
 }
 
 function afterLogin() {
@@ -896,9 +926,20 @@ function showMaDetail(i){
   ];
   document.getElementById('maDetailBody').innerHTML = rows.map(([k,v]) => `<div class="detail-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
   document.getElementById('btn-ma-remove').style.display = (m.name === currentUser.name) ? 'none' : '';
+  document.getElementById('maResetPassword').value = '';
   document.getElementById('maDetailModal').classList.add('show');
 }
 function closeMaDetailModal(){document.getElementById('maDetailModal').classList.remove('show');maDetailTarget=null;}
+function resetMaPassword(){
+  if(!maDetailTarget) return;
+  const password = document.getElementById('maResetPassword').value;
+  if(password.length<6){showToast('Passwort mindestens 6 Zeichen.');return;}
+  apiCall('mitarbeiter_reset_password.php',{method:'POST',body:{name:maDetailTarget,password}}).then(({ok,data})=>{
+    if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
+    document.getElementById('maResetPassword').value='';
+    showToast('✓ Passwort gesetzt.');
+  });
+}
 function confirmRemoveMa(){
   if(!maDetailTarget) return;
   const name = maDetailTarget;
