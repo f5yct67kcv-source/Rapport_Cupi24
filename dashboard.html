@@ -306,6 +306,9 @@ td .sec { font-size: 11.5px; color: var(--ink-3); }
 .dlg { background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--sh-3); width: 100%; max-width: 460px; max-height: 88vh; display: flex; flex-direction: column; }
 .dlg.narrow { max-width: 380px; }
 .dlg.wide { max-width: 580px; }
+/* Acht Wochentagsspalten plus Schichtname brauchen mehr -- sonst stehen
+   Sonntag und Feiertag ausserhalb, ohne dass man es merkt. */
+.dlg.breit { max-width: 820px; }
 .dlg-hd { padding: 20px 22px 0; flex: none; }
 .dlg-hd h2 { font-size: 16px; font-weight: 660; letter-spacing: -.2px; }
 .dlg-hd p { font-size: 12.5px; color: var(--ink-3); margin-top: 5px; line-height: 1.55; }
@@ -504,6 +507,22 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
    statt farbig: es ist eine Absicht, noch kein Datensatz. */
 .gr .s-soll { background: transparent; border: 1px dashed var(--line); color: var(--ink-3); box-sizing: border-box; }
 .gr .s-soll:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Masterschichten auf einen Zeitraum legen (ENT-026) */
+.aw-schnell { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin: 14px 0 10px; font-size: 12px; color: var(--ink-3); }
+.gr.aw-gr { border: 1px solid var(--line); border-radius: var(--r-sm); }
+.gr.aw-gr table { width: 100%; }
+.gr.aw-gr th.lb, .gr.aw-gr td.lb { min-width: 156px; max-width: 300px; padding: 6px 11px; }
+.gr.aw-gr thead th { padding: 6px 3px; font-size: 10.5px; }
+.gr.aw-gr thead th.fei { color: var(--warn); background: var(--warn-soft); }
+.gr.aw-gr td.d { padding: 4px 3px; }
+.gr.aw-gr td.lb .zeile { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.gr.aw-gr td.lb .zeile b { font-size: 12.5px; font-weight: 620; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gr.aw-gr td.lb .zeile span { font-size: 11px; color: var(--ink-3); white-space: nowrap; flex: none; }
+.inp.aw-z { width: 100%; min-width: 42px; padding: 5px 4px; text-align: center; font-variant-numeric: tabular-nums; }
+/* Aus dem Diktat uebernommene Zahlen sichtbar machen -- der Pruefschritt lebt
+   davon, dass man sieht, was die Maschine geraten hat (ENT-015). */
+.inp.aw-z.ki { border-color: var(--accent); background: var(--accent-soft); }
 
 /* ── Tagesliste: dieselben Daten auf schmalen Geräten */
 .nur-schmal { display: none; }
@@ -862,13 +881,21 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
             <label class="check" title="Personen ohne Einteilung ausblenden">
               <input type="checkbox" id="oplNurTeil" onchange="oplFiltern()"> nur Eingeteilte
             </label>
-            <button class="btn btn-plain btn-sm" onclick="oplStammdaten()">
-              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-              <span class="lbl">Masterschichten</span>
+            <button class="btn btn-quiet btn-sm" onclick="planDiktat('masterplan')" title="Schichten per Diktat setzen">
+              <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              <span class="lbl">Diktat</span>
             </button>
-            <button class="btn btn-primary btn-sm" onclick="oplErzeugen()">
-              <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Schichten erzeugen
+            <button class="btn btn-quiet btn-sm" onclick="oplStammdaten()" title="Zeiten, Namen und Gültigkeit der Vorlagen">
+              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.5.66.86 1.19.91H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span class="lbl">Vorlagen</span>
+            </button>
+            <button class="btn btn-plain btn-sm" onclick="mzAuf()">
+              <svg class="i i-sm" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+              <span class="lbl">Einteilen</span>
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="awAuf()">
+              <svg class="i i-sm" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><polyline points="9 15 11 17 15 13"/></svg>
+              Schichten setzen
             </button>
           </div>
           <div id="oplBody"></div>
@@ -1192,6 +1219,81 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
     <div class="dlg-ft">
       <button class="btn btn-plain" onclick="closeDlg('dlgMs')">Abbrechen</button>
       <button class="btn btn-primary" id="msBtn" onclick="saveMs()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Diktat für die Objektplanung (ENT-026) -->
+<div class="dlg-scrim" id="dlgPlanDiktat">
+  <div class="dlg narrow">
+    <div class="dlg-hd"><h2 id="pdTitel">Per Diktat</h2><p id="pdText"></p></div>
+    <div class="dlg-bd">
+      <div class="msg-err" id="pdErr" style="display:none"></div>
+      <div class="zone-note" style="margin-bottom:10px">Gilt für: <b id="pdWo"></b></div>
+      <textarea class="inp" id="pdText2" rows="3" placeholder="Tippen — oder das Mikrofon der Tastatur benutzen …"></textarea>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgPlanDiktat')">Abbrechen</button>
+      <button class="btn btn-primary" id="pdBtn" onclick="planDiktatSenden()">Erkennen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Masterschichten in einem Zug auf einen Zeitraum legen (ENT-026) -->
+<div class="dlg-scrim" id="dlgAnwenden">
+  <div class="dlg breit">
+    <div class="dlg-hd">
+      <h2>Masterschichten auf den Zeitraum legen</h2>
+      <p id="awText">Wie viele Personen braucht jede Schicht an welchem Wochentag? Ein Schritt: Bedarf setzen und die Schichten anlegen.</p>
+    </div>
+    <div class="dlg-bd">
+      <div class="msg-err" id="awErr" style="display:none"></div>
+      <div class="ki-hint" id="awKiHint" style="display:none"><span id="awKiText"></span></div>
+      <div class="form-grid">
+        <div class="f"><label for="awVon">Von *</label><input class="inp" id="awVon" type="date" onchange="awRechne()"></div>
+        <div class="f"><label for="awBis">Bis *</label><input class="inp" id="awBis" type="date" onchange="awRechne()"></div>
+      </div>
+      <div class="aw-schnell">
+        <span>Schnell setzen:</span>
+        <button class="btn btn-quiet btn-sm" onclick="awFuellen('alle')">Jeden Tag 1</button>
+        <button class="btn btn-quiet btn-sm" onclick="awFuellen('woche')">Mo–Fr 1</button>
+        <button class="btn btn-quiet btn-sm" onclick="awFuellen('we')">Nur Sa/So 1</button>
+        <button class="btn btn-quiet btn-sm" onclick="awFuellen('null')">Alles auf 0</button>
+      </div>
+      <div class="gr aw-gr"><table id="awTabelle"></table></div>
+      <div class="pick-foot" id="awFuss"></div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgAnwenden')">Abbrechen</button>
+      <button class="btn btn-primary" id="awBtn" onclick="awSpeichern()" disabled>Übernehmen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Personen über einen Zeitraum auf eine Schicht setzen (ENT-026) -->
+<div class="dlg-scrim" id="dlgMasse">
+  <div class="dlg">
+    <div class="dlg-hd">
+      <h2>Mitarbeitende einteilen</h2>
+      <p>Eine Schicht, ein Zeitraum, eine oder mehrere Personen. Fehlende Schichten entstehen dabei.</p>
+    </div>
+    <div class="dlg-bd">
+      <div class="msg-err" id="mzErr" style="display:none"></div>
+      <div class="ki-hint" id="mzKiHint" style="display:none"><span id="mzKiText"></span></div>
+      <div class="form-grid">
+        <div class="f wide"><label for="mzSchicht">Schicht *</label><select class="inp" id="mzSchicht" onchange="mzRechne()"></select></div>
+        <div class="f"><label for="mzVon">Von *</label><input class="inp" id="mzVon" type="date" onchange="mzRechne()"></div>
+        <div class="f"><label for="mzBis">Bis *</label><input class="inp" id="mzBis" type="date" onchange="mzRechne()"></div>
+        <div class="f wide">
+          <label>Wen einteilen</label>
+          <div class="ma-pick" id="mzMa"></div>
+        </div>
+      </div>
+      <div id="mzVorschau"></div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgMasse')">Abbrechen</button>
+      <button class="btn btn-primary" id="mzBtn" onclick="mzSpeichern()" disabled>Einteilen</button>
     </div>
   </div>
 </div>
@@ -2939,7 +3041,7 @@ function renderObjektplan() {
       <div style="min-width:0">
         <div style="font-weight:650;margin-bottom:3px">Kein Bedarf hinterlegt — darum ist der Monat leer</div>
         <div style="font-size:13px;color:var(--ink-2);line-height:1.55">Die ${nf(d.vorlagen.length)} ${d.vorlagen.length === 1 ? 'Masterschicht verlangt' : 'Masterschichten verlangen'} an keinem Wochentag Mitarbeitende. Ohne Bedarf entsteht keine Schicht — deshalb steht „Soll“ auf 0.00 h und „Schichten erzeugen“ ist ausgegraut.</div>
-        <div style="margin-top:9px"><button class="btn btn-primary btn-sm" onclick="oplStammdaten()">Bedarf jetzt eintragen</button></div>
+        <div style="margin-top:9px"><button class="btn btn-primary btn-sm" onclick="awAuf()">Bedarf jetzt eintragen</button></div>
       </div>
     </div></div>` : '';
 
@@ -3002,6 +3104,276 @@ function oplTagesliste(d, tage, zellen, fei, heute) {
   return `<div class="nur-schmal" id="oplTage">${zeilen ||
     `<div class="card"><div class="card-bd">${EMPTY('Nichts geplant',
       'In diesem Monat entsteht aus den Masterschichten kein Bedarf.')}</div></div>`}</div>`;
+}
+
+// ══════════════════════════════════════════ MASTERSCHICHTEN ANWENDEN
+// Ein Fenster statt fünf Dialogen mit Stichtag: Bedarf je Wochentag eintragen,
+// ein Knopf setzt ihn und legt die Schichten an (ENT-026).
+const AW_TAGE = [['mo', 'Mo'], ['di', 'Di'], ['mi', 'Mi'], ['do', 'Do'],
+                 ['fr', 'Fr'], ['sa', 'Sa'], ['so', 'So'], ['feiertag', 'Feiertag']];
+let awRechnung = null;   // laufende Entprellung
+
+function awAuf(vorbelegt) {
+  if (!oplId || !oplDaten) return;
+  const m = $('oplM').value || isoTag().slice(0, 7);
+  const [j, mo] = m.split('-').map(Number);
+  $('awVon').value = (vorbelegt && vorbelegt.von) || `${m}-01`;
+  $('awBis').value = (vorbelegt && vorbelegt.bis) || isoTag(new Date(j, mo, 0));
+  $('awErr').style.display = 'none';
+  $('awText').textContent = `Objekt „${oplDaten.objekt.name}“ — wie viele Personen braucht jede Schicht an welchem Wochentag?`;
+
+  const ausDiktat = !!(vorbelegt && vorbelegt.vorlagen);
+  const vom = {};
+  if (ausDiktat) vorbelegt.vorlagen.forEach(v => { vom[v.id] = v; });
+
+  $('awTabelle').innerHTML = `
+    <thead><tr><th class="lb">Schicht</th>${AW_TAGE.map(([k, l]) =>
+      `<th${k === 'feiertag' ? ' class="fei"' : ''}>${l}</th>`).join('')}</tr></thead>
+    <tbody>${(oplDaten.vorlagen || []).map(v => {
+      const q = vom[v.id];
+      return `<tr><td class="lb"><div class="zeile">
+        <b title="${esc(v.name)}">${v.kuerzel ? esc(v.kuerzel) + ' · ' : ''}${esc(v.name)}</b>
+        <span>${esc(v.von)}–${esc(v.bis)}</span>
+      </div></td>` + AW_TAGE.map(([k]) => {
+        const wert = q ? Number(q['bedarf_' + k] || 0) : awBisher(v.id, k);
+        return `<td class="d"><input class="inp aw-z${q ? ' ki' : ''}" type="number" min="0" max="99"
+          id="aw_${v.id}_${k}" value="${wert}" oninput="awRechne()"></td>`;
+      }).join('') + `</tr>`;
+    }).join('')}</tbody>`;
+
+  $('awKiHint').style.display = ausDiktat ? 'flex' : 'none';
+  if (ausDiktat) {
+    $('awKiText').innerHTML = `Blau markiert wurde aus dem Diktat übernommen — <b>gespeichert ist noch nichts</b>. Bitte prüfen und dann übernehmen.`;
+  }
+  openDlg('dlgAnwenden');
+  awRechne();
+}
+
+// Der bisher hinterlegte Bedarf, damit man sieht, was schon steht.
+function awBisher(id, feld) {
+  const v = (masterschichten || []).find(x => Number(x.id) === Number(id));
+  return v ? Number(v['bedarf_' + feld] || 0) : 0;
+}
+
+function awFuellen(muster) {
+  (oplDaten.vorlagen || []).forEach(v => {
+    AW_TAGE.forEach(([k]) => {
+      const el = $(`aw_${v.id}_${k}`);
+      if (!el) return;
+      const werktag = ['mo', 'di', 'mi', 'do', 'fr'].includes(k);
+      const wochenende = ['sa', 'so'].includes(k);
+      el.value = muster === 'alle' ? 1
+        : muster === 'woche' ? (werktag || k === 'feiertag' ? 1 : 0)
+        : muster === 'we' ? (wochenende ? 1 : 0)
+        : 0;
+      el.classList.remove('ki');
+    });
+  });
+  awRechne();
+}
+
+function awWerte() {
+  return (oplDaten.vorlagen || []).map(v => {
+    const satz = { id: Number(v.id) };
+    AW_TAGE.forEach(([k]) => {
+      satz['bedarf_' + k] = Math.max(0, Math.min(99, parseInt(($(`aw_${v.id}_${k}`) || {}).value, 10) || 0));
+    });
+    return satz;
+  });
+}
+
+// Gerechnet wird auf dem Server -- dieselbe Regel wie beim Anlegen, nur mit
+// Rückrollen. Eine zweite Rechnung im Browser würde irgendwann abweichen.
+function awRechne() {
+  clearTimeout(awRechnung);
+  $('awBtn').disabled = true;
+  $('awFuss').innerHTML = '<span style="color:var(--ink-3)">rechne …</span>';
+  awRechnung = setTimeout(() => {
+    const von = $('awVon').value, bis = $('awBis').value;
+    if (!von || !bis) { $('awFuss').innerHTML = '<span style="color:var(--ink-3)">Zeitraum wählen.</span>'; return; }
+    api('masterschicht_anwenden.php', { method: 'POST', body: {
+      objekt_id: oplId, von, bis, nur_pruefen: true, vorlagen: awWerte(),
+    } }).then(({ ok, data }) => {
+      if (!ok || data.status !== 'ok') {
+        $('awFuss').innerHTML = `<span style="color:var(--neg)">${esc(data.message || 'Rechnung nicht möglich.')}</span>`;
+        return;
+      }
+      const n = Number(data.wuerde_anlegen);
+      $('awBtn').disabled = n === 0 && Number(data.fassungen) === 0;
+      $('awBtn').textContent = n ? `${nf(n)} Schichten anlegen` : 'Übernehmen';
+      $('awFuss').innerHTML =
+        `<span class="chip ${n ? 'chip-a' : 'chip-n'}">${nf(n)} neu</span>`
+        + (Number(data.vorhanden) ? `<span class="chip chip-n">${nf(data.vorhanden)} schon vorhanden</span>` : '')
+        + (Number(data.neue_fassungen) ? `<span class="chip chip-w">${nf(data.neue_fassungen)} neue Fassung</span>` : '')
+        + `<span>${n ? 'Es ist noch nichts gespeichert.' : 'Es entstünde keine neue Schicht.'}</span>`;
+    });
+  }, 350);
+}
+
+function awSpeichern() {
+  const b = $('awBtn'); b.disabled = true;
+  $('awErr').style.display = 'none';
+  api('masterschicht_anwenden.php', { method: 'POST', body: {
+    objekt_id: oplId, von: $('awVon').value, bis: $('awBis').value, vorlagen: awWerte(),
+  } }).then(({ ok, data }) => {
+    b.disabled = false;
+    if (!ok || data.status !== 'ok') {
+      $('awErr').textContent = data.message || 'Speichern fehlgeschlagen.';
+      $('awErr').style.display = '';
+      return;
+    }
+    closeDlg('dlgAnwenden');
+    toast(data.angelegt
+      ? `${nf(data.angelegt)} Schichten angelegt.`
+      : 'Bedarf gespeichert — es fehlte keine Schicht.');
+    Promise.all([ladeObjektplan(true), loadEinsaetze(), loadMasterschichten()]).then(renderObjektplan);
+  });
+}
+
+// ══════════════════════════════════════════ MASSEN-ZUTEILUNG
+let mzRechnung = null;
+
+function mzAuf(vorbelegt) {
+  if (!oplId || !oplDaten) return;
+  const m = $('oplM').value || isoTag().slice(0, 7);
+  const [j, mo] = m.split('-').map(Number);
+  const v = oplDaten.vorlagen || [];
+  if (!v.length) { toast('Für dieses Objekt gibt es keine Schichtvorlage.'); return; }
+
+  $('mzSchicht').innerHTML = v.map(x =>
+    `<option value="${Number(x.id)}">${x.kuerzel ? esc(x.kuerzel) + ' · ' : ''}${esc(x.name)} (${esc(x.von)}–${esc(x.bis)})</option>`).join('');
+  if (vorbelegt && vorbelegt.masterschicht_id) $('mzSchicht').value = String(vorbelegt.masterschicht_id);
+  $('mzVon').value = (vorbelegt && vorbelegt.von) || `${m}-01`;
+  $('mzBis').value = (vorbelegt && vorbelegt.bis) || isoTag(new Date(j, mo, 0));
+  $('mzErr').style.display = 'none';
+  $('mzVorschau').innerHTML = '';
+
+  const gewaehlt = new Set(((vorbelegt && vorbelegt.mitarbeiter) || []).map(Number));
+  $('mzMa').innerHTML = mitarbeiter.length ? mitarbeiter.map(p =>
+    `<label><input type="checkbox" value="${Number(p.id)}"${gewaehlt.has(Number(p.id)) ? ' checked' : ''} onchange="mzRechne()">
+      <span class="who"><b>${esc(fullName(p) || p.name)}</b><span>${esc(p.name)}</span></span></label>`).join('')
+    : '<div class="leer">Keine aktiven Mitarbeitenden vorhanden.</div>';
+
+  const ausDiktat = !!(vorbelegt && vorbelegt.mitarbeiter);
+  $('mzKiHint').style.display = ausDiktat ? 'flex' : 'none';
+  if (ausDiktat) {
+    $('mzKiText').innerHTML = 'Aus dem Diktat übernommen — <b>gespeichert ist noch nichts</b>. Bitte prüfen und dann einteilen.';
+  }
+  openDlg('dlgMasse');
+  mzRechne();
+}
+
+function mzIds() {
+  return Array.from(document.querySelectorAll('#mzMa input[type=checkbox]'))
+    .filter(i => i.checked).map(i => Number(i.value));
+}
+
+function mzRechne() {
+  clearTimeout(mzRechnung);
+  $('mzBtn').disabled = true;
+  const ids = mzIds();
+  if (!ids.length) {
+    $('mzVorschau').innerHTML = '<p class="zone-note">Niemand ausgewählt.</p>';
+    return;
+  }
+  $('mzVorschau').innerHTML = '<p class="zone-note">rechne …</p>';
+  mzRechnung = setTimeout(() => {
+    api('zuteilung_masse.php', { method: 'POST', body: {
+      objekt_id: oplId, masterschicht_id: Number($('mzSchicht').value),
+      von: $('mzVon').value, bis: $('mzBis').value, mitarbeiter: ids, nur_pruefen: true,
+    } }).then(({ ok, data }) => {
+      if (!ok || data.status !== 'ok') {
+        $('mzVorschau').innerHTML = `<p class="zone-note" style="color:var(--neg)">${esc(data.message || 'Rechnung nicht möglich.')}</p>`;
+        return;
+      }
+      $('mzBtn').disabled = Number(data.gesetzt) === 0;
+      $('mzBtn').textContent = data.gesetzt ? `${nf(data.gesetzt)} Einteilungen speichern` : 'Einteilen';
+      // Was nicht geht, wird benannt -- stillschweigend zu ueberspringen waere
+      // schlimmer als es gar nicht anzubieten (ENT-022).
+      const k = data.konflikte || [];
+      $('mzVorschau').innerHTML = `<div class="pick-foot" style="margin-top:12px">
+          <span class="chip ${data.gesetzt ? 'chip-p' : 'chip-n'}">${nf(data.gesetzt)} neu</span>
+          ${data.schon_da ? `<span class="chip chip-n">${nf(data.schon_da)} schon eingeteilt</span>` : ''}
+          ${data.neue_schichten ? `<span class="chip chip-a">${nf(data.neue_schichten)} Schichten entstehen</span>` : ''}
+          ${data.konflikte_gesamt ? `<span class="chip chip-x">${nf(data.konflikte_gesamt)} nicht möglich</span>` : ''}
+        </div>
+        <p class="zone-note" style="margin-top:8px">${data.tage} ${data.tage === 1 ? 'Tag' : 'Tage'} mit Bedarf im Zeitraum. Es ist noch nichts gespeichert.</p>
+        ${k.length ? `<div class="vs-liste" style="margin-top:8px">${k.map(x => `<div class="z">
+            <span class="dt">${dmy(x.datum)}</span>
+            <span class="nm">${esc(x.name)} — schon eingeteilt</span>
+            <span class="zt">${esc(x.was)}</span></div>`).join('')}
+          ${data.konflikte_gesamt > k.length ? `<p class="zone-note" style="margin-top:6px">… und ${nf(data.konflikte_gesamt - k.length)} weitere.</p>` : ''}
+          </div>` : ''}`;
+    });
+  }, 350);
+}
+
+function mzSpeichern() {
+  const b = $('mzBtn'); b.disabled = true;
+  $('mzErr').style.display = 'none';
+  api('zuteilung_masse.php', { method: 'POST', body: {
+    objekt_id: oplId, masterschicht_id: Number($('mzSchicht').value),
+    von: $('mzVon').value, bis: $('mzBis').value, mitarbeiter: mzIds(),
+  } }).then(({ ok, data }) => {
+    b.disabled = false;
+    if (!ok || data.status !== 'ok') {
+      $('mzErr').textContent = data.message || 'Speichern fehlgeschlagen.';
+      $('mzErr').style.display = '';
+      return;
+    }
+    closeDlg('dlgMasse');
+    toast(`${nf(data.gesetzt)} Einteilungen gespeichert`
+      + (data.konflikte_gesamt ? ` — ${nf(data.konflikte_gesamt)} Tage übersprungen (schon eingeteilt).` : '.'));
+    Promise.all([ladeObjektplan(true), loadEinsaetze()]).then(renderObjektplan);
+  });
+}
+
+// ══════════════════════════════════════════ PLANUNGS-DIKTAT
+// Objekt und Monat kommen vom Bildschirm, nicht aus dem Satz -- das ist
+// weniger zu sagen und weniger falsch zu verstehen. Erkanntes füllt den
+// jeweiligen Dialog vor; gespeichert wird erst dort (ENT-015).
+let planDiktatArt = 'masterplan';
+
+function planDiktat(art) {
+  if (!oplId) { toast('Zuerst ein Objekt wählen.'); return; }
+  planDiktatArt = art === 'zuteilung' ? 'zuteilung' : 'masterplan';
+  $('pdTitel').textContent = planDiktatArt === 'zuteilung' ? 'Einteilen per Diktat' : 'Schichten setzen per Diktat';
+  $('pdText').textContent = planDiktatArt === 'zuteilung'
+    ? `Zum Beispiel: „Setze Valbon vom 1. bis 15. auf die Schliessrunde.“ Objekt und Monat kommen vom Bildschirm.`
+    : `Zum Beispiel: „Setze die Schliessrunde jeden Tag auf den ganzen Monat.“ Objekt und Monat kommen vom Bildschirm.`;
+  $('pdWo').textContent = `${oplDaten ? oplDaten.objekt.name : ''} · ${$('oplM').value}`;
+  $('pdText2').value = '';
+  $('pdErr').style.display = 'none';
+  openDlg('dlgPlanDiktat');
+  $('pdText2').focus();
+}
+
+function planDiktatSenden() {
+  const text = $('pdText2').value.trim();
+  const err = $('pdErr'); err.style.display = 'none';
+  if (!text) { err.textContent = 'Bitte etwas eingeben oder diktieren.'; err.style.display = ''; return; }
+  const b = $('pdBtn'); b.disabled = true; b.textContent = 'Erkenne …';
+  api('ki_planung_parse.php', { method: 'POST', body: {
+    text, art: planDiktatArt, objekt_id: oplId,
+    monat: $('oplM').value || isoTag().slice(0, 7), heute: isoTag(),
+  } }).then(({ ok, data }) => {
+    b.disabled = false; b.textContent = 'Erkennen';
+    if (!ok || data.status !== 'ok') {
+      err.textContent = data.message || 'Erkennung fehlgeschlagen.';
+      err.style.display = '';
+      return;
+    }
+    closeDlg('dlgPlanDiktat');
+    if (data.art === 'zuteilung') {
+      mzAuf({ masterschicht_id: data.masterschicht_id, mitarbeiter: data.mitarbeiter,
+              von: data.von, bis: data.bis });
+    } else {
+      awAuf({ vorlagen: data.vorlagen, von: data.von, bis: data.bis });
+    }
+  }).catch(() => {
+    b.disabled = false; b.textContent = 'Erkennen';
+    err.textContent = 'Netzwerkfehler.'; err.style.display = '';
+  });
 }
 
 // ── Zuteilen direkt aus der Zelle. Die Schicht muss dafür noch nicht

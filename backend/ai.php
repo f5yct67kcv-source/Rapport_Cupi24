@@ -328,3 +328,116 @@ function anthropic_recherche_kunde(string $text): ?array
 
     return null;
 }
+
+// Zerlegt einen Planungsbefehl der Art "setze die Schliessrunde jeden Tag auf
+// den August" (ENT-026). Objekt und Zeitraum kommen aus dem Bildschirm, der
+// Satz muss sie nicht nennen -- was gesagt wird, hat aber Vorrang.
+function anthropic_extract_masterplan(string $text, array $vorlagen, string $heute, string $monat): ?array
+{
+    $tool = [
+        'name' => 'extract_masterplan',
+        'description' => 'Ordnet einem Planungsbefehl Schichtvorlagen und einen Bedarf je Wochentag zu.',
+        'input_schema' => [
+            'type' => 'object',
+            'properties' => [
+                'von' => ['type' => 'string', 'description' => 'Beginn des Zeitraums, Format JJJJ-MM-TT. Nur wenn genannt.'],
+                'bis' => ['type' => 'string', 'description' => 'Ende des Zeitraums, Format JJJJ-MM-TT. Nur wenn genannt.'],
+                'vorlagen' => [
+                    'type' => 'array',
+                    'description' => 'Die angesprochenen Schichtvorlagen mit dem Bedarf je Wochentag. '
+                        . 'Nur Vorlagen aus der Liste. Wird keine bestimmte genannt (z.B. "alle Schichten"), '
+                        . 'alle aufnehmen.',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'id' => ['type' => 'integer', 'description' => 'ID aus der Liste der Vorlagen.'],
+                            'bedarf_mo' => ['type' => 'integer'],
+                            'bedarf_di' => ['type' => 'integer'],
+                            'bedarf_mi' => ['type' => 'integer'],
+                            'bedarf_do' => ['type' => 'integer'],
+                            'bedarf_fr' => ['type' => 'integer'],
+                            'bedarf_sa' => ['type' => 'integer'],
+                            'bedarf_so' => ['type' => 'integer'],
+                            'bedarf_feiertag' => ['type' => 'integer'],
+                        ],
+                        'required' => ['id'],
+                    ],
+                ],
+            ],
+            'required' => ['vorlagen'],
+        ],
+    ];
+
+    $liste = $vorlagen
+        ? implode("\n", array_map(
+            fn($v) => "- id {$v['id']}: " . trim(($v['kuerzel'] ? $v['kuerzel'] . ' · ' : '') . $v['name'])
+                . ' (' . substr((string)$v['von'], 0, 5) . '–' . substr((string)$v['bis'], 0, 5) . ')',
+            $vorlagen))
+        : '(keine Vorlagen vorhanden)';
+
+    $userContent =
+        "Heutiges Datum: {$heute}. Auf dem Bildschirm steht gerade der Monat {$monat}.\n\n"
+        . "Schichtvorlagen dieses Objekts:\n{$liste}\n\n"
+        . "Regeln:\n"
+        . "- Nur IDs aus der Liste verwenden. Erfinde keine.\n"
+        . "- \"jeden Tag\" heisst Bedarf 1 an allen sieben Wochentagen und am Feiertag.\n"
+        . "- \"unter der Woche\" heisst Mo bis Fr, Sa und So bleiben 0.\n"
+        . "- \"am Wochenende\" heisst Sa und So, Mo bis Fr bleiben 0.\n"
+        . "- Wird eine Anzahl genannt (\"mit zwei Leuten\"), gilt sie fuer die genannten Tage.\n"
+        . "- Wird kein Zeitraum genannt, von und bis weglassen.\n"
+        . "- Ein Wochentag ohne Angabe bekommt 0.\n\n"
+        . "Befehl:\n{$text}";
+
+    return anthropic_tool_call($tool, $userContent);
+}
+
+// Zerlegt "setze Valbon vom 1. bis 15. August auf die Schliessrunde" (ENT-026).
+function anthropic_extract_zuteilung(string $text, array $vorlagen, array $mitarbeiter, string $heute, string $monat): ?array
+{
+    $tool = [
+        'name' => 'extract_zuteilung',
+        'description' => 'Ordnet einem Befehl Personen, eine Schichtvorlage und einen Zeitraum zu.',
+        'input_schema' => [
+            'type' => 'object',
+            'properties' => [
+                'masterschicht_id' => [
+                    'type' => 'integer',
+                    'description' => 'ID der gemeinten Schichtvorlage aus der Liste. Eine Tageszeit wie '
+                        . '"Vormittag" oder "Nachtschicht" ueber die Uhrzeiten zuordnen.',
+                ],
+                'mitarbeiter_login_namen' => [
+                    'type' => 'array',
+                    'items' => ['type' => 'string'],
+                    'description' => 'Login-Namen der genannten Personen, exakt wie in der Liste.',
+                ],
+                'von' => ['type' => 'string', 'description' => 'Beginn, Format JJJJ-MM-TT. Nur wenn genannt.'],
+                'bis' => ['type' => 'string', 'description' => 'Ende, Format JJJJ-MM-TT. Nur wenn genannt.'],
+            ],
+            'required' => ['masterschicht_id', 'mitarbeiter_login_namen'],
+        ],
+    ];
+
+    $liste = $vorlagen
+        ? implode("\n", array_map(
+            fn($v) => "- id {$v['id']}: " . trim(($v['kuerzel'] ? $v['kuerzel'] . ' · ' : '') . $v['name'])
+                . ' (' . substr((string)$v['von'], 0, 5) . '–' . substr((string)$v['bis'], 0, 5) . ')',
+            $vorlagen))
+        : '(keine Vorlagen vorhanden)';
+    $maText = $mitarbeiter
+        ? implode("\n", array_map(
+            fn($m) => "- {$m['name']}: " . trim(($m['vorname'] ?? '') . ' ' . ($m['nachname'] ?? '')),
+            $mitarbeiter))
+        : '(keine Mitarbeitenden erfasst)';
+
+    $userContent =
+        "Heutiges Datum: {$heute}. Auf dem Bildschirm steht gerade der Monat {$monat}.\n\n"
+        . "Schichtvorlagen dieses Objekts:\n{$liste}\n\n"
+        . "Bekannte Mitarbeitende (Login-Name: Vorname Nachname):\n{$maText}\n\n"
+        . "Regeln:\n"
+        . "- Nur IDs und Login-Namen aus den Listen. Erfinde nichts.\n"
+        . "- Ein Datum ohne Monat gehoert in den Monat auf dem Bildschirm.\n"
+        . "- Wird kein Zeitraum genannt, von und bis weglassen.\n\n"
+        . "Befehl:\n{$text}";
+
+    return anthropic_tool_call($tool, $userContent);
+}

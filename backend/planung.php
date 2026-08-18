@@ -266,3 +266,91 @@ function doppelbelegungen(int $einsatzId, string $datum, string $von, string $bi
     }
     return $treffer;
 }
+
+// Setzt den Bedarf einer Vorlage ab einem Datum (ENT-026).
+//
+// Liegt das Datum nicht nach dem Beginn der Fassung, hat diese nie fuer einen
+// frueheren Tag gegolten -- dann wird sie ersetzt statt geteilt. Sonst entsteht
+// eine neue Fassung, und die bisherige endet am Vortag. Damit bleibt die Regel
+// aus ENT-021 gewahrt: die Vergangenheit wird nicht angefasst.
+function bedarf_fassung_setzen(int $id, array $bedarf, string $abDatum): array
+{
+    $s = db()->prepare('SELECT * FROM masterschichten WHERE id = ?');
+    $s->execute([$id]);
+    $alt = $s->fetch();
+    if (!$alt) {
+        return ['fehler' => 'Masterschicht nicht gefunden'];
+    }
+
+    $spalten = ['bedarf_mo', 'bedarf_di', 'bedarf_mi', 'bedarf_do', 'bedarf_fr',
+                'bedarf_sa', 'bedarf_so', 'bedarf_feiertag', 'bedarf_intervall'];
+    $werte = [];
+    foreach ($spalten as $sp) {
+        $werte[$sp] = array_key_exists($sp, $bedarf)
+            ? max(0, min(99, (int)$bedarf[$sp]))
+            : (int)$alt[$sp];
+    }
+
+    // Nichts geaendert: keine neue Fassung anlegen, sonst waechst die Liste bei
+    // jedem Speichern, ohne dass sich etwas unterscheidet.
+    $gleich = true;
+    foreach ($spalten as $sp) {
+        if ((int)$alt[$sp] !== $werte[$sp]) { $gleich = false; break; }
+    }
+    if ($gleich) {
+        return ['id' => $id, 'art' => 'unveraendert'];
+    }
+
+    if ($abDatum <= (string)$alt['gueltig_ab']) {
+        $satz = implode(', ', array_map(fn($k) => "$k = ?", $spalten));
+        $u = db()->prepare("UPDATE masterschichten SET $satz WHERE id = ?");
+        $u->execute([...array_values($werte), $id]);
+        return ['id' => $id, 'art' => 'ersetzt'];
+    }
+
+    $neu = $alt;
+    unset($neu['id']);
+    foreach ($spalten as $sp) {
+        $neu[$sp] = $werte[$sp];
+    }
+    $neu['gueltig_ab'] = $abDatum;
+    $neu['ersetzt_id'] = $id;
+
+    $namen = implode(', ', array_keys($neu));
+    $marken = implode(', ', array_fill(0, count($neu), '?'));
+    $i = db()->prepare("INSERT INTO masterschichten ($namen) VALUES ($marken)");
+    $i->execute(array_values($neu));
+    $neuId = (int)db()->lastInsertId();
+
+    $vortag = (new DateTimeImmutable($abDatum))->modify('-1 day')->format('Y-m-d');
+    db()->prepare('UPDATE masterschichten SET gueltig_bis = ? WHERE id = ?')->execute([$vortag, $id]);
+
+    return ['id' => $neuId, 'art' => 'neue Fassung', 'alt_bis' => $vortag];
+}
+
+// Legt die noch fehlenden Schichten eines Zeitraums an und gibt zurueck, wie
+// viele es waren. Gemeinsame Grundlage von schichten_erzeugen.php und dem
+// Anwenden-Fenster (ENT-026).
+function schichten_anlegen(array $vorschlag, int $adminId): int
+{
+    if (!$vorschlag['neu']) {
+        return 0;
+    }
+    $o = $vorschlag['objekt'];
+    $ins = db()->prepare(
+        'INSERT INTO einsaetze (kunde_id, kunde_name, objekt_id, masterschicht_id, titel,
+                                strasse, ort, einsatzart, datum, von, bis, bedarf, status, erstellt_von)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    foreach ($vorschlag['neu'] as $s) {
+        // Fahrtzeit bleibt als eigene Einsatzart sichtbar. Ob sie bezahlte
+        // Arbeitszeit ist, entscheidet dieses Werkzeug nicht (GAV).
+        $einsatzart = $s['art'] === 'fahrtzeit' ? 'Fahrtzeit' : $o['einsatzart'];
+        $ins->execute([
+            $o['kunde_id'], $o['kunde_name'], $o['id'], $s['masterschicht_id'], $s['name'],
+            $o['strasse'], $o['ort'], $einsatzart, $s['datum'], $s['von'], $s['bis'],
+            $s['bedarf'], $s['status'], $adminId,
+        ]);
+    }
+    return count($vorschlag['neu']);
+}
