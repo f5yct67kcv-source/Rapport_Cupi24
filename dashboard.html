@@ -1279,7 +1279,8 @@ function loadEinsaetze() {
       // Fehlt die Tabelle noch, ist das kein Grund für einen leeren Bildschirm.
       // Die Meldung kommt vom Server -- er weiss, ob eine Tabelle fehlt.
       $('plTable').innerHTML = EMPTY('Planung nicht verfügbar',
-        esc(data.message || 'Die Einsätze konnten nicht geladen werden. Ist schema_planung.sql in der Datenbank schon ausgeführt worden?'));
+        esc(data.message || 'Die Einsätze konnten nicht geladen werden.') +
+        '<div style="margin-top:16px"><button class="btn btn-primary btn-sm" onclick="planungEinrichten()">Datenbank jetzt einrichten</button></div>');
       return;
     }
     einsaetze = data.einsaetze || [];
@@ -1904,7 +1905,8 @@ function loadObjekte() {
     if (status === 401) return doLogout();
     if (!ok || data.status !== 'ok') {
       $('oTable').innerHTML = EMPTY('Objekte nicht verfügbar',
-        esc(data.message || 'Die Objekte konnten nicht geladen werden. Ist schema_planung.sql in der Datenbank schon ausgeführt worden?'));
+        esc(data.message || 'Die Objekte konnten nicht geladen werden.') +
+        '<div style="margin-top:16px"><button class="btn btn-primary btn-sm" onclick="planungEinrichten()">Datenbank jetzt einrichten</button></div>');
       return;
     }
     objekte = data.objekte || [];
@@ -2352,6 +2354,17 @@ function ladeFeiertagMap() {
     feiertage = {};
     (data.feiertage || []).forEach(f => { feiertage[f.datum] = f; });
     if ($('pv-uebersicht').classList.contains('on')) renderMatrix();
+  });
+}
+
+// Legt fehlende Tabellen der Planung an. Rein ergaenzend -- es wird nichts
+// geloescht. Erspart das Kopieren von schema_planung.sql in phpMyAdmin.
+function planungEinrichten() {
+  toast('Richte die Datenbank ein …');
+  api('planung_einrichten.php', { method: 'POST' }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { toast(data.message || 'Einrichtung fehlgeschlagen.'); return; }
+    Promise.all([loadEinsaetze(), loadObjekte(), ladeFeiertagMap()])
+      .then(() => toast(data.message + (data.getan && data.getan.length ? ` (${data.getan.length} Schritte)` : '')));
   });
 }
 
