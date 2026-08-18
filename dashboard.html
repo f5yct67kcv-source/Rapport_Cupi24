@@ -364,6 +364,11 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ma-pick .who span { font-size: 11.5px; color: var(--ink-3); }
 /* Muss die Regel für .who span oben überstimmen, sonst bliebe der Hinweis grau. */
 .ma-pick .who .clash { display: block; font-size: 11.5px; color: var(--warn); font-weight: 600; }
+/* Gesperrt: die Person ist zur selben Zeit anderswo eingeteilt. */
+.ma-pick .who .clash.sperr { color: var(--neg); }
+.ma-pick label.gesperrt { background: #FCFCFD; cursor: not-allowed; }
+.ma-pick label.gesperrt .who b { color: var(--ink-3); }
+.ma-pick label.gesperrt input { cursor: not-allowed; }
 .ma-pick .leer { padding: 14px 12px; font-size: 12.5px; color: var(--ink-3); }
 .pick-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--ink-3); }
 
@@ -1801,13 +1806,18 @@ function pickRender(prefix, ids, ausserId) {
   const k = konflikte($(enId(prefix, 'datum')).value, $(enId(prefix, 'von')).value, $(enId(prefix, 'bis')).value, ausserId);
   box.innerHTML = mitarbeiter.map(m => {
     const c = k[m.id] || [];
-    const clash = c.map(x => `${x.kunde_name} ${hm(x.von)}–${hm(x.bis)}`).join(', ');
-    return `<label>
-      <input type="checkbox" value="${Number(m.id)}"${gewaehlt.has(Number(m.id)) ? ' checked' : ''} onchange="pickFoot('${prefix}')">
+    const dabei = gewaehlt.has(Number(m.id));
+    // Wer zur selben Zeit anderswo eingeteilt ist, lässt sich nicht auswählen.
+    // Bereits Zugeteilte bleiben bedienbar, damit sich eine bestehende
+    // Doppelbelegung überhaupt auflösen lässt.
+    const gesperrt = c.length > 0 && !dabei;
+    const clash = c.map(x => `${x.titel || x.kunde_name} ${hm(x.von)}–${hm(x.bis)}`).join(', ');
+    return `<label class="${gesperrt ? 'gesperrt' : ''}">
+      <input type="checkbox" value="${Number(m.id)}"${dabei ? ' checked' : ''}${gesperrt ? ' disabled' : ''} onchange="pickFoot('${prefix}')">
       <span class="who">
         <b>${esc(fullName(m) || m.name)}</b>
         <span>${esc(m.name)}</span>
-        ${c.length ? `<span class="clash">Gleichzeitig eingeteilt: ${esc(clash)}</span>` : ''}
+        ${c.length ? `<span class="clash${gesperrt ? ' sperr' : ''}">${gesperrt ? 'Nicht verfügbar — schon eingeteilt' : 'Doppelbelegung — bitte entfernen'}: ${esc(clash)}</span>` : ''}
       </span>
     </label>`;
   }).join('');
@@ -1825,8 +1835,10 @@ function pickFoot(prefix) {
   const n = pickIds(prefix).length;
   const bedarf = Math.max(0, parseInt(($(enId(prefix, 'bedarf')) || {}).value, 10) || 0);
   const fehlt = Math.max(0, bedarf - n);
+  const gesperrt = document.querySelectorAll('#' + prefix + 'Ma input[type=checkbox]:disabled').length;
   el.innerHTML = `<span class="chip ${fehlt ? 'chip-w' : 'chip-p'}">${n}/${bedarf}</span>`
-    + `<span>${fehlt ? `noch ${fehlt} ${fehlt === 1 ? 'Person' : 'Personen'} offen` : 'Bedarf gedeckt'}</span>`;
+    + `<span>${fehlt ? `noch ${fehlt} ${fehlt === 1 ? 'Person' : 'Personen'} offen` : 'Bedarf gedeckt'}</span>`
+    + (gesperrt ? `<span class="chip chip-x">${gesperrt} zeitlich belegt</span>` : '');
 }
 
 // ── Anlegen
@@ -1940,11 +1952,15 @@ function openEinsatz(id) {
       <div class="f wide"><label for="enEBemerkung">Bemerkung</label><textarea class="inp" id="enEBemerkung" rows="2" style="min-height:60px">${esc(e.bemerkung || '')}</textarea></div>
     </div>
     <div class="zone">
-      <div class="zone-hd">Was der gelbe Hinweis bedeutet</div>
+      <div class="zone-hd">Doppelbelegung ist gesperrt</div>
       <div class="zone-note">
-        Er zeigt ausschliesslich eine zeitliche Überschneidung mit einem anderen Einsatz.
-        Ruhezeiten und Höchstarbeitszeiten nach GAV werden hier <b>nicht</b> geprüft —
-        diese Auslegung ist noch offen und wird nicht vorweggenommen.
+        Wer im selben Zeitfenster schon anderswo eingeteilt ist, lässt sich hier nicht
+        auswählen — auch nicht am Browser vorbei, die Sperre greift beim Speichern.
+        Aneinandergrenzende Schichten wie 22:00–22:30 und 22:30–22:45 sind
+        <b>keine</b> Doppelbelegung.<br><br>
+        Das ist eine reine Zeitprüfung. Ruhezeiten und Höchstarbeitszeiten nach GAV
+        werden <b>nicht</b> geprüft — diese Auslegung ist offen und wird nicht
+        vorweggenommen.
       </div>
     </div>
     <div class="zone danger">

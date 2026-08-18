@@ -183,3 +183,64 @@ function planung_vorschlag(int $objektId, string $von, string $bis): array
         'feiertage' => count($feiertage),
     ];
 }
+
+// Zeitfenster eines Einsatzes als Zeitstempel. Liegt "bis" vor "von", laeuft
+// der Einsatz ueber Mitternacht in den Folgetag.
+function zeitfenster(string $datum, string $von, string $bis): array
+{
+    $tag = substr($datum, 0, 10);
+    $a = strtotime($tag . ' ' . substr($von, 0, 5));
+    $b = strtotime($tag . ' ' . substr($bis, 0, 5));
+    if ($b <= $a) {
+        $b += 86400;
+    }
+    return [$a, $b];
+}
+
+// Wer von den gewuenschten Mitarbeitenden ist im selben Zeitfenster schon
+// anderswo eingeteilt? (ENT-022)
+//
+// Aneinandergrenzende Schichten sind KEINE Doppelbelegung: 22:00-22:30 und
+// 22:30-22:45 beruehren sich nur. Das ist Absicht -- eine Fahrtzeit schliesst
+// direkt an die Runde an.
+//
+// Abgesagte Einsaetze blockieren nicht. Provisorische schon: die Person ist
+// dafuer vorgesehen und kann nicht gleichzeitig woanders sein.
+function doppelbelegungen(int $einsatzId, string $datum, string $von, string $bis, array $mitarbeiterIds): array
+{
+    if (!$mitarbeiterIds) {
+        return [];
+    }
+    [$a, $b] = zeitfenster($datum, $von, $bis);
+
+    // Der Tag davor und danach muss mit, weil Nachtschichten ueber Mitternacht
+    // laufen und sonst durchrutschen wuerden.
+    $marken = implode(',', array_fill(0, count($mitarbeiterIds), '?'));
+    $sql = "SELECT e.id, e.datum, e.von, e.bis, e.kunde_name, e.titel, e.status,
+                   z.mitarbeiter_id, m.vorname, m.nachname, m.name
+            FROM einsatz_zuteilung z
+            JOIN einsaetze e ON e.id = z.einsatz_id
+            JOIN mitarbeiter m ON m.id = z.mitarbeiter_id
+            WHERE z.mitarbeiter_id IN ($marken)
+              AND e.id <> ?
+              AND e.status <> 'abgesagt'
+              AND e.datum BETWEEN DATE_SUB(?, INTERVAL 1 DAY) AND DATE_ADD(?, INTERVAL 1 DAY)";
+    $stmt = db()->prepare($sql);
+    $stmt->execute([...$mitarbeiterIds, $einsatzId, $datum, $datum]);
+
+    $treffer = [];
+    foreach ($stmt->fetchAll() as $r) {
+        [$c, $d] = zeitfenster($r['datum'], $r['von'], $r['bis']);
+        if ($c < $b && $a < $d) {
+            $name = trim(($r['vorname'] ?? '') . ' ' . ($r['nachname'] ?? '')) ?: $r['name'];
+            $treffer[] = [
+                'mitarbeiter_id' => (int)$r['mitarbeiter_id'],
+                'name' => $name,
+                'einsatz_id' => (int)$r['id'],
+                'was' => trim(($r['titel'] ?: $r['kunde_name']) . ' ' . substr($r['von'], 0, 5) . '–' . substr($r['bis'], 0, 5)),
+                'datum' => $r['datum'],
+            ];
+        }
+    }
+    return $treffer;
+}

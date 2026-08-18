@@ -4,6 +4,7 @@
 // durch die uebergebene Liste ersetzt.
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require __DIR__ . '/../planung.php';
 
 $user = require_session();
 if (!$user['ist_admin']) {
@@ -65,6 +66,25 @@ if ($gewuenscht) {
     $stmt = db()->prepare("SELECT id FROM mitarbeiter WHERE aktiv = 1 AND id IN ($platzhalter)");
     $stmt->execute($gewuenscht);
     $zuteilung = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+
+// Niemand darf zur selben Zeit an zwei Orten sein (ENT-022). Die Pruefung
+// gehoert hierher und nicht nur in die Oberflaeche -- ein Aufruf am Browser
+// vorbei wuerde sie sonst umgehen.
+if ($zuteilung) {
+    $doppelt = doppelbelegungen($id, $datum, $von, $bis, $zuteilung);
+    if ($doppelt) {
+        $namen = [];
+        foreach ($doppelt as $d) {
+            $namen[$d['name']] = $d['name'] . ' ist am ' . date('d.m.Y', strtotime($d['datum']))
+                . ' bereits eingeteilt: ' . $d['was'];
+        }
+        json_response([
+            'status' => 'error',
+            'message' => 'Doppelbelegung: ' . implode(' — ', $namen),
+            'doppelbelegung' => array_values($doppelt),
+        ], 409);
+    }
 }
 
 $pdo = db();
