@@ -508,6 +508,46 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .gr .s-soll { background: transparent; border: 1px dashed var(--line); color: var(--ink-3); box-sizing: border-box; }
 .gr .s-soll:hover { border-color: var(--accent); color: var(--accent); }
 
+/* ── Spracheingabe (ENT-027)
+   Der eigene Knopf ist unabhaengig von der Mikrofontaste der Tastatur, die
+   je nach Geraet und Browser fehlt oder stumm bleibt. Die Balken haengen am
+   echten Eingangspegel -- eine reine Zierde saehe bei totem Mikrofon genauso
+   aus und waere damit wertlos. */
+.sprach { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.sprach-btn {
+  display: inline-flex; align-items: center; gap: 8px; flex: none;
+  min-height: 42px; padding: 0 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: 13.5px; font-weight: 620; transition: background .15s, border-color .15s, color .15s;
+}
+.sprach-btn:hover { background: var(--bg); }
+.sprach-btn.laeuft { background: var(--neg); border-color: var(--neg); color: #fff; }
+.sprach-btn.laeuft:hover { background: #A82F23; }
+/* Der Ring pulsiert nur waehrend der Aufnahme und nur einmal -- keine Unruhe
+   auf einem Bildschirm, an dem man laenger arbeitet. */
+.sprach-btn.laeuft .pkt {
+  width: 9px; height: 9px; border-radius: 50%; background: #fff;
+  animation: pulsPunkt 1.4s ease-in-out infinite;
+}
+@keyframes pulsPunkt { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.72); } }
+
+.viz { display: flex; align-items: center; gap: 3px; height: 34px; flex: 1; min-width: 0; opacity: 0; transition: opacity .2s; }
+.viz.an { opacity: 1; }
+.viz i {
+  flex: 1; min-width: 2px; max-width: 6px; height: 3px; border-radius: 3px;
+  background: var(--accent); transform-origin: center;
+  transition: height .07s linear, background .2s;
+}
+/* Kein Pegel trotz laufender Aufnahme: das Mikrofon hoert nichts. */
+.viz.still i { background: var(--line); }
+.sprach-hint { font-size: 12px; color: var(--ink-3); line-height: 1.45; margin-top: 8px; }
+.sprach-hint.warn { color: var(--warn); }
+.sprach-hint.neg { color: var(--neg); }
+@media (prefers-reduced-motion: reduce) {
+  .sprach-btn.laeuft .pkt { animation: none; }
+  .viz i { transition: none; }
+}
+
 /* ── Masterschichten auf einen Zeitraum legen (ENT-026) */
 .aw-schnell { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin: 14px 0 10px; font-size: 12px; color: var(--ink-3); }
 .gr.aw-gr { border: 1px solid var(--line); border-radius: var(--r-sm); }
@@ -1230,7 +1270,16 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
     <div class="dlg-bd">
       <div class="msg-err" id="pdErr" style="display:none"></div>
       <div class="zone-note" style="margin-bottom:10px">Gilt für: <b id="pdWo"></b></div>
-      <textarea class="inp" id="pdText2" rows="3" placeholder="Tippen — oder das Mikrofon der Tastatur benutzen …"></textarea>
+      <textarea class="inp" id="pdText2" rows="3" placeholder="Sprechen oder tippen …"></textarea>
+      <div class="sprach" id="pdSprach">
+        <button class="sprach-btn" id="pdMik" onclick="sprachUm('pdText2','pd')">
+          <span class="pkt"></span>
+          <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          <span class="lb">Sprechen</span>
+        </button>
+        <div class="viz" id="pdViz"></div>
+      </div>
+      <div class="sprach-hint" id="pdSprachHint"></div>
     </div>
     <div class="dlg-ft">
       <button class="btn btn-plain" onclick="closeDlg('dlgPlanDiktat')">Abbrechen</button>
@@ -1372,7 +1421,16 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
     <div class="dlg-hd"><h2 id="kiTitel">Per Diktat</h2><p id="kiText"></p></div>
     <div class="dlg-bd">
       <div class="msg-err" id="kiErr" style="display:none"></div>
-      <textarea class="inp" id="kiText2" rows="4" placeholder="Tippen — oder das Mikrofon der Tastatur benutzen …"></textarea>
+      <textarea class="inp" id="kiText2" rows="4" placeholder="Sprechen oder tippen …"></textarea>
+      <div class="sprach" id="kiSprach">
+        <button class="sprach-btn" id="kiMik" onclick="sprachUm('kiText2','ki')">
+          <span class="pkt"></span>
+          <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          <span class="lb">Sprechen</span>
+        </button>
+        <div class="viz" id="kiViz"></div>
+      </div>
+      <div class="sprach-hint" id="kiSprachHint"></div>
       <label class="check" id="kiWebWrap" style="margin-top:14px;display:none">
         <input type="checkbox" id="kiWeb">
         <span>Fehlende Angaben im Handelsregister und im Netz suchen <span style="color:var(--ink-3)">— dauert länger, Ergebnis wird mit Quelle angezeigt</span></span>
@@ -3106,6 +3164,212 @@ function oplTagesliste(d, tage, zellen, fei, heute) {
       'In diesem Monat entsteht aus den Masterschichten kein Bedarf.')}</div></div>`}</div>`;
 }
 
+// ══════════════════════════════════════════ SPRACHEINGABE (ENT-027)
+// Ein eigener Aufnahmeknopf, unabhaengig von der Mikrofontaste der Tastatur --
+// die fehlt je nach Geraet oder bleibt stumm.
+//
+// Erkannt wird im Browser (Web Speech API). Das spart einen zusaetzlichen
+// Dienstleister; der Ton geht dafuer an den Browserhersteller (bei Safari an
+// Apple, bei Chrome an Google). Siehe ENT-027 und OP-28.
+//
+// Die Balken zeigen den ECHTEN Eingangspegel aus einem AnalyserNode. Eine
+// gespielte Animation saehe bei totem Mikrofon genauso aus -- und waere damit
+// wertlos fuer die Frage "hoert es mich ueberhaupt?".
+const SPRACH_DA = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+const BALKEN = 22;
+
+let sprach = null;        // laufende Erkennung
+let sprachZiel = null;    // id des Textfeldes
+let sprachPrefix = null;  // id-Vorsilbe der Bedienelemente
+let sprachFest = '';      // bereits endgueltig erkannter Text
+let sprachAudio = null;   // { ctx, analyser, strom, daten, raf }
+let sprachStille = 0;     // aufeinanderfolgende Bilder ohne Pegel
+
+function sprachEl(art) { return sprachPrefix ? $(sprachPrefix + art) : null; }
+
+// Die Bedienelemente eines Dialogs vorbereiten. Kann der Browser es nicht,
+// verschwindet der Knopf und der alte Weg wird ausdruecklich genannt --
+// ein Knopf, der nichts tut, ist schlimmer als keiner.
+function sprachBereit(prefix) {
+  const wrap = $(prefix + 'Sprach'), hint = $(prefix + 'SprachHint');
+  if (!wrap) return;
+  if (!SPRACH_DA) {
+    wrap.style.display = 'none';
+    hint.className = 'sprach-hint warn';
+    hint.textContent = 'Dieser Browser kann nicht direkt aufnehmen. Bitte tippen — oder das Mikrofon der Tastatur benutzen.';
+    return;
+  }
+  wrap.style.display = '';
+  hint.className = 'sprach-hint';
+  // Wo die Erkennung stattfindet, wird gesagt und nicht verschwiegen -- der
+  // Ton geht an den Browserhersteller (ENT-027, OP-28).
+  hint.innerHTML = 'Sprich in ganzen Sätzen. Der Text erscheint im Feld und lässt sich vor dem Erkennen noch ändern. '
+    + '<span style="color:var(--ink-3)">Die Spracherkennung übernimmt der Browser.</span>';
+  $(prefix + 'Viz').innerHTML = Array.from({ length: BALKEN }, () => '<i></i>').join('');
+  sprachAus(prefix);
+}
+
+function sprachAus(prefix) {
+  const b = $(prefix + 'Mik');
+  if (!b) return;
+  b.classList.remove('laeuft');
+  b.querySelector('.lb').textContent = 'Sprechen';
+  const v = $(prefix + 'Viz');
+  if (v) { v.classList.remove('an', 'still'); v.querySelectorAll('i').forEach(i => { i.style.height = '3px'; }); }
+}
+
+function sprachUm(zielId, prefix) {
+  if (sprach) { sprachStop(); return; }
+  sprachStart(zielId, prefix);
+}
+
+function sprachStart(zielId, prefix) {
+  const Erkenner = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Erkenner) return;
+  sprachZiel = zielId;
+  sprachPrefix = prefix;
+  sprachFest = ($(zielId).value || '').trim();
+  const hint = $(prefix + 'SprachHint');
+
+  try {
+    sprach = new Erkenner();
+  } catch (e) {
+    hint.className = 'sprach-hint neg';
+    hint.textContent = 'Die Spracherkennung liess sich nicht starten. Bitte tippen.';
+    sprach = null;
+    return;
+  }
+  sprach.lang = 'de-CH';
+  sprach.continuous = true;
+  sprach.interimResults = true;
+
+  sprach.onresult = e => {
+    let vorlaeufig = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        sprachFest = (sprachFest + ' ' + t).trim();
+      } else {
+        vorlaeufig += t;
+      }
+    }
+    $(sprachZiel).value = (sprachFest + ' ' + vorlaeufig).trim();
+  };
+
+  sprach.onerror = e => {
+    const grund = {
+      'not-allowed': 'Zugriff auf das Mikrofon verweigert. Im Browser unter den Website-Einstellungen erlauben.',
+      'service-not-allowed': 'Der Browser lässt die Spracherkennung nicht zu. Bitte tippen.',
+      'no-speech': 'Nichts gehört. Näher ans Gerät und nochmals versuchen.',
+      'audio-capture': 'Kein Mikrofon gefunden.',
+      'network': 'Keine Verbindung zur Spracherkennung.',
+    }[e.error] || 'Aufnahme abgebrochen. Bitte tippen oder nochmals versuchen.';
+    hint.className = 'sprach-hint neg';
+    hint.textContent = grund;
+    sprachStop(true);
+  };
+
+  // Safari beendet die Erkennung bei Stille von sich aus. Solange der Knopf
+  // rot ist, wird darum neu gestartet -- sonst bricht die Aufnahme mitten im
+  // Satz ab, ohne dass man es merkt.
+  sprach.onend = () => {
+    if (!sprach) return;
+    try { sprach.start(); } catch (e) { sprachStop(true); }
+  };
+
+  try {
+    sprach.start();
+  } catch (e) {
+    sprach = null;
+    hint.className = 'sprach-hint neg';
+    hint.textContent = 'Die Aufnahme liess sich nicht starten. Bitte tippen.';
+    return;
+  }
+
+  const b = $(prefix + 'Mik');
+  b.classList.add('laeuft');
+  b.querySelector('.lb').textContent = 'Aufnahme beenden';
+  $(prefix + 'Viz').classList.add('an');
+  hint.className = 'sprach-hint';
+  hint.textContent = 'Aufnahme läuft. Nochmals tippen beendet sie.';
+  pegelStart();
+}
+
+function sprachStop(ausFehler) {
+  const prefix = sprachPrefix;
+  const erkenner = sprach;
+  sprach = null;                       // zuerst leeren, damit onend nicht neu startet
+  if (erkenner) {
+    try { erkenner.onend = null; erkenner.stop(); } catch (e) {}
+  }
+  pegelStop();
+  if (prefix) {
+    sprachAus(prefix);
+    if (!ausFehler) {
+      const hint = $(prefix + 'SprachHint');
+      hint.className = 'sprach-hint';
+      hint.textContent = $(sprachZiel) && $(sprachZiel).value.trim()
+        ? 'Aufnahme beendet. Text prüfen und dann „Erkennen“.'
+        : 'Aufnahme beendet — es wurde nichts verstanden.';
+    }
+  }
+  sprachPrefix = null;
+  sprachZiel = null;
+}
+
+// ── Pegel: der ehrliche Teil der Animation
+function pegelStart() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(strom => {
+    if (!sprach) { strom.getTracks().forEach(t => t.stop()); return; }
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) { strom.getTracks().forEach(t => t.stop()); return; }
+    const ctx = new Ctx();
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 64;
+    analyser.smoothingTimeConstant = 0.7;
+    ctx.createMediaStreamSource(strom).connect(analyser);
+    sprachAudio = { ctx, analyser, strom, daten: new Uint8Array(analyser.frequencyBinCount), raf: 0 };
+    sprachStille = 0;
+    pegelBild();
+  }).catch(() => { /* ohne Pegel laeuft die Erkennung trotzdem */ });
+}
+
+function pegelBild() {
+  if (!sprachAudio || !sprachPrefix) return;
+  const { analyser, daten } = sprachAudio;
+  analyser.getByteFrequencyData(daten);
+  const balken = sprachEl('Viz') ? sprachEl('Viz').querySelectorAll('i') : [];
+  let summe = 0;
+  balken.forEach((el, i) => {
+    // Die tiefen Baender tragen die Stimme -- darum von unten abtasten und
+    // die Balken zur Mitte hin hoeher zeichnen.
+    const q = daten[Math.min(daten.length - 1, Math.floor(i * daten.length / balken.length))] || 0;
+    const mitte = 1 - Math.abs(i - (balken.length - 1) / 2) / ((balken.length - 1) / 2);
+    summe += q;
+    el.style.height = Math.max(3, Math.round(3 + (q / 255) * 28 * (0.45 + 0.55 * mitte))) + 'px';
+  });
+  // Kein Pegel ueber laengere Zeit: das Mikrofon liefert nichts. Das wird
+  // gezeigt, statt eine Aufnahme vorzugaukeln.
+  const still = balken.length ? summe / balken.length < 2 : true;
+  sprachStille = still ? sprachStille + 1 : 0;
+  if (sprachEl('Viz')) sprachEl('Viz').classList.toggle('still', sprachStille > 45);
+  if (sprachStille === 90 && sprachEl('SprachHint')) {
+    sprachEl('SprachHint').className = 'sprach-hint warn';
+    sprachEl('SprachHint').textContent = 'Das Mikrofon liefert kein Signal. Stummschaltung prüfen oder ein anderes Mikrofon wählen.';
+  }
+  sprachAudio.raf = requestAnimationFrame(pegelBild);
+}
+
+function pegelStop() {
+  if (!sprachAudio) return;
+  cancelAnimationFrame(sprachAudio.raf);
+  try { sprachAudio.strom.getTracks().forEach(t => t.stop()); } catch (e) {}
+  try { sprachAudio.ctx.close(); } catch (e) {}
+  sprachAudio = null;
+  sprachStille = 0;
+}
+
 // ══════════════════════════════════════════ MASTERSCHICHTEN ANWENDEN
 // Ein Fenster statt fünf Dialogen mit Stichtag: Bedarf je Wochentag eintragen,
 // ein Knopf setzt ihn und legt die Schichten an (ENT-026).
@@ -3344,6 +3608,7 @@ function planDiktat(art) {
   $('pdWo').textContent = `${oplDaten ? oplDaten.objekt.name : ''} · ${$('oplM').value}`;
   $('pdText2').value = '';
   $('pdErr').style.display = 'none';
+  sprachBereit('pd');
   openDlg('dlgPlanDiktat');
   $('pdText2').focus();
 }
@@ -3680,7 +3945,11 @@ function askDeleteRapport(id) {
 
 // ══════════════════════════════════════════ DIALOGE
 function openDlg(id) { $(id).classList.add('on'); }
-function closeDlg(id) { $(id).classList.remove('on'); }
+function closeDlg(id) {
+  // Ein geschlossener Dialog darf nicht weiterhoeren.
+  if (sprach && (id === 'dlgKi' || id === 'dlgPlanDiktat')) sprachStop();
+  $(id).classList.remove('on');
+}
 
 function askConfirm(titel, text, knopf, fn) {
   $('cfTitel').textContent = titel;
@@ -3983,6 +4252,7 @@ function openKi(mode) {
   // Recherche gibt es nur beim Kunden — beim Personal wird nichts nachgeschlagen.
   $('kiWebWrap').style.display = mode === 'kunde' ? '' : 'none';
   $('kiWeb').checked = false;
+  sprachBereit('ki');
   openDlg('dlgKi');
   $('kiText2').focus();
 }
