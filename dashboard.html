@@ -864,6 +864,10 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
     </nav>
 
     <div class="side-foot">
+      <button class="nav-item" id="nav-einrichtung" title="Einrichtung" onclick="openDlg('dlgEinrichtung')">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.5.66.86 1.19.91H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="lbl">Einrichtung</span>
+      </button>
       <div class="side-user">
         <div class="avatar" id="uAvatar">–</div>
         <div class="who">
@@ -1563,6 +1567,25 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
   </div>
 </div>
 
+<!-- Einrichtung: Tabellen der Planung und Verfügbarkeit anlegen -->
+<div class="dlg-scrim" id="dlgEinrichtung">
+  <div class="dlg">
+    <div class="dlg-hd">
+      <h2>Einrichtung</h2>
+      <p>Legt fehlende Tabellen an — für die Planung (ENT-020/ENT-021) und die Sperrtage (ENT-028). Bereits vorhandene bleiben unverändert; es wird nichts gelöscht oder geleert. Gefahrlos mehrfach ausführbar.</p>
+    </div>
+    <div class="dlg-bd">
+      <div id="eiInhalt">
+        <p class="zone-note">Ein Klick auf „Prüfen und einrichten“ zeigt, was fehlt, und ergänzt es sofort.</p>
+      </div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgEinrichtung')">Schliessen</button>
+      <button class="btn btn-primary" id="eiBtn" onclick="planungEinrichten()">Prüfen und einrichten</button>
+    </div>
+  </div>
+</div>
+
 <!-- Rückfrage vor folgenreichen Schritten -->
 <div class="dlg-scrim" id="dlgConfirm">
   <div class="dlg narrow">
@@ -1833,7 +1856,7 @@ function loadEinsaetze() {
       // Die Meldung kommt vom Server -- er weiss, ob eine Tabelle fehlt.
       $('plTable').innerHTML = EMPTY('Planung nicht verfügbar',
         esc(data.message || 'Die Einsätze konnten nicht geladen werden.') +
-        '<div style="margin-top:16px"><button class="btn btn-primary btn-sm" onclick="planungEinrichten()">Datenbank jetzt einrichten</button></div>');
+        '<div style="margin-top:16px"><button class="btn btn-primary btn-sm" onclick="eiOeffnen()">Datenbank jetzt einrichten</button></div>');
       return;
     }
     einsaetze = data.einsaetze || [];
@@ -2502,7 +2525,7 @@ function loadObjekte() {
     if (!ok || data.status !== 'ok') {
       $('oTable').innerHTML = EMPTY('Objekte nicht verfügbar',
         esc(data.message || 'Die Objekte konnten nicht geladen werden.') +
-        '<div style="margin-top:16px"><button class="btn btn-primary btn-sm" onclick="planungEinrichten()">Datenbank jetzt einrichten</button></div>');
+        '<div style="margin-top:16px"><button class="btn btn-primary btn-sm" onclick="eiOeffnen()">Datenbank jetzt einrichten</button></div>');
       return;
     }
     objekte = data.objekte || [];
@@ -2988,14 +3011,39 @@ function ladeFeiertagMap() {
   });
 }
 
-// Legt fehlende Tabellen der Planung an. Rein ergaenzend -- es wird nichts
-// geloescht. Erspart das Kopieren von schema_planung.sql in phpMyAdmin.
+// Legt fehlende Tabellen an -- fuer die Planung UND die Sperrtage (ENT-028).
+// Rein ergaenzend, nichts wird geloescht. Erspart das Kopieren von
+// schema_planung.sql / schema_verfuegbarkeit.sql in phpMyAdmin.
+//
+// Dauerhaft ueber "Einrichtung" in der Seitenleiste erreichbar -- nicht nur
+// als Nothilfe, wenn ein Laden bereits fehlgeschlagen ist. Sonst findet ihn
+// niemand, dessen erster Blick auf ein funktionierendes Dashboard faellt.
+function eiOeffnen() { openDlg('dlgEinrichtung'); planungEinrichten(); }
+
 function planungEinrichten() {
-  toast('Richte die Datenbank ein …');
+  const b = $('eiBtn'); if (b) b.disabled = true;
+  $('eiInhalt').innerHTML = '<p class="zone-note">Prüfe …</p>';
   api('planung_einrichten.php', { method: 'POST' }).then(({ ok, data }) => {
-    if (!ok || data.status !== 'ok') { toast(data.message || 'Einrichtung fehlgeschlagen.'); return; }
-    Promise.all([loadEinsaetze(), loadObjekte(), ladeFeiertagMap()])
-      .then(() => toast(data.message + (data.getan && data.getan.length ? ` (${data.getan.length} Schritte)` : '')));
+    if (b) b.disabled = false;
+    if (!ok) {
+      $('eiInhalt').innerHTML = `<div class="msg-err">${esc(data.message || 'Einrichtung fehlgeschlagen.')}</div>`;
+      return;
+    }
+    const zeile = (t, liste, leer) => !liste || !liste.length ? '' : `
+      <div class="titel" style="margin-top:${t === 'Jetzt ergänzt' ? '0' : '14px'}">${esc(t)}</div>
+      <ul style="margin:0;padding-left:18px;font-size:13px;color:var(--ink-2);line-height:1.7">
+        ${liste.map(x => `<li>${esc(x)}</li>`).join('')}
+      </ul>`;
+    $('eiInhalt').innerHTML =
+      `<div class="msg-err" style="background:${data.status === 'ok' ? 'var(--pos-soft)' : 'var(--neg-soft)'};color:${data.status === 'ok' ? 'var(--pos)' : 'var(--neg)'}">${esc(data.message)}</div>`
+      + zeile('Jetzt ergänzt', data.getan)
+      + zeile('War schon vorhanden', data.unveraendert);
+    if (data.status === 'ok') {
+      Promise.all([loadEinsaetze(), loadObjekte(), ladeFeiertagMap(), ladeSperren()]);
+    }
+  }).catch(() => {
+    if (b) b.disabled = false;
+    $('eiInhalt').innerHTML = '<div class="msg-err">Netzwerkfehler.</div>';
   });
 }
 
