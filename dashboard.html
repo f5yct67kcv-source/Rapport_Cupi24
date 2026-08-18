@@ -297,6 +297,9 @@ td .sec { font-size: 11.5px; color: var(--ink-3); }
 .chip-a { background: var(--accent-soft); color: var(--accent); }
 .chip-p { background: var(--pos-soft); color: var(--pos); }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pos); flex: none; box-shadow: 0 0 0 3px var(--pos-soft); }
+.dot.warn { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-soft); }
+.rank.click { cursor: pointer; }
+.rank.click:hover { background: var(--bg); }
 
 /* Ranking-Zeile */
 .rank { display: flex; align-items: center; gap: 12px; padding: 11px 18px; border-bottom: 1px solid var(--line-soft); }
@@ -955,6 +958,15 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
             </div>
             <div class="card-bd flush"><div id="proMa"></div></div>
           </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd">
+            <h2>Neue Sperrtage</h2>
+            <div class="sp"></div>
+            <span class="note">kommende Tage</span>
+          </div>
+          <div class="card-bd flush"><div id="sperrFeed"></div></div>
         </div>
       </section>
 
@@ -1651,6 +1663,21 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf = (n, d) => Number(n || 0).toLocaleString('de-CH', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
 const dmy = d => d ? String(d).slice(0, 10).split('-').reverse().join('.') : '–';
+// Grobe relative Zeit fuer Ereignislisten -- auf die Minute genau ist hier
+// nicht wichtig, nur die Groessenordnung ("gerade eben" vs. "vor 3 Tagen").
+function relZeit(sqlZeit) {
+  if (!sqlZeit) return '';
+  const dann = new Date(String(sqlZeit).replace(' ', 'T'));
+  if (isNaN(dann)) return '';
+  const min = Math.round((Date.now() - dann.getTime()) / 60000);
+  if (min < 1) return 'gerade eben';
+  if (min < 60) return `vor ${min} Min.`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `vor ${h} ${h === 1 ? 'Std.' : 'Std.'}`;
+  const t = Math.round(h / 24);
+  if (t < 14) return `vor ${t} ${t === 1 ? 'Tag' : 'Tagen'}`;
+  return dmy(sqlZeit);
+}
 const hm  = t => t ? String(t).slice(0, 5) : '';
 const dash = v => (v === null || v === undefined || String(v).trim() === '') ? '<span style="color:var(--ink-3)">–</span>' : esc(v);
 
@@ -1817,7 +1844,7 @@ function loadStats() {
     if (status === 401) return doLogout();
     if (!ok || data.status !== 'ok') { toast(data.message || 'Kennzahlen konnten nicht geladen werden.'); return; }
     stats = data;
-    renderKpi(); renderChart(); renderAngemeldet(); renderLetzte(); renderProMa();
+    renderKpi(); renderChart(); renderAngemeldet(); renderLetzte(); renderProMa(); renderSperrFeed();
   });
 }
 
@@ -1979,6 +2006,33 @@ function renderLetzte() {
         <td><span class="chip chip-n">${esc(r.einsatzart)}</span></td>
         <td class="num strong nowrap">${nf(r.netto_h, 2)} h</td>
       </tr>`).join('') + `</tbody></table>`;
+}
+
+// Neu gesetzte Sperrtage als Ereignisliste (ENT-030). Nur die Fakten, die
+// die Planung wirklich mitgeteilt bekommt -- keine Vermutung ueber Grund
+// oder Dringlichkeit, das steht hoechstens in der freiwilligen Notiz.
+function renderSperrFeed() {
+  const f = stats.sperr_ereignisse || [];
+  if (!f.length) {
+    $('sperrFeed').innerHTML = EMPTY('Keine neuen Sperrtage', 'Sobald sich jemand einen Tag sperrt, erscheint es hier.');
+    return;
+  }
+  $('sperrFeed').innerHTML = f.map(x => `
+    <div class="rank click" onclick="sperrEreignisAn('${esc(x.datum).slice(0, 10)}')">
+      <span class="dot warn"></span>
+      <div class="who">
+        <b>${esc(fullName(x) || x.name)}</b>
+        <span>hat sich ${esc(dmy(x.datum))} gesperrt${x.bemerkung ? ' — ' + esc(x.bemerkung) : ''}</span>
+      </div>
+      <div style="text-align:right;font-size:12px;color:var(--ink-3);white-space:nowrap">${esc(relZeit(x.erfasst_am))}</div>
+    </div>`).join('');
+}
+
+// Von der Übersicht direkt zum Tagesplan des betroffenen Tages.
+function sperrEreignisAn(datum) {
+  pTab = 'tag';
+  $('tgD').value = datum;
+  go('planung');
 }
 
 function renderProMa() {

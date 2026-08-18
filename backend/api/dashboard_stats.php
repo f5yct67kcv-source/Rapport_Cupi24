@@ -74,6 +74,25 @@ $stmt = db()->prepare(
 $stmt->execute([$monatStart]);
 $proMitarbeiter = $stmt->fetchAll();
 
+// ── Neueste Sperrtage (ENT-030). Nur kuenftige/heutige Tage: eine Sperre fuer
+// einen bereits vergangenen Tag ist kein aktuelles Ereignis mehr.
+// Die Tabelle kann fehlen, solange OP-29 nicht erledigt ist -- dann bleibt
+// die Liste leer, statt das ganze Dashboard mitzureissen (ENT-024-Prinzip:
+// lieber ehrlich leer als ein Fehler, der alles blockiert).
+$sperrEreignisse = [];
+try {
+    $sperrEreignisse = db()->query(
+        "SELECT v.mitarbeiter_id, m.name, m.vorname, m.nachname, v.datum, v.bemerkung, v.erfasst_am
+         FROM verfuegbarkeiten v
+         JOIN mitarbeiter m ON m.id = v.mitarbeiter_id
+         WHERE v.datum >= CURDATE()
+         ORDER BY v.erfasst_am DESC
+         LIMIT 8"
+    )->fetchAll();
+} catch (Throwable $e) {
+    $sperrEreignisse = [];
+}
+
 // ── Letzte Rapporte
 $letzte = db()->query(
     'SELECT r.id, r.datum, m.name AS mitarbeiter, r.kunde, r.ort, r.einsatzart, r.netto_h
@@ -98,4 +117,5 @@ json_response([
     'angemeldet'      => $angemeldet,
     'pro_mitarbeiter' => $proMitarbeiter,
     'letzte_rapporte' => $letzte,
+    'sperr_ereignisse' => $sperrEreignisse,
 ]);
