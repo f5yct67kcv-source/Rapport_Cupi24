@@ -496,6 +496,39 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .btn-schmal { display: inline-flex; }
 @media (max-width: 900px) { .btn-schmal { display: none; } }
 
+
+/* ══════════════════════════════════════════ SCHMALE BILDSCHIRME
+   Grundsatz: die Seite scrollt nie waagrecht. Breite Inhalte scrollen in
+   ihrer eigenen Karte. */
+@media (max-width: 900px) {
+  /* Sicherheitsnetz. "clip" statt "hidden", weil "hidden" die Kopfzeile
+     zu einem Scrollbereich machen und ihr Kleben zerstören würde. */
+  .main { overflow-x: clip; }
+  .topbar > div { min-width: 0; }
+  .topbar h1, .topbar .crumb { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Beschriftungsspalte der Raster: schmaler, sonst bleibt vom Monat nichts */
+  .mx th.obj, .mx td.obj { min-width: 132px; max-width: 150px; padding: 8px 10px; }
+  .gr th.lb, .gr td.lb { min-width: 130px; max-width: 150px; padding: 7px 10px; }
+  .gr td.sum, .gr th.sum { padding: 7px 8px; font-size: 11px; }
+}
+@media (max-width: 620px) {
+  /* Werkzeugleisten: ein Bedienelement je Zeile statt überlaufender Reihen.
+     Auswahlfelder und Datumsfelder sind auf iOS deutlich breiter als auf dem
+     Rechner -- feste Breiten führen dort zum waagrechten Schieben. */
+  .bar-tools { gap: 8px; }
+  .bar-tools > .sp { display: none; }
+  .search { flex: 1 1 100%; min-width: 0; max-width: none; }
+  .bar-tools select.inp, .bar-tools input.inp { flex: 1 1 100%; width: 100% !important; min-width: 0; }
+  .bar-tools .btn { flex: 1 1 auto; justify-content: center; }
+  .bar-tools .check { flex: 1 1 100%; }
+  /* Kennzahlen des Objektplans untereinander statt gequetscht */
+  .opl-kopf > .sp { display: none; }
+  .opl-kopf .opl-zahl { text-align: left; flex: 1 1 40%; }
+  .opl-kopf .nm { font-size: 17px; }
+  /* Reiterleiste darf für sich allein scrollen */
+  .tabs { margin-left: -16px; margin-right: -16px; padding: 0 16px; }
+}
+
 /* ══════════════════════════════════════════ RESPONSIV */
 @media (max-width: 1180px) {
   .g-kpi { grid-template-columns: repeat(2, 1fr); }
@@ -2684,7 +2717,7 @@ function renderObjektplan() {
           <div class="nm">${esc(o.name)}</div>
           <div class="sub">${esc(o.kunde_name)} · ${o.strasse ? esc(o.strasse) + ', ' : ''}${esc(o.ort)} · Kanton ${esc(o.kanton)}${o.aktiv ? '' : ' · stillgelegt'}</div>
         </div>
-        <div style="flex:1"></div>
+        <div class="sp" style="flex:1"></div>
         <div class="opl-zahl"><b>${nf(gueltig.length)}</b><span>Masterschichten</span></div>
         <div class="opl-zahl"><b>${nf(hGeplant, 2)}</b><span>Stunden geplant</span></div>
         <div class="opl-zahl voll"><b>${nf(hBesetzt, 2)}</b><span>davon besetzt</span></div>
