@@ -74,9 +74,6 @@ svg.i-sm { width: 17px; height: 17px; }
 .gate-oben .wm { color: var(--shell-txt-hi); font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
 .gate-oben .sub { color: #656B78; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 4px; }
 .gate-form { background: var(--surface); border-radius: var(--r-lg); padding: 22px; box-shadow: var(--sh-2); }
-.sprache { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; }
-.sprache button { min-height: 40px; padding: 0 20px; border-radius: 20px; border: 1px solid var(--shell-line); background: transparent; color: var(--shell-txt); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
-.sprache button.on { background: var(--shell-hi); color: var(--shell-txt-hi); border-color: #3A404B; }
 
 /* ══════════════════════════════════════════ GERÜST */
 .app { display: none; min-height: 100%; flex-direction: column; }
@@ -148,6 +145,29 @@ svg.i-sm { width: 17px; height: 17px; }
 .tag-kopf span { font-size: 12.5px; font-weight: 640; letter-spacing: .6px; text-transform: uppercase; color: var(--ink-3); }
 .tag-kopf .sp { flex: 1; }
 
+/* ── Sperrtage (ENT-028) */
+.sperr-karte { margin-bottom: 8px; }
+.sperr-karte.aus { border-color: var(--warn); background: var(--warn-soft); }
+.sperr-zeile { display: flex; align-items: center; gap: 13px; width: 100%; padding: 12px 14px;
+  border: none; background: none; font-family: inherit; text-align: left; cursor: pointer; min-height: 58px; }
+.sperr-zeile .tg { flex: none; width: 46px; }
+.sperr-zeile .tg b { display: block; font-size: 14px; font-weight: 700; }
+.sperr-zeile .tg span { display: block; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.sperr-zeile .ws { flex: 1; min-width: 0; }
+.sperr-zeile .ws b { display: block; font-size: 14.5px; font-weight: 640; }
+.sperr-zeile .ws span { display: block; font-size: 12.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sperr-zeile .ws .warn { color: var(--warn); font-weight: 620; }
+/* Der Schalter zeigt den Zustand, ohne dass man den Text lesen muss. */
+.schalter { flex: none; width: 48px; height: 28px; border-radius: 999px; background: var(--line); position: relative; transition: background .18s; }
+.schalter i { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; box-shadow: var(--sh-1); transition: transform .18s; }
+.schalter.an { background: var(--warn); }
+.schalter.an i { transform: translateX(20px); }
+.sperr-notiz { display: flex; align-items: center; gap: 7px; width: 100%; padding: 10px 14px;
+  border: none; border-top: 1px solid rgba(154,107,8,.22); background: none; font-family: inherit;
+  font-size: 12.5px; font-weight: 620; color: var(--warn); cursor: pointer; min-height: 42px; }
+@media (prefers-reduced-motion: reduce) { .schalter, .schalter i { transition: none; } }
+
 /* ── Leerzustand */
 .leer { text-align: center; padding: 46px 22px; }
 .leer .ic { width: 52px; height: 52px; border-radius: 16px; background: var(--line-soft); color: var(--ink-3); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; }
@@ -212,10 +232,6 @@ svg.i-sm { width: 17px; height: 17px; }
     <div class="wm">Cockpit</div>
     <div class="sub">CUPI 24 GmbH</div>
   </div>
-  <div class="sprache">
-    <button id="spDe" class="on" onclick="setzeSprache('de')">DE</button>
-    <button id="spSq" onclick="setzeSprache('sq')">SQ</button>
-  </div>
   <div class="gate-form">
     <div id="gErr" class="msg-err" style="display:none"></div>
     <div class="f"><label for="gName" id="lb-name">Name</label><input class="inp" id="gName" autocomplete="username" autocapitalize="none"></div>
@@ -240,6 +256,7 @@ svg.i-sm { width: 17px; height: 17px; }
   <main class="inhalt">
     <section class="v on" id="v-heute"></section>
     <section class="v" id="v-plan"></section>
+    <section class="v" id="v-sperren"></section>
     <section class="v" id="v-rapport"></section>
     <section class="v" id="v-profil"></section>
   </main>
@@ -252,6 +269,10 @@ svg.i-sm { width: 17px; height: 17px; }
     <button id="t-plan" onclick="zeige('plan')">
       <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>
       <span id="lb-tab-plan">Plan</span>
+    </button>
+    <button id="t-sperren" onclick="zeige('sperren')">
+      <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="9.5" y1="14" x2="14.5" y2="18.5"/><line x1="14.5" y1="14" x2="9.5" y2="18.5"/></svg>
+      <span id="lb-tab-sperren">Sperren</span>
     </button>
     <button id="t-rapport" onclick="zeige('rapport')">
       <svg class="i" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -281,17 +302,23 @@ svg.i-sm { width: 17px; height: 17px; }
 
 <script>
 /* ══════════════════════════════════════════════════════════════════
-   SPRACHEN — Deutsch und Albanisch, wie in der Erfassung.
-   Begriffe aus dem bestehenden Wörterbuch der Erfassung übernommen,
-   damit dieselbe Sache überall gleich heisst. Neu hinzugekommene
-   albanische Begriffe sind unten mit [neu] gekennzeichnet und noch
-   nicht von einem Muttersprachler geprüft.
+   WORTLAUT — alle sichtbaren Texte an einer Stelle, damit dieselbe Sache
+   überall gleich heisst.
+
+   Deutsch ist seit ENT-028 die einzige Sprache. Die frühere albanische
+   Fassung ist entfallen: eine halb gepflegte Übersetzung ist schlechter
+   als gar keine.
    ══════════════════════════════════════════════════════════════════ */
 const W = {
-  de: {
     anmelden: 'Anmelden', name: 'Name', passwort: 'Passwort',
     fehlerAnmeldung: 'Name oder Passwort falsch.', beidesNoetig: 'Name und Passwort erforderlich.',
-    heute: 'Heute', plan: 'Plan', rapport: 'Rapport', profil: 'Profil',
+    heute: 'Heute', plan: 'Plan', rapport: 'Rapport', profil: 'Profil', sperren: 'Sperren',
+    sperrenTitel: 'Tage sperren', gesperrt: 'Gesperrt', frei: 'Frei',
+    sperrenText: 'Tippe auf einen Tag, an dem du nicht kannst. Die Planung sieht das und berücksichtigt es — eine Zusage ist es nicht.',
+    sperreNotiz: 'Notiz', sperreNotizText: 'Kurz sagen warum — die Planung sieht es (freiwillig).',
+    sperreGesetzt: 'Tag gesperrt.', sperreWeg: 'Sperre aufgehoben.',
+    sperreEingeteilt: 'An diesem Tag bist du bereits eingeteilt.',
+    sperreVergangen: 'vorbei',
     schicht: 'Schicht', schichten: 'Schichten', keineHeute: 'Heute kein Einsatz',
     keineHeuteText: 'Für heute bist du nicht eingeteilt. Der Plan zeigt deine nächsten Schichten.',
     keinePlan: 'Keine Schichten geplant', keinePlanText: 'Sobald du eingeteilt wirst, erscheint es hier.',
@@ -311,49 +338,15 @@ const W = {
     telefon: 'Telefon', mobil: 'Mobil', email: 'E-Mail', anmeldename: 'Anmeldename',
     passwortAendern: 'Passwort ändern', altesPasswort: 'Bisheriges Passwort',
     neuesPasswort: 'Neues Passwort', mind6: 'mindestens 6 Zeichen',
-    passwortOk: 'Passwort geändert.', abmelden: 'Abmelden', sprache: 'Sprache',
+    passwortOk: 'Passwort geändert.', abmelden: 'Abmelden',
     speichern: 'Speichern', abbrechen: 'Abbrechen', schliessen: 'Schliessen',
     datenHinweis: 'Änderungen an deinen Daten macht die Verwaltung.',
     netzfehler: 'Keine Verbindung. Bitte nochmals versuchen.',
     folgetag: 'bis Folgetag',
-  },
-  sq: {
-    anmelden: 'Hyr', name: 'Emri', passwort: 'Fjalëkalimi',
-    fehlerAnmeldung: 'Emri ose fjalëkalimi është i gabuar.', beidesNoetig: 'Emri dhe fjalëkalimi janë të detyrueshëm.',
-    heute: 'Sot', plan: 'Plani', rapport: 'Raport', profil: 'Profili',
-    schicht: 'Turni', schichten: 'Turnet', keineHeute: 'Sot pa shërbim',
-    keineHeuteText: 'Për sot nuk je i planifikuar. Te “Plani” shikon turnet e ardhshme.',
-    keinePlan: 'Nuk ka turne të planifikuara', keinePlanText: 'Sapo të planifikohesh, do të shfaqet këtu.',
-    naechste: 'Shërbimi i ardhshëm', jetztLaeuft: 'Në vazhdim', gleich: 'Fillon së shpejti',
-    kunde: 'Klienti', arbeitsort: 'Vendi i punës', zeit: 'Ora', einsatzart: 'Lloji i Shërbimit',
-    bemerkung: 'Shënime', objekt: 'Objekti', imTeam: 'në ekip',
-    zusagen: 'Konfirmo', ablehnen: 'Refuzo', zugesagt: 'Konfirmuar', abgelehnt: 'Refuzuar',
-    offen: 'Ende e hapur', gemeldet: 'Përgjigjja u ruajt.',
-    geplant: 'E planifikuar', bestaetigt: 'E konfirmuar', provisorisch: 'Në gatishmëri', abgesagt: 'E anuluar',
-    abgesagtHinweis: 'Ky shërbim është anuluar.',
-    provisorischHinweis: 'Në gatishmëri — vendoset në afat të shkurtër nëse shërbimi zhvillohet.',
-    neuerRapport: 'Raport i Ri', meineRapporte: 'Raportet e mia',
-    keineRapporte: 'Nuk ka raporte', keineRapporteText: 'Shërbimet e regjistruara shfaqen këtu.',
-    zurErfassung: 'Te regjistrimi i raportit',
-    diesenMonat: 'Këtë muaj', stunden: 'Orë', einsaetze: 'Shërbime',
-    persNr: 'Nr. i Punonjësit', geburtsdatum: 'Datëlindja', adresse: 'Adresa',
-    telefon: 'Telefoni', mobil: 'Celulari', email: 'E-Mail', anmeldename: 'Emri i hyrjes',
-    passwortAendern: 'Ndrysho fjalëkalimin', altesPasswort: 'Fjalëkalimi aktual',
-    neuesPasswort: 'Fjalëkalimi i ri', mind6: 'të paktën 6 shenja',
-    passwortOk: 'Fjalëkalimi u ndryshua.', abmelden: 'Dilni', sprache: 'Gjuha',
-    speichern: 'Ruaj', abbrechen: 'Anulo', schliessen: 'Mbyll',
-    datenHinweis: 'Ndryshimet në të dhënat e tua i bën administrata.',
-    netzfehler: 'Nuk ka lidhje. Ju lutem provoni përsëri.',
-    folgetag: 'deri ditën tjetër',
-  }
 };
-let sprache = localStorage.getItem('rv3_lang') === 'sq' ? 'sq' : 'de';
-const w = k => (W[sprache] && W[sprache][k]) || W.de[k] || k;
+const w = k => W[k] || k;
 
-const WOCHENTAG = {
-  de: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'],
-  sq: ['E diel', 'E hënë', 'E martë', 'E mërkurë', 'E enjte', 'E premte', 'E shtunë']
-};
+const WOCHENTAG = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 
 // ── Zustand
 const API = 'api/';
@@ -361,6 +354,7 @@ let token = localStorage.getItem('rv3_token') || '';
 let ich = JSON.parse(localStorage.getItem('rv3_user') || 'null');
 let schichten = [];
 let rapporte = [];
+let sperrtage = {};   // Datum -> Bemerkung (ENT-028)
 let profil = null;
 let monat = { anzahl: 0, stunden: 0 };
 let reiter = 'heute';
@@ -410,22 +404,13 @@ function api(pfad, opts) {
     .catch(() => ({ ok: false, status: 0, data: {} }));
 }
 
-// ══════════════════════════════════════════ SPRACHE
-function setzeSprache(l) {
-  sprache = l === 'sq' ? 'sq' : 'de';
-  localStorage.setItem('rv3_lang', sprache);
-  document.documentElement.lang = sprache;
-  $('spDe').classList.toggle('on', sprache === 'de');
-  $('spSq').classList.toggle('on', sprache === 'sq');
-  beschriften();
-  if ($('app').classList.contains('on')) zeichne();
-}
 function beschriften() {
   $('lb-name').textContent = w('name');
   $('lb-pass').textContent = w('passwort');
   $('gBtn').textContent = w('anmelden');
   $('lb-tab-heute').textContent = w('heute');
   $('lb-tab-plan').textContent = w('plan');
+  $('lb-tab-sperren').textContent = w('sperren');
   $('lb-tab-rapport').textContent = w('rapport');
   $('lb-tab-profil').textContent = w('profil');
 }
@@ -463,8 +448,8 @@ function starten() {
 function allesLaden() {
   const b = $('kLaden'); b.disabled = true;
   const heute = new Date();
-  $('kDatum').textContent = WOCHENTAG[sprache][heute.getDay()] + ', ' + dmy(isoTag(heute));
-  return Promise.all([ladeSchichten(), ladeProfil(), ladeRapporte()])
+  $('kDatum').textContent = WOCHENTAG[heute.getDay()] + ', ' + dmy(isoTag(heute));
+  return Promise.all([ladeSchichten(), ladeProfil(), ladeRapporte(), ladeSperren()])
     .then(() => { b.disabled = false; zeichne(); });
 }
 function ladeSchichten() {
@@ -498,6 +483,7 @@ function zeichne() {
   beschriften();
   if (reiter === 'heute') zeichneHeute();
   if (reiter === 'plan') zeichnePlan();
+  if (reiter === 'sperren') zeichneSperren();
   if (reiter === 'rapport') zeichneRapport();
   if (reiter === 'profil') zeichneProfil();
 }
@@ -526,7 +512,7 @@ function schichtKarte(e, mitDatum) {
         <span class="was">
           <b>${esc(e.titel || e.kunde_name)}</b>
           <span>${esc(e.ort)}${e.strasse ? ' · ' + esc(e.strasse) : ''}</span>
-          ${mitDatum ? `<span>${esc(WOCHENTAG[sprache][new Date(tagVon(e) + 'T12:00:00').getDay()])}, ${dmy(e.datum)}</span>` : ''}
+          ${mitDatum ? `<span>${esc(WOCHENTAG[new Date(tagVon(e) + 'T12:00:00').getDay()])}, ${dmy(e.datum)}</span>` : ''}
         </span>
       </div>
     </button>
@@ -587,7 +573,7 @@ function zeichnePlan() {
     if (tag !== letzter) {
       letzter = tag;
       const amTag = kommend.filter(x => tagVon(x) === tag && x.status !== 'abgesagt');
-      const wd = WOCHENTAG[sprache][new Date(tag + 'T12:00:00').getDay()];
+      const wd = WOCHENTAG[new Date(tag + 'T12:00:00').getDay()];
       html += `<div class="tag-kopf">
         <span>${esc(wd)}</span><b>${dmy(tag)}</b>
         ${tag === heute ? `<span class="marke m-a">${esc(w('heute'))}</span>` : ''}
@@ -598,6 +584,117 @@ function zeichnePlan() {
     html += schichtKarte(e, false);
   });
   $('v-plan').innerHTML = html;
+}
+
+// ══════════════════════════════════════════ SPERRTAGE (ENT-028)
+// Wer nicht kann, sagt es hier. Das ist eine Mitteilung an die Planung --
+// kein Anspruch und keine Garantie. Genau so steht es auch im Text.
+function ladeSperren() {
+  const bis = isoTag(new Date(Date.now() + 90 * 864e5));
+  return api(`meine_verfuegbarkeit.php?von=${isoTag()}&bis=${bis}`).then(({ ok, data }) => {
+    sperrtage = {};
+    if (ok && data.status === 'ok') {
+      (data.tage || []).forEach(t => { sperrtage[String(t.datum).slice(0, 10)] = t.bemerkung || ''; });
+    }
+  });
+}
+
+function istGesperrt(t) {
+  return Object.prototype.hasOwnProperty.call(sperrtage, t);
+}
+
+function zeichneSperren() {
+  const heute = isoTag();
+  const tage = Array.from({ length: 63 }, (_, i) => isoTag(new Date(Date.now() + i * 864e5)));
+  // Wo bin ich schon eingeteilt? Einen solchen Tag zu sperren ist ein
+  // Widerspruch -- das gehoert sichtbar daneben, nicht verschwiegen.
+  const belegt = {};
+  schichten.forEach(e => {
+    if (e.status === 'abgesagt') return;
+    (belegt[tagVon(e)] = belegt[tagVon(e)] || []).push(e);
+  });
+
+  const anzahl = tage.filter(istGesperrt).length;
+  let html = `<div class="karte"><div class="karte-bd">
+      <div style="font-size:15px;font-weight:660;margin-bottom:5px">${esc(w('sperrenTitel'))}</div>
+      <div style="font-size:13px;color:var(--ink-2);line-height:1.55">${esc(w('sperrenText'))}</div>
+      ${anzahl ? `<div style="margin-top:10px"><span class="marke m-w">${anzahl} ${anzahl === 1 ? 'Tag' : 'Tage'} gesperrt</span></div>` : ''}
+    </div></div>`;
+
+  let woche = '';
+  tage.forEach(t => {
+    const d = new Date(t + 'T12:00:00');
+    const kw = kalenderwoche(d);
+    if (kw !== woche) {
+      woche = kw;
+      html += `<div class="titel">Woche ${esc(kw)}</div>`;
+    }
+    const g = istGesperrt(t);
+    const notiz = g ? sperrtage[t] : '';
+    const eingeteilt = (belegt[t] || []).length;
+    html += `<div class="karte sperr-karte${g ? ' aus' : ''}">
+      <button class="sperr-zeile" onclick="sperreUm('${t}')">
+        <span class="tg">
+          <b>${esc(WOCHENTAG[d.getDay()].slice(0, 2))}</b>
+          <span>${dmy(t).slice(0, 5)}</span>
+        </span>
+        <span class="ws">
+          <b>${g ? esc(w('gesperrt')) : esc(w('frei'))}</b>
+          ${eingeteilt ? `<span class="warn">${esc(w('sperreEingeteilt'))}</span>`
+            : (notiz ? `<span>${esc(notiz)}</span>` : `<span>${t === heute ? 'heute' : ''}</span>`)}
+        </span>
+        <span class="schalter${g ? ' an' : ''}"><i></i></span>
+      </button>
+      ${g ? `<button class="sperr-notiz" onclick="sperreNotiz('${t}')">
+        <svg class="i i-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+        ${notiz ? esc(w('sperreNotiz')) + ' ändern' : esc(w('sperreNotiz')) + ' hinzufügen'}
+      </button>` : ''}
+    </div>`;
+  });
+  $('v-sperren').innerHTML = html;
+}
+
+// ISO-Kalenderwoche -- der Donnerstag der Woche entscheidet über das Jahr.
+function kalenderwoche(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+  const jahresStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return String(Math.ceil(((t - jahresStart) / 864e5 + 1) / 7));
+}
+
+function sperreUm(t) {
+  const neu = !istGesperrt(t);
+  const notiz = neu ? '' : undefined;
+  sperreSpeichern(t, neu, notiz);
+}
+
+function sperreSpeichern(t, gesperrt, bemerkung) {
+  const rumpf = { datum: t, gesperrt };
+  if (bemerkung !== undefined) rumpf.bemerkung = bemerkung;
+  return api('meine_verfuegbarkeit.php', { method: 'POST', body: rumpf }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { toast(data.message || w('netzfehler')); return false; }
+    if (gesperrt) { sperrtage[t] = data.bemerkung || ''; } else { delete sperrtage[t]; }
+    zeichneSperren();
+    toast(gesperrt ? w('sperreGesetzt') : w('sperreWeg'));
+    return true;
+  });
+}
+
+function sperreNotiz(t) {
+  blattId = null;
+  $('blTitel').textContent = dmy(t);
+  $('blBody').innerHTML = `
+    <p style="font-size:13.5px;color:var(--ink-2);line-height:1.55;margin-bottom:14px">${esc(w('sperreNotizText'))}</p>
+    <div class="f"><label for="spNotiz">${esc(w('sperreNotiz'))}</label>
+      <input class="inp" id="spNotiz" maxlength="200" value="${esc(sperrtage[t] || '')}" placeholder="z. B. erst ab 18 Uhr"></div>`;
+  $('blFuss').innerHTML = `
+    <button class="btn btn-plain" onclick="blattZu()">${esc(w('abbrechen'))}</button>
+    <button class="btn btn-primary" onclick="sperreNotizSpeichern('${t}')">${esc(w('speichern'))}</button>`;
+  blattZeigen();
+}
+
+function sperreNotizSpeichern(t) {
+  sperreSpeichern(t, true, $('spNotiz').value.trim()).then(gut => { if (gut) blattZu(); });
 }
 
 // ══════════════════════════════════════════ RAPPORT
@@ -659,12 +756,6 @@ function zeichneProfil() {
     <p style="font-size:13px;color:var(--ink-3);margin-top:14px">${esc(w('datenHinweis'))}</p>
     </div></div>
 
-    <div class="titel">${esc(w('sprache'))}</div>
-    <div class="karte"><div class="karte-bd" style="display:flex;gap:10px">
-      <button class="btn ${sprache === 'de' ? 'btn-primary' : 'btn-plain'}" style="flex:1" onclick="setzeSprache('de')">Deutsch</button>
-      <button class="btn ${sprache === 'sq' ? 'btn-primary' : 'btn-plain'}" style="flex:1" onclick="setzeSprache('sq')">Shqip</button>
-    </div></div>
-
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
       <button class="btn btn-plain btn-wide" onclick="passwortBlatt()">${esc(w('passwortAendern'))}</button>
       ${p.ist_admin ? `<a class="btn btn-plain btn-wide" href="dashboard.html">Cockpit</a>` : ''}
@@ -679,7 +770,7 @@ function blattAuf(id) {
   blattId = Number(id);
   const st = STATUS_MARKE[e.status] || STATUS_MARKE.geplant;
   const zu = ZUSAGE_MARKE[e.zusage] || ZUSAGE_MARKE.offen;
-  const wd = WOCHENTAG[sprache][new Date(tagVon(e) + 'T12:00:00').getDay()];
+  const wd = WOCHENTAG[new Date(tagVon(e) + 'T12:00:00').getDay()];
 
   $('blTitel').textContent = e.titel || e.kunde_name;
   $('blBody').innerHTML = `
@@ -762,7 +853,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') blattZu(); }
 $('gPass').addEventListener('keydown', e => { if (e.key === 'Enter') anmelden(); });
 $('gName').addEventListener('keydown', e => { if (e.key === 'Enter') $('gPass').focus(); });
 
-setzeSprache(sprache);
+beschriften();
 if (token && ich) starten();
 </script>
 </body>

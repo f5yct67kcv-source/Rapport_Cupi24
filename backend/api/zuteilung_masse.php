@@ -77,12 +77,25 @@ if (!$tage) {
     ], 400);
 }
 
+// Selbst gesperrte Tage (ENT-028). Sie verhindern nichts -- sie werden
+// mitgezaehlt und ausgewiesen, damit die Entscheidung bewusst faellt.
+$sperren = [];
+$sp = db()->prepare(
+    'SELECT mitarbeiter_id, datum, bemerkung FROM verfuegbarkeiten
+     WHERE datum BETWEEN ? AND ? AND mitarbeiter_id IN (' . implode(',', array_fill(0, count($leute), '?')) . ')'
+);
+$sp->execute([$von, $bis, ...array_map(fn($l) => (int)$l['id'], $leute)]);
+foreach ($sp->fetchAll() as $r) {
+    $sperren[(int)$r['mitarbeiter_id'] . '|' . $r['datum']] = $r['bemerkung'];
+}
+
 $o = $b['objekt'];
 $pdo = db();
 $pdo->beginTransaction();
 try {
     $gesetzt = 0; $schonDa = 0; $neueSchichten = 0;
     $konflikte = [];
+    $gesperrt = [];
 
     foreach ($tage as $s) {
         $datum = $s['datum'];
@@ -110,6 +123,13 @@ try {
                     'was' => $doppelt[0]['was'],
                 ];
                 continue;
+            }
+            if (array_key_exists($id . '|' . $datum, $sperren)) {
+                $gesperrt[] = [
+                    'datum' => $datum,
+                    'name' => $namen[$id],
+                    'bemerkung' => $sperren[$id . '|' . $datum],
+                ];
             }
             $frei[] = $id;
         }
@@ -151,6 +171,8 @@ try {
         'neue_schichten' => $neueSchichten,
         'konflikte' => array_slice($konflikte, 0, 30),
         'konflikte_gesamt' => count($konflikte),
+        'gesperrt' => array_slice($gesperrt, 0, 30),
+        'gesperrt_gesamt' => count($gesperrt),
         'schicht' => trim(($vorlage['kuerzel'] ? $vorlage['kuerzel'] . ' · ' : '') . $vorlage['name']),
         'personen' => array_values($namen),
         'von' => $von, 'bis' => $bis,

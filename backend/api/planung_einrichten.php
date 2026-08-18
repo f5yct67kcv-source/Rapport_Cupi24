@@ -157,6 +157,21 @@ CREATE TABLE IF NOT EXISTS einsatz_zuteilung (
   FOREIGN KEY (mitarbeiter_id) REFERENCES mitarbeiter(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+// Sperrtage der Mitarbeitenden (ENT-028). Eine Sperre ist eine Mitteilung,
+// kein technisches Verbot -- die Planung warnt, verbietet aber nicht.
+'verfuegbarkeiten' => "
+CREATE TABLE IF NOT EXISTS verfuegbarkeiten (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  mitarbeiter_id INT NOT NULL,
+  datum DATE NOT NULL,
+  art VARCHAR(16) NOT NULL DEFAULT 'gesperrt',
+  bemerkung VARCHAR(200) NULL,
+  erfasst_am DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_person_tag (mitarbeiter_id, datum),
+  KEY idx_datum (datum),
+  FOREIGN KEY (mitarbeiter_id) REFERENCES mitarbeiter(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 ];
 
 foreach ($tabellen as $name => $sql) {

@@ -508,6 +508,11 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .gr .s-soll { background: transparent; border: 1px dashed var(--line); color: var(--ink-3); box-sizing: border-box; }
 .gr .s-soll:hover { border-color: var(--accent); color: var(--accent); }
 
+/* Selbst gesperrter Tag (ENT-028): sichtbar, aber nicht blockierend.
+   Bewusst warngelb und nicht rot -- Rot ist der Doppelbelegung vorbehalten,
+   die wirklich unmoeglich ist. */
+.ma-pick .who .sperrtag { display: block; font-size: 11.5px; font-weight: 620; color: var(--warn); margin-top: 2px; }
+
 /* ── Spracheingabe (ENT-027)
    Der eigene Knopf ist unabhaengig von der Mikrofontaste der Tastatur, die
    je nach Geraet und Browser fehlt oder stumm bleibt. Die Balken haengen am
@@ -1494,6 +1499,7 @@ let oplFehler = '';
 let oplSuche = '';     // Filter über Schicht- und Personennamen
 let oplNurTeil = false;// nur eingeteilte Personen zeigen
 let oplZelleZiel = null;   // { msId, datum } des offenen Zuteilungsdialogs
+let sperren = {};      // "mitarbeiterId|datum" -> Bemerkung (ENT-028)
 let pTab = 'uebersicht';
 let kiMode = 'neu';
 const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email'];
@@ -1619,6 +1625,7 @@ function go(view) {
     if (!Object.keys(feiertage).length) ladeFeiertagMap();
     if (!mitarbeiter.length) loadMitarbeiter();
     if (!kunden.length) loadKunden();
+    ladeSperren();
   }
   history.replaceState(null, '', '#' + view);
 }
@@ -1696,6 +1703,28 @@ function loadEinsaetze() {
     if ($('pv-tag').classList.contains('on')) renderTagesplan();
     if ($('pv-objektplan').classList.contains('on')) ladeObjektplan(true).then(renderObjektplan);
   });
+}
+
+// Selbst gesperrte Tage der Mitarbeitenden (ENT-028). Sie verhindern nichts,
+// sie werden angezeigt -- die Entscheidung bleibt bei der Planung.
+function ladeSperren() {
+  const von = isoTag(new Date(Date.now() - 31 * 864e5));
+  const bis = isoTag(new Date(Date.now() + 200 * 864e5));
+  return api(`verfuegbarkeit_list.php?von=${von}&bis=${bis}`).then(({ ok, data }) => {
+    sperren = {};
+    if (ok && data.status === 'ok') {
+      (data.sperren || []).forEach(x => {
+        sperren[x.mitarbeiter_id + '|' + String(x.datum).slice(0, 10)] = x.bemerkung || '';
+      });
+    }
+  });
+}
+
+// Hat sich diese Person an diesem Tag gesperrt? Gibt die Bemerkung zurueck
+// oder null. Ein leerer String heisst "gesperrt, ohne Begruendung".
+function gesperrtAm(maId, datum) {
+  const k = Number(maId) + '|' + String(datum).slice(0, 10);
+  return Object.prototype.hasOwnProperty.call(sperren, k) ? sperren[k] : null;
 }
 
 function skeletons() {
@@ -3555,11 +3584,13 @@ function mzRechne() {
       // Was nicht geht, wird benannt -- stillschweigend zu ueberspringen waere
       // schlimmer als es gar nicht anzubieten (ENT-022).
       const k = data.konflikte || [];
+      const sp = data.gesperrt || [];
       $('mzVorschau').innerHTML = `<div class="pick-foot" style="margin-top:12px">
           <span class="chip ${data.gesetzt ? 'chip-p' : 'chip-n'}">${nf(data.gesetzt)} neu</span>
           ${data.schon_da ? `<span class="chip chip-n">${nf(data.schon_da)} schon eingeteilt</span>` : ''}
           ${data.neue_schichten ? `<span class="chip chip-a">${nf(data.neue_schichten)} Schichten entstehen</span>` : ''}
           ${data.konflikte_gesamt ? `<span class="chip chip-x">${nf(data.konflikte_gesamt)} nicht möglich</span>` : ''}
+          ${data.gesperrt_gesamt ? `<span class="chip chip-w">${nf(data.gesperrt_gesamt)} gegen eine Sperre</span>` : ''}
         </div>
         <p class="zone-note" style="margin-top:8px">${data.tage} ${data.tage === 1 ? 'Tag' : 'Tage'} mit Bedarf im Zeitraum. Es ist noch nichts gespeichert.</p>
         ${k.length ? `<div class="vs-liste" style="margin-top:8px">${k.map(x => `<div class="z">
@@ -3567,6 +3598,13 @@ function mzRechne() {
             <span class="nm">${esc(x.name)} — schon eingeteilt</span>
             <span class="zt">${esc(x.was)}</span></div>`).join('')}
           ${data.konflikte_gesamt > k.length ? `<p class="zone-note" style="margin-top:6px">… und ${nf(data.konflikte_gesamt - k.length)} weitere.</p>` : ''}
+          </div>` : ''}
+        ${sp.length ? `<p class="zone-note" style="margin-top:10px;color:var(--warn)"><b>An diesen Tagen hat sich jemand selbst gesperrt.</b> Sie werden trotzdem eingeteilt — die Sperre ist eine Mitteilung, kein Verbot.</p>
+          <div class="vs-liste">${sp.map(x => `<div class="z">
+            <span class="dt">${dmy(x.datum)}</span>
+            <span class="nm">${esc(x.name)} — hat sich gesperrt</span>
+            <span class="zt">${esc(x.bemerkung || '—')}</span></div>`).join('')}
+          ${data.gesperrt_gesamt > sp.length ? `<p class="zone-note" style="margin-top:6px">… und ${nf(data.gesperrt_gesamt - sp.length)} weitere.</p>` : ''}
           </div>` : ''}`;
     });
   }, 350);
@@ -3587,7 +3625,8 @@ function mzSpeichern() {
     }
     closeDlg('dlgMasse');
     toast(`${nf(data.gesetzt)} Einteilungen gespeichert`
-      + (data.konflikte_gesamt ? ` — ${nf(data.konflikte_gesamt)} Tage übersprungen (schon eingeteilt).` : '.'));
+      + (data.konflikte_gesamt ? ` — ${nf(data.konflikte_gesamt)} Tage übersprungen (schon eingeteilt)` : '')
+      + (data.gesperrt_gesamt ? `, ${nf(data.gesperrt_gesamt)} gegen eine Sperre` : '') + '.');
     Promise.all([ladeObjektplan(true), loadEinsaetze()]).then(renderObjektplan);
   });
 }
@@ -3689,11 +3728,15 @@ function oplZuRender(ids) {
     const dabei = gewaehlt.has(Number(mm.id));
     const gesperrt = c.length > 0 && !dabei;
     const clash = c.map(x => `${x.titel || x.kunde_name} ${hm(x.von)}–${hm(x.bis)}`).join(', ');
+    // Selbst gesperrter Tag: deutlich sichtbar, aber waehlbar. Eine
+    // Doppelbelegung ist unmoeglich, eine Sperre ist eine Mitteilung (ENT-028).
+    const sp = gesperrtAm(mm.id, z.datum);
     return `<label class="${gesperrt ? 'gesperrt' : ''}">
       <input type="checkbox" value="${Number(mm.id)}"${dabei ? ' checked' : ''}${gesperrt ? ' disabled' : ''} onchange="oplZuFuss()">
       <span class="who">
         <b>${esc(fullName(mm) || mm.name)}</b>
         <span>${esc(mm.name)}</span>
+        ${sp !== null ? `<span class="sperrtag">Hat sich diesen Tag gesperrt${sp ? ' — ' + esc(sp) : ''}</span>` : ''}
         ${c.length ? `<span class="clash${gesperrt ? ' sperr' : ''}">${gesperrt ? 'Nicht verfügbar — schon eingeteilt' : 'Doppelbelegung — bitte entfernen'}: ${esc(clash)}</span>` : ''}
       </span>
     </label>`;
@@ -3704,10 +3747,15 @@ function oplZuRender(ids) {
 function oplZuFuss() {
   const n = oplZuIds().length, bedarf = Math.max(0, oplZelleZiel ? oplZelleZiel.bedarf : 0);
   const fehlt = Math.max(0, bedarf - n);
-  const gesperrt = document.querySelectorAll('#zuMa input[type=checkbox]:disabled').length;
+  const belegt = document.querySelectorAll('#zuMa input[type=checkbox]:disabled').length;
+  // Wie viele der GEWAEHLTEN haben sich diesen Tag gesperrt? Nur das ist
+  // eine Warnung, die etwas kostet.
+  const wider = oplZelleZiel
+    ? oplZuIds().filter(id => gesperrtAm(id, oplZelleZiel.datum) !== null).length : 0;
   $('zuFuss').innerHTML = `<span class="chip ${fehlt ? 'chip-w' : 'chip-p'}">${n}/${bedarf}</span>`
     + `<span>${fehlt ? `noch ${fehlt} ${fehlt === 1 ? 'Person' : 'Personen'} offen` : 'Bedarf gedeckt'}</span>`
-    + (gesperrt ? `<span class="chip chip-x">${gesperrt} zeitlich belegt</span>` : '');
+    + (belegt ? `<span class="chip chip-x">${belegt} zeitlich belegt</span>` : '')
+    + (wider ? `<span class="chip chip-w">${wider} gegen eine Sperre</span>` : '');
 }
 
 function oplZuSpeichern() {
