@@ -1162,14 +1162,14 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
       <div id="msWoche">
         <label style="display:block;font-size:11px;font-weight:650;color:var(--ink-2);letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px">Benötigte Mitarbeitende je Tag</label>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-          <div class="f" style="margin:0"><label for="msBedarf_mo">Mo</label><input class="inp" id="msBedarf_mo" type="number" min="0" max="99" value="0"></div>
-          <div class="f" style="margin:0"><label for="msBedarf_di">Di</label><input class="inp" id="msBedarf_di" type="number" min="0" max="99" value="0"></div>
-          <div class="f" style="margin:0"><label for="msBedarf_mi">Mi</label><input class="inp" id="msBedarf_mi" type="number" min="0" max="99" value="0"></div>
-          <div class="f" style="margin:0"><label for="msBedarf_do">Do</label><input class="inp" id="msBedarf_do" type="number" min="0" max="99" value="0"></div>
-          <div class="f" style="margin:0"><label for="msBedarf_fr">Fr</label><input class="inp" id="msBedarf_fr" type="number" min="0" max="99" value="0"></div>
-          <div class="f" style="margin:0"><label for="msBedarf_sa">Sa</label><input class="inp" id="msBedarf_sa" type="number" min="0" max="99" value="0"></div>
-          <div class="f" style="margin:0"><label for="msBedarf_so">So</label><input class="inp" id="msBedarf_so" type="number" min="0" max="99" value="0"></div>
-          <div class="f" style="margin:0"><label for="msBedarf_feiertag" style="color:var(--warn)">Feiertag</label><input class="inp" id="msBedarf_feiertag" type="number" min="0" max="99" value="0"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_mo">Mo</label><input class="inp" id="msBedarf_mo" type="number" min="0" max="99" value="1"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_di">Di</label><input class="inp" id="msBedarf_di" type="number" min="0" max="99" value="1"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_mi">Mi</label><input class="inp" id="msBedarf_mi" type="number" min="0" max="99" value="1"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_do">Do</label><input class="inp" id="msBedarf_do" type="number" min="0" max="99" value="1"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_fr">Fr</label><input class="inp" id="msBedarf_fr" type="number" min="0" max="99" value="1"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_sa">Sa</label><input class="inp" id="msBedarf_sa" type="number" min="0" max="99" value="1"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_so">So</label><input class="inp" id="msBedarf_so" type="number" min="0" max="99" value="1"></div>
+          <div class="f" style="margin:0"><label for="msBedarf_feiertag" style="color:var(--warn)">Feiertag</label><input class="inp" id="msBedarf_feiertag" type="number" min="0" max="99" value="1"></div>
         </div>
         <p class="zone-note" style="margin-top:8px">An einem Feiertag gilt der Feiertagswert <b>statt</b> des Wochentagswerts. Das ist eine Bedarfsangabe — keine Aussage über Zuschläge.</p>
       </div>
@@ -1184,7 +1184,7 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
       </div>
 
       <div class="form-grid" style="margin-top:16px">
-        <div class="f"><label for="msGueltigAb" id="msGueltigAbLbl">Gültig ab *</label><input class="inp" id="msGueltigAb" type="date"></div>
+        <div class="f"><label for="msGueltigAb" id="msGueltigAbLbl">Gültig ab *</label><input class="inp" id="msGueltigAb" type="date" onchange="msStichtagPruefen()"></div>
         <div class="f"><label for="msGueltigBis">Gültig bis (leer = offen)</label><input class="inp" id="msGueltigBis" type="date"></div>
       </div>
       <p class="zone-note" style="margin-top:-6px">Für saisonale Muster hier den Zeitraum eingrenzen, z. B. April bis Oktober.</p>
@@ -2366,6 +2366,23 @@ function askDeleteObjekt() {
 // ══════════════════════════════════════════ MASTERSCHICHTEN
 const MS_TAGE = ['mo', 'di', 'mi', 'do', 'fr', 'sa', 'so', 'feiertag'];
 
+// Zwei sehr verschiedene Ergebnisse, je nach Stichtag -- und der Unterschied
+// entscheidet, ob eine Schicht kuenftig doppelt in der Liste steht.
+function msStichtagPruefen() {
+  if (msModus !== 'aenderung' || !msTarget) return;
+  const m = masterschichten.find(x => Number(x.id) === msTarget);
+  if (!m) return;
+  const ab = $('msGueltigAb').value;
+  const start = String(m.gueltig_ab).slice(0, 10);
+  const el = $('msStichtagText');
+  if (!ab) { el.textContent = 'Bitte einen Stichtag wählen.'; return; }
+  if (ab <= start) {
+    el.innerHTML = `Der Stichtag liegt nicht nach dem Beginn der bisherigen Fassung (${esc(dmy(start))}). Die Vorlage wird darum <b>vollständig ersetzt</b> — es entsteht keine zweite Fassung. Richtig, wenn die bisherige Fassung noch nie eine Schicht erzeugt hat.`;
+  } else {
+    el.innerHTML = `Ab diesem Tag gilt die neue Fassung. Die bisherige (gültig ab ${esc(dmy(start))}) bekommt den Vortag als Enddatum und bleibt in der Liste stehen. <b>Bereits erzeugte Schichten bleiben unverändert</b> — die Vergangenheit wird nicht angefasst.`;
+  }
+}
+
 function openMs(modus, id) {
   msModus = modus;
   msTarget = id ? Number(id) : null;
@@ -2386,7 +2403,9 @@ function openMs(modus, id) {
   $('msArbeitszeit').value = m ? m.arbeitszeit_h : '';
   $('msAufAbruf').checked = m ? !!m.auf_abruf : false;
   $('msRhythmus').value = m ? m.rhythmus : 'woche';
-  MS_TAGE.forEach(t => { $('msBedarf_' + t).value = m ? m['bedarf_' + t] : 0; });
+  // Vorgabe 1 statt 0: eine Vorlage ohne Bedarf erzeugt nie eine Schicht und
+  // ist damit wirkungslos. Wer einzelne Tage nicht braucht, setzt sie auf 0.
+  MS_TAGE.forEach(t => { $('msBedarf_' + t).value = m ? m['bedarf_' + t] : 1; });
   $('msIntervallTage').value = m && m.intervall_tage ? m.intervall_tage : 2;
   $('msIntervallStart').value = m && m.intervall_start ? String(m.intervall_start).slice(0, 10) : isoTag();
   $('msBedarf_intervall').value = m ? m.bedarf_intervall : 1;
@@ -2399,7 +2418,7 @@ function openMs(modus, id) {
     $('msGueltigAb').value = isoTag();
     $('msGueltigAbLbl').textContent = 'Neue Fassung gilt ab *';
     hinweis.style.display = 'flex';
-    $('msStichtagText').innerHTML = `Ab diesem Tag gilt die neue Fassung. Die bisherige (gültig ab ${esc(dmy(m.gueltig_ab))}) bekommt den Vortag als Enddatum. <b>Bereits erzeugte Schichten bleiben unverändert</b> — die Vergangenheit wird nicht angefasst.`;
+    msStichtagPruefen();
   } else {
     $('msGueltigAb').value = m ? String(m.gueltig_ab).slice(0, 10) : isoTag();
     $('msGueltigAbLbl').textContent = 'Gültig ab *';
@@ -2462,6 +2481,18 @@ function saveMs() {
     body.gueltig_bis = $('msGueltigBis').value;
     if (!body.von || !body.bis) { err.textContent = 'Von und Bis sind Pflicht.'; err.style.display = ''; return; }
     if (!body.gueltig_ab) { err.textContent = 'Ein Stichtag ist Pflicht.'; err.style.display = ''; return; }
+    // Ohne Bedarf entsteht nie eine Schicht. Das lautlos zu speichern hat
+    // genau den leeren Monat erzeugt, der wie ein Fehler aussieht.
+    const summe = body.rhythmus === 'intervall'
+      ? Number(body.bedarf_intervall)
+      : MS_TAGE.reduce((a, t) => a + Number(body['bedarf_' + t] || 0), 0);
+    if (!summe) {
+      err.innerHTML = body.rhythmus === 'intervall'
+        ? 'Ohne benötigte Mitarbeitende entsteht keine Schicht. Trage mindestens <b>1</b> ein.'
+        : 'Diese Vorlage würde an keinem Tag eine Schicht erzeugen. Trage bei mindestens einem Wochentag (oder beim Feiertag) eine Zahl ein.';
+      err.style.display = '';
+      return;
+    }
   }
 
   const b = $('msBtn'); b.disabled = true;
@@ -2537,7 +2568,11 @@ function ladeVorschau() {
         ${data.feiertage ? `<span class="chip chip-w">${nf(data.feiertage)} Feiertage im Zeitraum</span>` : ''}
       </div>`;
     if (!data.anzahl) {
-      $('vsInhalt').innerHTML = kopf + `<p class="zone-note">Für diesen Zeitraum ist bereits alles angelegt. Es würde nichts geschrieben.</p>`;
+      // Zwei sehr verschiedene Gründe für "nichts zu tun" -- sie zu verwechseln
+      // schickt einen auf die falsche Fährte.
+      $('vsInhalt').innerHTML = kopf + (data.uebersprungen
+        ? `<p class="zone-note">Für diesen Zeitraum ist bereits alles angelegt. Es würde nichts geschrieben.</p>`
+        : `<p class="zone-note"><b>In diesem Zeitraum entsteht kein Bedarf.</b> Die ${nf(data.vorlagen)} ${data.vorlagen === 1 ? 'Vorlage verlangt' : 'Vorlagen verlangen'} an keinem Tag Mitarbeitende — vermutlich stehen die Bedarfszahlen noch auf 0. Zu ändern über „Masterschichten“ unter „Ändern ab …“.</p>`);
       return;
     }
     const liste = data.schichten.map(s => `<div class="z">
@@ -2896,7 +2931,19 @@ function renderObjektplan() {
 
   const monatsName = new Date(tage[0] + 'T12:00:00').toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
 
-  $('oplBody').innerHTML = `
+  // Vorlagen da, aber nirgends Bedarf: das ist der haeufigste Grund fuer einen
+  // leeren Monat und sieht wie ein Fehler aus. Also ausdruecklich sagen.
+  const ohneBedarf = (d.vorlagen || []).length > 0 && hSoll === 0 && !(d.einsaetze || []).length;
+  const hinweis = ohneBedarf ? `<div class="card" style="margin-bottom:10px"><div class="card-bd" style="display:flex;gap:12px;align-items:flex-start">
+      <svg class="i" viewBox="0 0 24 24" style="flex:none;color:var(--warn);margin-top:1px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div style="min-width:0">
+        <div style="font-weight:650;margin-bottom:3px">Kein Bedarf hinterlegt — darum ist der Monat leer</div>
+        <div style="font-size:13px;color:var(--ink-2);line-height:1.55">Die ${nf(d.vorlagen.length)} ${d.vorlagen.length === 1 ? 'Masterschicht verlangt' : 'Masterschichten verlangen'} an keinem Wochentag Mitarbeitende. Ohne Bedarf entsteht keine Schicht — deshalb steht „Soll“ auf 0.00 h und „Schichten erzeugen“ ist ausgegraut.</div>
+        <div style="margin-top:9px"><button class="btn btn-primary btn-sm" onclick="oplStammdaten()">Bedarf jetzt eintragen</button></div>
+      </div>
+    </div></div>` : '';
+
+  $('oplBody').innerHTML = hinweis + `
     <div class="card nur-breit"><div class="card-bd flush"><div class="gr dicht">
       <table>
         <thead><tr><th class="lb">${esc(monatsName)}</th>${kopf}<th class="sum">Std.</th></tr></thead>
