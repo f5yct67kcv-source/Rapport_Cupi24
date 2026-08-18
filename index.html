@@ -189,6 +189,7 @@ tr:hover td { background: var(--accent-light); }
       <button class="lang-btn active" onclick="setLang('de')">DE</button>
       <button class="lang-btn" onclick="setLang('sq')">SQ</button>
     </div>
+    <a href="app.html" id="btn-header-app" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">Mein Plan</a>
     <button onclick="doLogout()" id="btn-header-logout" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer">⏻</button>
   </div>
 </header>
@@ -803,6 +804,7 @@ const T = {
     'lbl-sec-pin':'PIN ändern','lbl-new-pin':'Neuer PIN (4 Ziffern)',
     'btn-change-pin':'PIN speichern','lbl-sec-danger':'Daten',
     'btn-clear-all':'Alle Rapporte löschen','btn-logout':'Abmelden',
+    'btn-header-app':'Mein Plan',
     'modal-del-title':'Rapport löschen?',
     'modal-del-body':'Dieser Eintrag wird unwiderruflich gelöscht.',
     'btn-modal-cancel':'Abbrechen','btn-modal-ok':'Löschen',
@@ -854,6 +856,7 @@ const T = {
     'lbl-sec-pin':'Ndrysho PIN-in','lbl-new-pin':'PIN i Ri (4 shifra)',
     'btn-change-pin':'Ruaj PIN-in','lbl-sec-danger':'Të dhëna',
     'btn-clear-all':'Fshij të gjitha Raportet','btn-logout':'Dilni',
+    'btn-header-app':'Plani im',
     'modal-del-title':'Fshi Raportin?',
     'modal-del-body':'Ky regjistrim do të fshihet përgjithmonë.',
     'btn-modal-cancel':'Anulo','btn-modal-ok':'Fshi',
@@ -895,7 +898,7 @@ function applyLang() {
     'lbl-sec-bem','lbl-confirm','btn-save','success-title','success-sub','btn-neuer',
     'btn-filter-clear','btn-csv','lbl-sec-mastats','lbl-pin-hint','lbl-pin-sub',
     'lbl-sec-adminma','btn-add-ma','lbl-sec-pin','lbl-new-pin','btn-change-pin',
-    'lbl-sec-danger','btn-clear-all','btn-logout',
+    'lbl-sec-danger','btn-clear-all','btn-logout','btn-header-app',
     'modal-del-title','modal-del-body','btn-modal-cancel','btn-modal-ok'];
   ids.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = t(id); });
 

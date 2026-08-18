@@ -585,8 +585,10 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
     <div id="gateDenied" style="display:none">
       <div class="gate-msg">
         Dieser Bereich ist der Administration vorbehalten.<br>
-        Für die Rapporterfassung geht es <a href="index.html" style="color:var(--accent);font-weight:600">hier zur Erfassung</a>.
+        Deine Schichten und Rapporte findest du in der App.
       </div>
+      <a class="btn btn-primary btn-wide" href="app.html" style="margin-bottom:10px">Zur App</a>
+      <a class="btn btn-plain btn-wide" href="index.html" style="margin-bottom:10px">Zur Rapporterfassung</a>
       <button class="btn btn-plain btn-wide" onclick="doLogout()">Abmelden</button>
     </div>
   </div>
@@ -1309,6 +1311,9 @@ function doLogout() {
 
 function enter() {
   if (!me || !me.ist_admin) {
+    // Mitarbeitende gehoeren nicht hierher, sondern in die App -- die
+    // Anmeldung gilt bereits, darum ohne zweites Anmelden weiterleiten.
+    location.replace('app.html');
     $('gateLogin').style.display = 'none';
     $('gateDenied').style.display = '';
     return;
