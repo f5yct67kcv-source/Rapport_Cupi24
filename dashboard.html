@@ -1277,9 +1277,9 @@ function loadEinsaetze() {
     if (status === 401) return doLogout();
     if (!ok || data.status !== 'ok') {
       // Fehlt die Tabelle noch, ist das kein Grund für einen leeren Bildschirm.
+      // Die Meldung kommt vom Server -- er weiss, ob eine Tabelle fehlt.
       $('plTable').innerHTML = EMPTY('Planung nicht verfügbar',
-        esc(data.message || 'Die Einsätze konnten nicht geladen werden.') +
-        ' Ist schema_planung.sql in der Datenbank schon ausgeführt worden?');
+        esc(data.message || 'Die Einsätze konnten nicht geladen werden. Ist schema_planung.sql in der Datenbank schon ausgeführt worden?'));
       return;
     }
     einsaetze = data.einsaetze || [];
@@ -1904,8 +1904,7 @@ function loadObjekte() {
     if (status === 401) return doLogout();
     if (!ok || data.status !== 'ok') {
       $('oTable').innerHTML = EMPTY('Objekte nicht verfügbar',
-        esc(data.message || 'Die Objekte konnten nicht geladen werden.') +
-        ' Ist schema_planung.sql in der Datenbank schon ausgeführt worden?');
+        esc(data.message || 'Die Objekte konnten nicht geladen werden. Ist schema_planung.sql in der Datenbank schon ausgeführt worden?'));
       return;
     }
     objekte = data.objekte || [];

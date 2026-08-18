@@ -43,3 +43,32 @@ function require_session(): array {
     }
     return $row;
 }
+
+// Ein unbehandelter Fehler darf nie als HTML-Seite herauskommen: die
+// Oberflaeche erwartet JSON und zeigt sonst nur "fehlgeschlagen" ohne Grund.
+// Haeufigster Fall im Alltag ist eine noch nicht ausgefuehrte Schemadatei --
+// darauf wird ausdruecklich hingewiesen, statt den Fehler zu verschlucken.
+set_exception_handler(function (Throwable $e): void {
+    $meldung = 'Unerwarteter Serverfehler';
+    if ($e instanceof PDOException) {
+        switch ((string)$e->getCode()) {
+            case '42S02':   // Tabelle fehlt
+                $meldung = 'Eine benoetigte Tabelle fehlt in der Datenbank. '
+                    . 'Wurde backend/schema_planung.sql schon in phpMyAdmin ausgefuehrt?';
+                break;
+            case '42S22':   // Spalte fehlt
+                $meldung = 'Eine benoetigte Spalte fehlt in der Datenbank. '
+                    . 'Vermutlich wurde nur die aeltere Fassung von schema_planung.sql ausgefuehrt '
+                    . '-- Teil B der Datei ergaenzt die fehlenden Spalten.';
+                break;
+            case '23000':   // Fremdschluessel oder Eindeutigkeit verletzt
+                $meldung = 'Der Datensatz verletzt eine Regel der Datenbank '
+                    . '(Verweis auf einen fehlenden Eintrag oder doppelter Wert).';
+                break;
+            default:
+                $meldung = 'Datenbankfehler';
+        }
+    }
+    // Bewusst ohne technische Einzelheiten: die Meldung geht an den Browser.
+    json_response(['status' => 'error', 'message' => $meldung], 500);
+});

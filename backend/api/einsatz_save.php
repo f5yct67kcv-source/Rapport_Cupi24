@@ -109,7 +109,9 @@ try {
     $pdo->commit();
 } catch (Throwable $e) {
     $pdo->rollBack();
-    json_response(['status' => 'error', 'message' => 'Speichern fehlgeschlagen'], 500);
+    // Die einheitliche Fehlerbehandlung in db.php formuliert die Meldung --
+    // so erfaehrt der Admin z.B., dass eine Tabelle noch fehlt.
+    throw $e;
 }
 
 json_response(['status' => 'ok', 'id' => $id, 'zugeteilt' => count($zuteilung)]);
