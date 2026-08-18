@@ -153,6 +153,8 @@ select.inp { padding-right: 30px; background-image: linear-gradient(45deg, trans
 .btn-burger { display: none; }
 
 .content { padding: 26px; max-width: 1440px; width: 100%; }
+/* Rasteransichten brauchen jede Spalte -- die Lesebreite gilt dort nicht. */
+.content.weit { max-width: none; }
 .view { display: none; }
 .view.on { display: block; animation: fade .18s ease-out; }
 @keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
@@ -337,7 +339,7 @@ tbody tr.grp:first-child td { border-top: none; }
 .grp-in b { font-size: 12.5px; font-weight: 680; letter-spacing: -.1px; }
 .grp-in .wd { font-size: 11px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--ink-3); }
 .grp-in .sp { flex: 1; }
-.grp-in .note { font-size: 11.5px; color: var(--ink-3); }
+.grp-in .note { font-size: 11.5px; color: var(--ink-3); margin-left: 9px; }
 tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 
 .chip-w { background: var(--warn-soft); color: var(--warn); }
@@ -474,6 +476,49 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .gr td.sum { position: sticky; right: 0; background: var(--surface); border-left: 1px solid var(--line); padding: 7px 12px; text-align: right; font-size: 11.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .gr thead th.sum { background: #FBFCFD; }
 
+/* ── Objektplanung: dichte Monatsansicht (ENT-024).
+   Am Schreibtisch zählt, wie viel auf einen Blick zusammenpasst. Die Zeilen
+   sind darum so flach wie lesbar bleibt -- und nur hier, nicht überall. */
+/* Im Objektplan zaehlt jede Zeile: die Abstaende ueber der Tabelle werden
+   enger gefasst als sonst im Dashboard. */
+#pv-objektplan .tabs, #view-planung .tabs { margin-bottom: 10px; }
+.opl-leiste { margin-bottom: 9px; }
+.opl-leiste .wo { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+.opl-zahlen { display: flex; align-items: baseline; gap: 15px; font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
+.opl-zahlen b { font-size: 14px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; margin-right: 2px; }
+.opl-zahlen .voll b { color: var(--pos); }
+.opl-zahlen .offen b { color: var(--neg); }
+
+.gr.dicht table { table-layout: fixed; }
+.gr.dicht th.lb, .gr.dicht td.lb { min-width: 252px; max-width: 252px; width: 252px; padding: 3px 12px; }
+.gr.dicht th.sum, .gr.dicht td.sum { width: 92px; padding: 3px 10px; font-size: 11px; }
+.gr.dicht thead th { padding: 2px 1px; }
+.gr.dicht td.d { padding: 2px 1px; }
+.gr.dicht tbody tr.grp td { padding: 3px 12px; }
+.gr.dicht td.lb .zeile { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.gr.dicht td.lb .zeile b { display: block; font-size: 12px; font-weight: 620; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gr.dicht td.lb .zeile span { display: block; font-size: 10.5px; color: var(--ink-3); white-space: nowrap; flex: none; }
+.gr.dicht .stand { width: 100%; min-width: 0; height: 19px; padding: 0 1px; font-size: 10px; box-sizing: border-box; }
+.gr.dicht .blk { font-size: 9px; padding: 1px 2px; margin-bottom: 1px; }
+/* Bedarf aus der Vorlage, für den noch keine Schicht erzeugt wurde. Gestrichelt
+   statt farbig: es ist eine Absicht, noch kein Datensatz. */
+.gr .s-soll { background: transparent; border: 1px dashed var(--line); color: var(--ink-3); box-sizing: border-box; }
+.gr .s-soll:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Tagesliste: dieselben Daten auf schmalen Geräten */
+.nur-schmal { display: none; }
+.opl-tag { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 10px; overflow: hidden; box-shadow: var(--sh-1); }
+.opl-tag .kopf { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border-bottom: 1px solid var(--line-soft); background: #FBFCFD; font-size: 13px; }
+.opl-tag .kopf .sp { flex: 1; }
+.opl-posten { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 13px; border: none; border-bottom: 1px solid var(--line-soft); background: none; font-family: inherit; text-align: left; cursor: pointer; min-height: 52px; }
+.opl-posten:last-child { border-bottom: none; }
+.opl-posten:hover { background: var(--bg); }
+.opl-posten .zt { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.35; flex: none; }
+.opl-posten .ws { flex: 1; min-width: 0; }
+.opl-posten .ws b { display: block; font-size: 13.5px; font-weight: 640; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.opl-posten .ws span { display: block; font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.opl-posten .stand { flex: none; display: inline-flex; min-width: 40px; height: 24px; padding: 0 7px; border-radius: 5px; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
 
 /* Schmale Seitenleiste — mehr Arbeitsfläche für die breiten Raster.
    Nur ab Tabletbreite: darunter ist die Leiste ohnehin ausgeklappt-verborgen
@@ -510,7 +555,14 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
   .mx th.obj, .mx td.obj { min-width: 132px; max-width: 150px; padding: 8px 10px; }
   .gr th.lb, .gr td.lb { min-width: 130px; max-width: 150px; padding: 7px 10px; }
   .gr td.sum, .gr th.sum { padding: 7px 8px; font-size: 11px; }
+  /* Objektplanung: eine Matrix mit 31 Spalten ist auf dem Handy nicht
+     bedienbar. Stattdessen dieselben Daten als Tagesliste (ENT-024). */
+  .nur-breit { display: none; }
+  .nur-schmal { display: block; }
+  .opl-leiste .wo { display: none; }
+  .opl-zahlen { flex: 1 1 100%; gap: 12px; overflow-x: auto; }
 }
+
 @media (max-width: 620px) {
   /* Werkzeugleisten: ein Bedienelement je Zeile statt überlaufender Reihen.
      Auswahlfelder und Datumsfelder sind auf iOS deutlich breiter als auf dem
@@ -521,6 +573,12 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
   .bar-tools select.inp, .bar-tools input.inp { flex: 1 1 100%; width: 100% !important; min-width: 0; }
   .bar-tools .btn { flex: 1 1 auto; justify-content: center; }
   .bar-tools .check { flex: 1 1 100%; }
+  /* Auch auf dem Handy gilt: der Kopf darf den Plan nicht verdrängen. Monat und
+     Navigation teilen sich eine Zeile, Filter und Schalter ebenso. */
+  .opl-leiste #oplM { flex: 1 1 120px; width: auto !important; min-width: 110px; }
+  .opl-leiste .btn-quiet { flex: 0 0 auto; min-width: 36px; }
+  .opl-leiste #oplSuche { flex: 1 1 130px; width: auto !important; max-width: none; }
+  .opl-leiste .check { flex: 0 0 auto; }
   /* Kennzahlen des Objektplans untereinander statt gequetscht */
   .opl-kopf > .sp { display: none; }
   .opl-kopf .opl-zahl { text-align: left; flex: 1 1 40%; }
@@ -791,13 +849,19 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 
         <!-- ── Reiter: Objektplanung ── -->
         <div class="ptab" id="pv-objektplan">
-          <div class="bar-tools">
-            <select class="inp" id="oplObjekt" style="width:auto;max-width:280px" onchange="renderObjektplan()"></select>
+          <div class="bar-tools opl-leiste">
+            <select class="inp" id="oplObjekt" style="width:auto;max-width:230px" onchange="renderObjektplan()"></select>
+            <span class="wo" id="oplWo"></span>
             <input class="inp" type="month" id="oplM" style="width:auto" onchange="renderObjektplan()">
-            <button class="btn btn-quiet btn-sm" onclick="oplSchieben(-1)">‹ Vormonat</button>
+            <button class="btn btn-quiet btn-sm" onclick="oplSchieben(-1)" title="Vormonat" aria-label="Vormonat">‹</button>
             <button class="btn btn-quiet btn-sm" onclick="oplHeute()">Heute</button>
-            <button class="btn btn-quiet btn-sm" onclick="oplSchieben(1)">Folgemonat ›</button>
+            <button class="btn btn-quiet btn-sm" onclick="oplSchieben(1)" title="Folgemonat" aria-label="Folgemonat">›</button>
+            <div class="opl-zahlen" id="oplZahlen"></div>
             <div class="sp" style="flex:1"></div>
+            <input class="inp search" id="oplSuche" placeholder="Schicht oder Person" oninput="oplFiltern()" style="max-width:190px">
+            <label class="check" title="Personen ohne Einteilung ausblenden">
+              <input type="checkbox" id="oplNurTeil" onchange="oplFiltern()"> nur Eingeteilte
+            </label>
             <button class="btn btn-plain btn-sm" onclick="oplStammdaten()">
               <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
               <span class="lbl">Masterschichten</span>
@@ -1154,6 +1218,26 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
   </div>
 </div>
 
+<!-- Zuteilen direkt aus der Objektplanung (ENT-024) -->
+<div class="dlg-scrim" id="dlgZuteilen">
+  <div class="dlg">
+    <div class="dlg-hd">
+      <h2 id="zuTitel">Einteilen</h2>
+      <p id="zuText"></p>
+    </div>
+    <div class="dlg-bd">
+      <div class="msg-err" id="zuErr" style="display:none"></div>
+      <div class="ma-pick" id="zuMa"></div>
+      <div class="pick-foot" id="zuFuss"></div>
+      <div id="zuVerweis" style="margin-top:12px"></div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgZuteilen')">Abbrechen</button>
+      <button class="btn btn-primary" id="zuBtn" onclick="oplZuSpeichern()">Speichern</button>
+    </div>
+  </div>
+</div>
+
 <!-- Feiertagskalender -->
 <div class="dlg-scrim" id="dlgFeiertage">
   <div class="dlg">
@@ -1243,6 +1327,13 @@ let msAlle = false;    // auch abgelaufene Fassungen zeigen
 let vsObjekt = null;   // Objekt der offenen Vorschau
 let oplId = null;      // Objekt der Objektplanung
 let oplMs = [];        // dessen Masterschichten
+let oplDaten = null;   // Soll, Ist und Feiertage des gezeigten Monats
+let oplStand = '';     // Objekt|Monat des geladenen Standes
+let oplLaeuft = false;
+let oplFehler = '';
+let oplSuche = '';     // Filter über Schicht- und Personennamen
+let oplNurTeil = false;// nur eingeteilte Personen zeigen
+let oplZelleZiel = null;   // { msId, datum } des offenen Zuteilungsdialogs
 let pTab = 'uebersicht';
 let kiMode = 'neu';
 const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email'];
@@ -1339,6 +1430,13 @@ const TITLES = {
   kunden:      ['Kunden', 'Stammdaten']
 };
 
+// Monatsraster brauchen die volle Fensterbreite, alles andere bleibt auf
+// Lesebreite -- eine 1900px breite Formularspalte liest niemand gern.
+function weiteAnsicht(an) {
+  const c = document.querySelector('.content');
+  if (c) c.classList.toggle('weit', !!an);
+}
+
 function go(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('on'));
@@ -1347,6 +1445,7 @@ function go(view) {
   $('pgTitle').textContent = TITLES[view][0];
   $('pgCrumb').textContent = TITLES[view][1];
   $('side').classList.remove('on');
+  if (view !== 'planung') weiteAnsicht(false);
   if (view === 'rapporte') renderRapporte();
   if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
   if (view === 'kunden' && !kunden.length) loadKunden();
@@ -1435,7 +1534,7 @@ function loadEinsaetze() {
     renderPlanung();
     if ($('pv-uebersicht').classList.contains('on')) renderMatrix();
     if ($('pv-tag').classList.contains('on')) renderTagesplan();
-    if ($('pv-objektplan').classList.contains('on')) renderObjektplan();
+    if ($('pv-objektplan').classList.contains('on')) ladeObjektplan(true).then(renderObjektplan);
   });
 }
 
@@ -2047,6 +2146,7 @@ function goTab(t) {
   $('pv-' + t).classList.add('on');
   $('ptab-' + t).classList.add('on');
   $('pgCrumb').textContent = TAB_CRUMB[t] || '';
+  weiteAnsicht(['uebersicht', 'objektplan'].includes(t));
   if (t === 'uebersicht') renderMatrix();
   if (t === 'einsaetze') renderPlanung();
   if (t === 'objektplan') {
@@ -2054,7 +2154,7 @@ function goTab(t) {
     oplAuswahl();
     // Immer nachladen: die Vorlagen können sich seit dem letzten Blick geändert
     // haben, und ohne sie fehlt der ganze Schichtblock.
-    ladeOplMs().then(renderObjektplan);
+    ladeObjektplan(true).then(renderObjektplan);
   }
   if (t === 'objekte') objekte.length ? renderObjekte() : loadObjekte();
   if (t === 'tag') renderTagesplan();
@@ -2573,174 +2673,237 @@ function ladeOplMs() {
   });
 }
 
+// Soll-Bedarf, vorhandene Einsätze und Feiertage in einem Zug (ENT-024).
+// Der Soll kommt bewusst vom Server: die Bedarfsregel steht in planung.php und
+// darf nicht ein zweites Mal im Browser nachgebaut werden.
+function ladeObjektplan(erzwingen) {
+  const m = $('oplM').value || isoTag().slice(0, 7);
+  if (!oplId) { oplDaten = null; oplStand = ''; return Promise.resolve(); }
+  const schluessel = oplId + '|' + m;
+  if (!erzwingen && schluessel === oplStand) return Promise.resolve();
+  const [j, mo] = m.split('-').map(Number);
+  const von = `${m}-01`, bis = isoTag(new Date(j, mo, 0));
+  oplLaeuft = true;
+  return api(`objektplan.php?objekt_id=${oplId}&von=${von}&bis=${bis}`).then(({ ok, data }) => {
+    oplLaeuft = false;
+    oplStand = schluessel;          // auch im Fehlerfall, sonst lädt es endlos
+    // Auch eine formal erfolgreiche Antwort ohne Objekt ist unbrauchbar --
+    // dann lieber eine Meldung als eine halb gezeichnete Tabelle.
+    if (!ok || data.status !== 'ok' || !data.objekt || !Array.isArray(data.bedarf)) {
+      oplDaten = null;
+      oplFehler = data.message || 'Der Objektplan konnte nicht geladen werden.';
+      return;
+    }
+    oplFehler = '';
+    oplDaten = data;
+  });
+}
+
+function oplFiltern() {
+  oplSuche = ($('oplSuche').value || '').trim().toLowerCase();
+  oplNurTeil = $('oplNurTeil').checked;
+  renderObjektplan();
+}
+
+// Zustand einer Zelle: wie viele sind da, wie viele werden gebraucht, und
+// steht dahinter schon ein Einsatz oder bloss der Bedarf aus der Vorlage?
+function oplZellstand(z) {
+  if (!z || (!z.soll && !z.li.length)) return null;
+  if (z.li.length && !z.aktiv.length) return { kl: 's-ab', txt: '–', wort: 'abgesagt' };
+  if (!z.li.length) return { kl: 's-soll', txt: '0/' + z.soll, wort: 'noch nicht erzeugt' };
+  const t = z.ist + '/' + z.soll;
+  if (z.prov) return { kl: 's-prov', txt: t, wort: 'auf Abruf' };
+  if (z.ist >= z.soll) return { kl: 's-voll', txt: t, wort: 'voll besetzt' };
+  return { kl: z.ist > 0 ? 's-teil' : 's-leer', txt: t, wort: z.ist ? 'teilweise besetzt' : 'niemand eingeteilt' };
+}
+
+// Aus Soll und Ist die Zellen je Masterschicht und Tag bauen. Existiert ein
+// Einsatz, gilt dessen Bedarf -- er kann von Hand angepasst worden sein.
+// Existiert keiner, gilt der Bedarf aus der Vorlage.
+function oplZellen(d) {
+  const z = {};
+  (d.bedarf || []).forEach(b => {
+    z[b.masterschicht_id + '|' + b.datum] = {
+      soll: Number(b.bedarf), ist: 0, li: [], aktiv: [],
+      h: Number(b.arbeitszeit_h), prov: b.status === 'provisorisch',
+    };
+  });
+  const nachId = {};
+  (d.vorlagen || []).forEach(v => { nachId[v.id] = v; });
+
+  (d.einsaetze || []).forEach(e => {
+    if (!e.masterschicht_id) return;
+    const k = e.masterschicht_id + '|' + String(e.datum).slice(0, 10);
+    const c = z[k] || (z[k] = { soll: 0, ist: 0, li: [], aktiv: [],
+      h: Number((nachId[e.masterschicht_id] || {}).arbeitszeit_h || 0), prov: false });
+    c.li.push(e);
+  });
+  Object.values(z).forEach(c => {
+    c.aktiv = c.li.filter(e => e.status !== 'abgesagt');
+    if (c.li.length) {
+      c.ist = c.aktiv.reduce((a, e) => a + (e.mitarbeiter || []).length, 0);
+      c.soll = c.aktiv.reduce((a, e) => a + Number(e.bedarf), 0);
+      c.prov = c.aktiv.length > 0 && c.aktiv.every(e => e.status === 'provisorisch');
+    }
+  });
+  return z;
+}
+
 function renderObjektplan() {
   const gewaehlt = Number($('oplObjekt').value) || null;
-  if (gewaehlt && gewaehlt !== oplId) {   // Objekt gewechselt → Vorlagen neu holen
-    oplId = gewaehlt;
-    ladeOplMs().then(renderObjektplan);
-    return;
-  }
-  const o = objekte.find(x => Number(x.id) === Number(oplId));
-  if (!o) {
+  if (gewaehlt && gewaehlt !== oplId) oplId = gewaehlt;
+  const m = $('oplM').value || isoTag().slice(0, 7);
+
+  if (!oplId) {
+    $('oplWo').textContent = '';
+    $('oplZahlen').innerHTML = '';
     $('oplBody').innerHTML = `<div class="card"><div class="card-bd">` + EMPTY('Kein Objekt gewählt',
       'Objekte legst du im Reiter „Objekte“ an. Danach lässt sich hier jedes einzeln planen.') + `</div></div>`;
     return;
   }
+  if (oplStand !== oplId + '|' + m) {
+    if (!oplLaeuft) ladeObjektplan().then(renderObjektplan);
+    $('oplBody').innerHTML = `<div class="card"><div class="card-bd">
+      <div class="sk" style="height:13px;width:38%;margin-bottom:10px"></div>
+      <div class="sk" style="height:13px;width:64%;margin-bottom:10px"></div>
+      <div class="sk" style="height:13px;width:52%"></div></div></div>`;
+    return;
+  }
+  if (!oplDaten) {
+    $('oplZahlen').innerHTML = '';
+    $('oplBody').innerHTML = `<div class="card"><div class="card-bd">` +
+      EMPTY('Objektplan nicht verfügbar', oplFehler || 'Unbekannter Fehler.') + `</div></div>`;
+    return;
+  }
 
-  const m = $('oplM').value || isoTag().slice(0, 7);
+  const d = oplDaten, o = d.objekt;
   const [jahr, mon] = m.split('-').map(Number);
-  if (!jahr || !mon) return;
   const heute = isoTag();
   const tage = Array.from({ length: new Date(jahr, mon, 0).getDate() },
     (_, i) => `${m}-${String(i + 1).padStart(2, '0')}`);
+  const fei = d.feiertage || {};
+  const zellen = oplZellen(d);
 
-  // ── Einsätze dieses Objekts im Monat einsortieren
-  const proTag = {}, proMs = {}, proMa = {};
-  einsaetze.forEach(e => {
-    if (Number(e.objekt_id) !== Number(oplId)) return;
-    const d = tagVon(e);
-    if (!d.startsWith(m)) return;
-    (proTag[d] = proTag[d] || []).push(e);
-    (proMs[(e.masterschicht_id || 0) + '|' + d] = proMs[(e.masterschicht_id || 0) + '|' + d] || []).push(e);
-    (e.mitarbeiter || []).forEach(p => {
-      const k = p.id + '|' + d;
-      (proMa[k] = proMa[k] || []).push(e);
-    });
+  $('oplWo').textContent = `${o.kunde_name || ''}${o.ort ? ' · ' + o.ort : ''}`;
+  $('oplWo').title = [o.kunde_name, o.strasse, o.ort, 'Kanton ' + o.kanton].filter(Boolean).join(' · ');
+
+  // ── Kennzahlen: Soll aus den Vorlagen, Ist aus der Zuteilung
+  let hSoll = 0, hIst = 0, stellenOffen = 0;
+  Object.values(zellen).forEach(c => {
+    hSoll += c.h * c.soll;
+    hIst += c.h * c.ist;
+    stellenOffen += Math.max(0, c.soll - c.ist);
   });
+  const hOffen = Math.max(0, hSoll - hIst);
+  $('oplZahlen').innerHTML = `
+    <span title="Aus den Masterschichten, unabhängig davon ob schon Schichten erzeugt sind"><b>${nf(hSoll, 2)}</b> h Soll</span>
+    <span class="voll"><b>${nf(hIst, 2)}</b> h besetzt</span>
+    <span class="${hOffen ? 'offen' : ''}"><b>${nf(hOffen, 2)}</b> h offen</span>
+    <span class="${stellenOffen ? 'offen' : ''}"><b>${nf(stellenOffen)}</b> ${stellenOffen === 1 ? 'Stelle' : 'Stellen'}</span>`;
 
-  // Stunden je Einsatz: die effektive Arbeitszeit der Masterschicht, sonst die
-  // Bruttodauer. Reiner Planungswert -- keine Lohngrundlage.
+  const tagKl = t => fei[t] ? 'fei' : ([0, 6].includes(new Date(t + 'T12:00:00').getDay()) ? 'we' : '');
+  const kopf = tage.map(t => {
+    const wd = new Date(t + 'T12:00:00').getDay();
+    const kl = [t === heute ? 'heute' : '', tagKl(t)].filter(Boolean).join(' ');
+    return `<th class="${kl}" title="${esc(dmy(t) + (fei[t] ? ' — ' + fei[t].name : ''))}">${Number(t.slice(8))}<span class="wd">${WD[wd].slice(0, 2)}</span></th>`;
+  }).join('');
+  const gruppe = (titel, note) =>
+    `<tr class="grp"><td colspan="${tage.length + 2}"><div style="position:sticky;left:0;display:inline-block" class="grp-in"><b>${esc(titel)}</b>${note ? `<span class="note">${esc(note)}</span>` : ''}</div></td></tr>`;
+
+  // ── Besetzung gesamt: alle Schichten eines Tages zusammengefasst
+  let gSoll = 0, gIst = 0;
+  const gesamtZellen = tage.map(t => {
+    let soll = 0, ist = 0, offen = 0, teile = [];
+    (d.vorlagen || []).forEach(v => {
+      const c = zellen[v.id + '|' + t];
+      if (!c) return;
+      soll += c.soll; ist += c.ist;
+      if (c.soll > c.ist) offen += c.soll - c.ist;
+      teile.push(`${v.kuerzel ? v.kuerzel + ' ' : ''}${v.von}–${v.bis} ${c.ist}/${c.soll}`);
+    });
+    gSoll += soll; gIst += ist;
+    if (!soll && !ist) return `<td class="d ${tagKl(t)}"><span class="stand s-nix">·</span></td>`;
+    const kl = ist >= soll && soll > 0 ? 's-voll' : (ist > 0 ? 's-teil' : 's-leer');
+    return `<td class="d ${tagKl(t)}"><button class="stand ${kl}" title="${esc(dmy(t) + '\n' + teile.join('\n'))}" onclick="zumTag('${t}')">${ist}/${soll}</button></td>`;
+  }).join('');
+  const gesamtZeile = `<tr><td class="lb"><div class="zeile"><b>Alle Schichten</b><span>besetzt / gebraucht</span></div></td>
+    ${gesamtZellen}<td class="sum"><b>${nf(gIst)}</b> / ${nf(gSoll)}</td></tr>`;
+
+  // ── Zeilen je Masterschicht
+  const passt = txt => !oplSuche || String(txt).toLowerCase().includes(oplSuche);
+  const vorlagen = (d.vorlagen || []).filter(v => passt(`${v.kuerzel || ''} ${v.name}`));
+  const msZeilen = vorlagen.length ? vorlagen.map(v => {
+    let zIst = 0, zSoll = 0;
+    const tds = tage.map(t => {
+      const c = zellen[v.id + '|' + t];
+      const st = oplZellstand(c);
+      if (!st) return `<td class="d ${tagKl(t)}"></td>`;
+      zIst += c.h * c.ist; zSoll += c.h * c.soll;
+      const hin = `${dmy(t)} · ${v.von}–${v.bis}\n${v.name}\n${st.wort}` +
+        (c.aktiv.length ? '\n' + c.aktiv.flatMap(e => (e.mitarbeiter || []).map(p => fullName(p) || p.name)).join(', ') : '');
+      return `<td class="d ${tagKl(t)}"><button class="stand ${st.kl}" title="${esc(hin)}" onclick="oplZelleAuf(${Number(v.id)},'${t}')">${st.txt}</button></td>`;
+    }).join('');
+    return `<tr><td class="lb"><div class="zeile">
+      <b title="${esc(v.name)}">${v.kuerzel ? esc(v.kuerzel) + ' · ' : ''}${esc(v.name)}</b>
+      <span>${esc(v.von)}–${esc(v.bis)} · ${nf(v.arbeitszeit_h, 2)} h${v.art === 'fahrtzeit' ? ' · FZ' : ''}${v.auf_abruf ? ' · Abruf' : ''}</span>
+    </div></td>${tds}<td class="sum"><b>${nf(zIst, 2)}</b> / ${nf(zSoll, 2)}</td></tr>`;
+  }).join('') : `<tr class="leerzeile"><td class="lb"><div class="zeile"><b>${oplSuche ? 'Kein Treffer' : 'Keine Masterschicht'}</b></div></td>
+      <td class="d" colspan="${tage.length + 1}" style="text-align:left;padding-left:12px">${oplSuche ? 'Der Filter passt auf keine Schicht.' : 'Ohne Vorlage entsteht kein Bedarf — über „Masterschichten“ anlegen.'}</td></tr>`;
+
+  // ── Zeilen je Person: Einsätze als Blöcke, wie sie wirklich stehen
+  const proMa = {};
+  (d.einsaetze || []).forEach(e => {
+    const t = String(e.datum).slice(0, 10);
+    (e.mitarbeiter || []).forEach(p => { (proMa[p.id + '|' + t] = proMa[p.id + '|' + t] || []).push(e); });
+  });
   const nachId = {};
-  oplMs.forEach(x => { nachId[x.id] = x; });
-  let brutto = false;
-  const std = e => {
-    const ms = nachId[e.masterschicht_id];
-    if (ms) return Number(ms.arbeitszeit_h);
-    brutto = true;
+  (d.vorlagen || []).forEach(v => { nachId[v.id] = v; });
+  const stdVon = e => {
+    const v = nachId[e.masterschicht_id];
+    if (v) return Number(v.arbeitszeit_h);
     const sp = spanne(e.datum, e.von, e.bis);
     return sp ? (sp[1] - sp[0]) / 36e5 : 0;
   };
 
-  // ── Kennzahlen
-  let hGeplant = 0, hBesetzt = 0, stellenOffen = 0;
-  Object.values(proTag).flat().forEach(e => {
-    if (e.status === 'abgesagt') return;
-    const h = std(e);
-    hGeplant += h * Number(e.bedarf);
-    hBesetzt += h * (e.mitarbeiter || []).length;
-    stellenOffen += fehlend(e);
-  });
-  const hOffen = Math.max(0, hGeplant - hBesetzt);
-
-  // ── Kopfzeilen der Tage
-  const kopf = tage.map(d => {
-    const wd = new Date(d + 'T12:00:00').getDay();
-    const kl = [d === heute ? 'heute' : '', feiertage[d] ? 'fei' : (wd === 0 || wd === 6 ? 'we' : '')].filter(Boolean).join(' ');
-    return `<th class="${kl}" title="${esc(dmy(d) + (feiertage[d] ? ' — ' + feiertage[d].name : ''))}">${Number(d.slice(8))}<span class="wd">${WD[wd].slice(0, 2)}</span></th>`;
-  }).join('');
-  const tagKl = d => {
-    const wd = new Date(d + 'T12:00:00').getDay();
-    return feiertage[d] ? 'fei' : (wd === 0 || wd === 6 ? 'we' : '');
-  };
-  const gruppe = titel =>
-    `<tr class="grp"><td colspan="${tage.length + 2}"><div style="position:sticky;left:0;display:inline-block" class="grp-in"><b>${titel}</b></div></td></tr>`;
-
-  // ── Zeile: Besetzung gesamt
-  const gesamtZeile = `<tr>
-    <td class="lb"><b>Alle Schichten</b><span>Besetzung je Tag</span></td>` +
-    tage.map(d => {
-      const liste = proTag[d] || [];
-      const st = zellenStand(liste);
-      const t = liste.length
-        ? dmy(d) + '\n' + liste.map(e => `${hm(e.von)}–${hm(e.bis)} ${e.titel || ''} — ${(e.mitarbeiter || []).length}/${e.bedarf}`).join('\n')
-        : dmy(d) + ' — nichts geplant';
-      return `<td class="d ${tagKl(d)}">` + (liste.length
-        ? (() => {
-            const aktiv = liste.filter(e => e.status !== 'abgesagt');
-            const txt = aktiv.length
-              ? aktiv.reduce((a, e) => a + (e.mitarbeiter || []).length, 0) + '/' + aktiv.reduce((a, e) => a + Number(e.bedarf), 0)
-              : '–';
-            return `<button class="stand ${st.klasse.replace('z-', 's-')}" title="${esc(t)}" onclick="zumTag('${d}')">${txt}</button>`;
-          })()
-        : `<span class="stand s-nix">·</span>`) + `</td>`;
-    }).join('') +
-    `<td class="sum"><b>${nf(hBesetzt, 2)}</b> / ${nf(hGeplant, 2)} h</td></tr>`;
-
-  // ── Zeilen je Masterschicht (nur die im Monat gültigen)
-  const gueltig = oplMs.filter(x =>
-    String(x.gueltig_ab).slice(0, 10) <= tage[tage.length - 1] &&
-    (!x.gueltig_bis || String(x.gueltig_bis).slice(0, 10) >= tage[0]));
-
-  const msZeilen = gueltig.length ? gueltig.map(x => {
-    let hZeile = 0;
-    const zellen = tage.map(d => {
-      const liste = proMs[x.id + '|' + d] || [];
-      const aktiv = liste.filter(e => e.status !== 'abgesagt');
-      hZeile += aktiv.reduce((a, e) => a + Number(x.arbeitszeit_h) * (e.mitarbeiter || []).length, 0);
-      if (!liste.length) return `<td class="d ${tagKl(d)}"><span class="stand s-nix">·</span></td>`;
-      const st = zellenStand(liste);
-      const zug = aktiv.reduce((a, e) => a + (e.mitarbeiter || []).length, 0);
-      const bed = aktiv.reduce((a, e) => a + Number(e.bedarf), 0);
-      return `<td class="d ${tagKl(d)}"><button class="stand ${st.klasse.replace('z-', 's-')}" title="${esc(dmy(d) + ' — ' + x.name)}" onclick="openEinsatz(${Number(liste[0].id)})">${aktiv.length ? zug + '/' + bed : '–'}</button></td>`;
-    }).join('');
-    return `<tr>
-      <td class="lb"><b>${x.kuerzel ? esc(x.kuerzel) + ' · ' : ''}${esc(x.name)}</b><span>${hm(x.von)}–${hm(x.bis)} · ${nf(x.arbeitszeit_h, 2)} h${x.art === 'fahrtzeit' ? ' · Fahrtzeit' : ''}${x.auf_abruf ? ' · auf Abruf' : ''}</span></td>
-      ${zellen}<td class="sum">${nf(hZeile, 2)} h</td></tr>`;
-  }).join('') : `<tr class="leerzeile"><td class="lb"><b>Keine Masterschicht</b></td><td class="d" colspan="${tage.length + 1}" style="text-align:left;padding-left:14px;color:var(--ink-3);font-size:12.5px">In diesem Monat gilt keine Vorlage — ohne Vorlage entsteht keine Schicht.</td></tr>`;
-
-  // ── Zeilen je Mitarbeitendem: erst die eingeteilten, dann die übrigen
-  const mitStunden = mitarbeiter.map(p => {
+  const leute = mitarbeiter.map(p => {
     let h = 0, tageMit = 0;
-    tage.forEach(d => {
-      const liste = (proMa[p.id + '|' + d] || []).filter(e => e.status !== 'abgesagt');
-      if (liste.length) tageMit++;
-      h += liste.reduce((a, e) => a + std(e), 0);
+    tage.forEach(t => {
+      const li = (proMa[p.id + '|' + t] || []).filter(e => e.status !== 'abgesagt');
+      if (li.length) tageMit++;
+      h += li.reduce((a, e) => a + stdVon(e), 0);
     });
     return { p, h, tageMit };
-  }).sort((a, b) => b.h - a.h || String(fullName(a.p)).localeCompare(String(fullName(b.p))));
+  }).filter(x => passt(fullName(x.p) + ' ' + x.p.name))
+    .filter(x => !oplNurTeil || x.tageMit > 0)
+    .sort((a, b) => b.h - a.h || String(fullName(a.p)).localeCompare(String(fullName(b.p))));
 
-  const maZeilen = mitStunden.map(({ p, h, tageMit }) => {
-    const zellen = tage.map(d => {
-      const liste = proMa[p.id + '|' + d] || [];
-      if (!liste.length) return `<td class="d ${tagKl(d)}"></td>`;
-      return `<td class="d ${tagKl(d)}">` + liste.map(e => {
+  const maZeilen = leute.length ? leute.map(({ p, h, tageMit }) => {
+    const tds = tage.map(t => {
+      const li = proMa[p.id + '|' + t] || [];
+      if (!li.length) return `<td class="d ${tagKl(t)}"></td>`;
+      return `<td class="d ${tagKl(t)}">` + li.map(e => {
         const kl = e.status === 'abgesagt' ? ' ab' : (e.status === 'provisorisch' ? ' prov' : '');
-        const ms = nachId[e.masterschicht_id];
-        const txt = ms && ms.kuerzel ? esc(ms.kuerzel) : hm(e.von);
-        return `<button class="blk${kl}" title="${esc(dmy(d) + ' ' + hm(e.von) + '–' + hm(e.bis) + ' ' + (e.titel || ''))}" onclick="openEinsatz(${Number(e.id)})">${txt}</button>`;
+        const v = nachId[e.masterschicht_id];
+        return `<button class="blk${kl}" title="${esc(dmy(t) + ' ' + hm(e.von) + '–' + hm(e.bis) + ' ' + (e.titel || ''))}" onclick="openEinsatz(${Number(e.id)})">${esc(v && v.kuerzel ? v.kuerzel : hm(e.von))}</button>`;
       }).join('') + `</td>`;
     }).join('');
-    return `<tr${h ? '' : ' class="leerzeile"'}>
-      <td class="lb"><b>${esc(fullName(p) || p.name)}</b><span>${h ? `${tageMit} ${tageMit === 1 ? 'Tag' : 'Tage'}` : 'nicht eingeteilt'}</span></td>
-      ${zellen}<td class="sum">${h ? nf(h, 2) + ' h' : '<span style="color:var(--ink-3)">–</span>'}</td></tr>`;
-  }).join('');
+    return `<tr${h ? '' : ' class="leerzeile"'}><td class="lb"><div class="zeile">
+      <b>${esc(fullName(p) || p.name)}</b>
+      <span>${h ? `${tageMit} ${tageMit === 1 ? 'Tag' : 'Tage'}` : 'nicht eingeteilt'}</span>
+    </div></td>${tds}<td class="sum">${h ? nf(h, 2) + ' h' : '<span style="color:var(--ink-3)">–</span>'}</td></tr>`;
+  }).join('') : `<tr class="leerzeile"><td class="lb"><div class="zeile"><b>Niemand</b></div></td>
+      <td class="d" colspan="${tage.length + 1}" style="text-align:left;padding-left:12px">${oplNurTeil ? 'In diesem Monat ist niemand eingeteilt.' : 'Der Filter passt auf niemanden.'}</td></tr>`;
+
+  const monatsName = new Date(tage[0] + 'T12:00:00').toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
 
   $('oplBody').innerHTML = `
-    <div class="card" style="margin-bottom:16px"><div class="card-bd">
-      <div class="opl-kopf">
-        <div>
-          <div class="nm">${esc(o.name)}</div>
-          <div class="sub">${esc(o.kunde_name)} · ${o.strasse ? esc(o.strasse) + ', ' : ''}${esc(o.ort)} · Kanton ${esc(o.kanton)}${o.aktiv ? '' : ' · stillgelegt'}</div>
-        </div>
-        <div class="sp" style="flex:1"></div>
-        <div class="opl-zahl"><b>${nf(gueltig.length)}</b><span>Masterschichten</span></div>
-        <div class="opl-zahl"><b>${nf(hGeplant, 2)}</b><span>Stunden geplant</span></div>
-        <div class="opl-zahl voll"><b>${nf(hBesetzt, 2)}</b><span>davon besetzt</span></div>
-        <div class="opl-zahl ${hOffen ? 'offen' : ''}"><b>${nf(hOffen, 2)}</b><span>offen</span></div>
-        <div class="opl-zahl ${stellenOffen ? 'offen' : ''}"><b>${nf(stellenOffen)}</b><span>offene Stellen</span></div>
-      </div>
-    </div>
-    <div class="legende">
-      <span>Stundenwerte dienen der Planung. Sie sind <b>keine</b> Lohn- oder Rechnungsgrundlage${brutto ? ' und enthalten bei Schichten ohne Vorlage keinen Pausenabzug' : ''}.</span>
-    </div></div>
-
-    <div class="card"><div class="card-bd flush"><div class="gr">
+    <div class="card nur-breit"><div class="card-bd flush"><div class="gr dicht">
       <table>
-        <thead><tr><th class="lb" style="text-transform:none;font-size:12px;color:var(--ink-2)">${esc(new Date(tage[0] + 'T12:00:00').toLocaleDateString('de-CH', { month: 'long', year: 'numeric' }))}</th>${kopf}<th class="sum">Stunden</th></tr></thead>
+        <thead><tr><th class="lb">${esc(monatsName)}</th>${kopf}<th class="sum">Std.</th></tr></thead>
         <tbody>
           ${gruppe('Besetzung gesamt')}
           ${gesamtZeile}
-          ${gruppe('Schichten')}
+          ${gruppe('Schichten', 'Klick auf eine Zelle teilt ein')}
           ${msZeilen}
           ${gruppe('Mitarbeitende')}
           ${maZeilen}
@@ -2751,10 +2914,139 @@ function renderObjektplan() {
       <span><i style="background:var(--pos-soft)"></i>voll besetzt</span>
       <span><i style="background:var(--warn-soft)"></i>teilweise</span>
       <span><i style="background:var(--neg-soft)"></i>niemand eingeteilt</span>
-      <span><i style="background:var(--accent-soft)"></i>provisorisch</span>
-      <span style="margin-left:auto">Klick auf eine Zelle öffnet die Schicht.</span>
-    </div></div>`;
+      <span><i style="background:var(--accent-soft)"></i>auf Abruf</span>
+      <span><i style="border:1px dashed var(--ink-3);background:transparent"></i>Bedarf, noch keine Schicht erzeugt</span>
+      <span style="margin-left:auto">Stundenwerte dienen der Planung — <b>keine</b> Lohn- oder Rechnungsgrundlage.</span>
+    </div></div>
+    ${oplTagesliste(d, tage, zellen, fei, heute)}`;
 }
+
+// Auf dem Handy ist eine Matrix mit 31 Spalten nicht bedienbar. Dieselben
+// Daten darum als Tagesliste (ENT-024) -- nur Tage, an denen etwas ansteht.
+function oplTagesliste(d, tage, zellen, fei, heute) {
+  const zeilen = tage.map(t => {
+    const posten = (d.vorlagen || []).map(v => ({ v, c: zellen[v.id + '|' + t] }))
+      .filter(x => x.c && (x.c.soll || x.c.li.length));
+    if (!posten.length) return '';
+    const wd = WD[new Date(t + 'T12:00:00').getDay()];
+    const offen = posten.reduce((a, x) => a + Math.max(0, x.c.soll - x.c.ist), 0);
+    return `<div class="opl-tag">
+      <div class="kopf">
+        <b>${esc(wd)}, ${dmy(t)}</b>
+        ${t === heute ? '<span class="chip chip-a">heute</span>' : ''}
+        ${fei[t] ? `<span class="chip chip-w">${esc(fei[t].name)}</span>` : ''}
+        <span class="sp"></span>
+        <span class="chip ${offen ? 'chip-x' : 'chip-p'}">${offen ? offen + ' offen' : 'besetzt'}</span>
+      </div>
+      ${posten.map(({ v, c }) => {
+        const st = oplZellstand(c) || { kl: 's-leer', txt: '0/0' };
+        const namen = c.aktiv.flatMap(e => (e.mitarbeiter || []).map(p => fullName(p) || p.name));
+        return `<button class="opl-posten" onclick="oplZelleAuf(${Number(v.id)},'${t}')">
+          <span class="zt">${esc(v.von)}<br>${esc(v.bis)}</span>
+          <span class="ws">
+            <b>${v.kuerzel ? esc(v.kuerzel) + ' · ' : ''}${esc(v.name)}</b>
+            <span>${namen.length ? esc(namen.join(', ')) : 'niemand eingeteilt'}</span>
+          </span>
+          <span class="stand ${st.kl}">${st.txt}</span>
+        </button>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+  return `<div class="nur-schmal" id="oplTage">${zeilen ||
+    `<div class="card"><div class="card-bd">${EMPTY('Nichts geplant',
+      'In diesem Monat entsteht aus den Masterschichten kein Bedarf.')}</div></div>`}</div>`;
+}
+
+// ── Zuteilen direkt aus der Zelle. Die Schicht muss dafür noch nicht
+// existieren -- sie entsteht beim Speichern (ENT-024).
+function oplZelleAuf(msId, datum) {
+  const d = oplDaten;
+  if (!d) return;
+  const v = (d.vorlagen || []).find(x => Number(x.id) === Number(msId));
+  if (!v) return;
+  const zellen = oplZellen(d);
+  const c = zellen[msId + '|' + datum];
+  const bestehend = c && c.aktiv.length ? c.aktiv[0] : null;
+  oplZelleZiel = { msId: Number(msId), datum, bedarf: c ? c.soll : 1, einsatzId: bestehend ? Number(bestehend.id) : 0 };
+
+  const wd = WD[new Date(datum + 'T12:00:00').getDay()];
+  $('zuTitel').textContent = `${v.kuerzel ? v.kuerzel + ' · ' : ''}${v.name}`;
+  $('zuText').textContent = `${wd}, ${dmy(datum)} · ${v.von}–${v.bis} · ${nf(v.arbeitszeit_h, 2)} h`
+    + (bestehend ? '' : ' — die Schicht wird beim Speichern angelegt.');
+  $('zuErr').style.display = 'none';
+  $('zuVerweis').innerHTML = bestehend
+    ? `<button class="btn btn-quiet btn-sm" onclick="closeDlg('dlgZuteilen');openEinsatz(${Number(bestehend.id)})">Schicht im Detail öffnen</button>`
+    : '';
+  oplZuRender(bestehend ? (bestehend.mitarbeiter || []).map(p => Number(p.id)) : []);
+  openDlg('dlgZuteilen');
+}
+
+function oplZuIds() {
+  return Array.from(document.querySelectorAll('#zuMa input[type=checkbox]'))
+    .filter(i => i.checked).map(i => Number(i.value));
+}
+
+function oplZuRender(ids) {
+  const z = oplZelleZiel;
+  const v = (oplDaten.vorlagen || []).find(x => Number(x.id) === z.msId);
+  const gewaehlt = new Set((ids || []).map(Number));
+  const box = $('zuMa');
+  if (!mitarbeiter.length) {
+    box.innerHTML = '<div class="leer">Keine aktiven Mitarbeitenden vorhanden.</div>';
+    oplZuFuss();
+    return;
+  }
+  // Dieselbe Sperre wie überall: niemand kann zur selben Zeit an zwei Orten
+  // sein (ENT-022). Bereits Zugeteilte bleiben bedienbar, sonst liesse sich
+  // eine bestehende Doppelbelegung nicht mehr auflösen.
+  const k = konflikte(z.datum, v.von, v.bis, z.einsatzId || null);
+  box.innerHTML = mitarbeiter.map(mm => {
+    const c = k[mm.id] || [];
+    const dabei = gewaehlt.has(Number(mm.id));
+    const gesperrt = c.length > 0 && !dabei;
+    const clash = c.map(x => `${x.titel || x.kunde_name} ${hm(x.von)}–${hm(x.bis)}`).join(', ');
+    return `<label class="${gesperrt ? 'gesperrt' : ''}">
+      <input type="checkbox" value="${Number(mm.id)}"${dabei ? ' checked' : ''}${gesperrt ? ' disabled' : ''} onchange="oplZuFuss()">
+      <span class="who">
+        <b>${esc(fullName(mm) || mm.name)}</b>
+        <span>${esc(mm.name)}</span>
+        ${c.length ? `<span class="clash${gesperrt ? ' sperr' : ''}">${gesperrt ? 'Nicht verfügbar — schon eingeteilt' : 'Doppelbelegung — bitte entfernen'}: ${esc(clash)}</span>` : ''}
+      </span>
+    </label>`;
+  }).join('');
+  oplZuFuss();
+}
+
+function oplZuFuss() {
+  const n = oplZuIds().length, bedarf = Math.max(0, oplZelleZiel ? oplZelleZiel.bedarf : 0);
+  const fehlt = Math.max(0, bedarf - n);
+  const gesperrt = document.querySelectorAll('#zuMa input[type=checkbox]:disabled').length;
+  $('zuFuss').innerHTML = `<span class="chip ${fehlt ? 'chip-w' : 'chip-p'}">${n}/${bedarf}</span>`
+    + `<span>${fehlt ? `noch ${fehlt} ${fehlt === 1 ? 'Person' : 'Personen'} offen` : 'Bedarf gedeckt'}</span>`
+    + (gesperrt ? `<span class="chip chip-x">${gesperrt} zeitlich belegt</span>` : '');
+}
+
+function oplZuSpeichern() {
+  const z = oplZelleZiel;
+  if (!z) return;
+  const btn = $('zuBtn'); btn.disabled = true;
+  $('zuErr').style.display = 'none';
+  api('einsatz_zuteilen.php', { method: 'POST', body: {
+    objekt_id: oplId, masterschicht_id: z.msId, datum: z.datum, mitarbeiter: oplZuIds(),
+  } }).then(({ ok, data }) => {
+    btn.disabled = false;
+    if (!ok || data.status !== 'ok') {
+      $('zuErr').textContent = data.message || 'Speichern fehlgeschlagen.';
+      $('zuErr').style.display = '';
+      return;
+    }
+    closeDlg('dlgZuteilen');
+    toast(data.angelegt ? 'Schicht angelegt und eingeteilt.' : 'Zuteilung gespeichert.');
+    // Der Objektplan und die Einsatzliste kennen jetzt einen anderen Stand.
+    Promise.all([ladeObjektplan(true), loadEinsaetze()]).then(renderObjektplan);
+  });
+}
+
 
 // ══════════════════════════════════════════ MONATSÜBERSICHT
 function mxSchieben(n) {

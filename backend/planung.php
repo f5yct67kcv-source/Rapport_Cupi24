@@ -80,7 +80,7 @@ function feiertage_im_zeitraum(string $kanton, string $von, string $bis): array
 // Welche Schichten wuerden im Zeitraum aus den Masterschichten eines Objekts
 // entstehen? Schreibt nichts -- das Ergebnis dient der Vorschau und wird von
 // schichten_erzeugen.php mit denselben Regeln noch einmal berechnet.
-function planung_vorschlag(int $objektId, string $von, string $bis): array
+function planung_bedarf(int $objektId, string $von, string $bis): array
 {
     $o = db()->prepare('SELECT * FROM objekte WHERE id = ?');
     $o->execute([$objektId]);
@@ -97,24 +97,11 @@ function planung_vorschlag(int $objektId, string $von, string $bis): array
     $ms->execute([$objektId, $bis, $von]);
     $vorlagen = $ms->fetchAll();
 
-    // Was aus diesen Vorlagen im Zeitraum schon existiert, wird nicht doppelt
-    // angelegt.
-    $vorhanden = [];
-    $ex = db()->prepare(
-        'SELECT masterschicht_id, datum FROM einsaetze
-         WHERE objekt_id = ? AND datum BETWEEN ? AND ? AND masterschicht_id IS NOT NULL'
-    );
-    $ex->execute([$objektId, $von, $bis]);
-    foreach ($ex->fetchAll() as $r) {
-        $vorhanden[$r['masterschicht_id'] . '|' . $r['datum']] = true;
-    }
-
     $feiertage = feiertage_im_zeitraum((string)$objekt['kanton'], $von, $bis);
     $wochenfeld = [1 => 'bedarf_mo', 2 => 'bedarf_di', 3 => 'bedarf_mi', 4 => 'bedarf_do',
                    5 => 'bedarf_fr', 6 => 'bedarf_sa', 7 => 'bedarf_so'];
 
-    $neu = [];
-    $uebersprungen = 0;
+    $bedarf = [];
     $ende = new DateTimeImmutable($bis);
 
     foreach ($vorlagen as $v) {
@@ -124,7 +111,7 @@ function planung_vorschlag(int $objektId, string $von, string $bis): array
 
         while ($tag <= $letzter) {
             $datum = $tag->format('Y-m-d');
-            $bedarf = 0;
+            $anzahl = 0;
 
             if ($v['rhythmus'] === 'intervall') {
                 // Strikter Rhythmus ab dem Startdatum, ohne Ruecksicht auf
@@ -133,38 +120,35 @@ function planung_vorschlag(int $objektId, string $von, string $bis): array
                 $abstand = max(1, (int)$v['intervall_tage']);
                 $diff = (int)$start->diff($tag)->format('%r%a');
                 if ($diff >= 0 && $diff % $abstand === 0) {
-                    $bedarf = (int)$v['bedarf_intervall'];
+                    $anzahl = (int)$v['bedarf_intervall'];
                 }
             } else {
                 // Ein Feiertag ersetzt den Wochentagsbedarf, er ergaenzt ihn nicht.
-                $bedarf = isset($feiertage[$datum])
+                $anzahl = isset($feiertage[$datum])
                     ? (int)$v['bedarf_feiertag']
                     : (int)$v[$wochenfeld[(int)$tag->format('N')]];
             }
 
-            if ($bedarf > 0) {
-                if (isset($vorhanden[$v['id'] . '|' . $datum])) {
-                    $uebersprungen++;
-                } else {
-                    $neu[] = [
-                        'datum' => $datum,
-                        'masterschicht_id' => (int)$v['id'],
-                        'name' => $v['name'],
-                        'kuerzel' => $v['kuerzel'],
-                        'von' => substr((string)$v['von'], 0, 5),
-                        'bis' => substr((string)$v['bis'], 0, 5),
-                        'bedarf' => $bedarf,
-                        'status' => (int)$v['auf_abruf'] ? 'provisorisch' : 'geplant',
-                        'feiertag' => $feiertage[$datum]['name'] ?? null,
-                        'art' => $v['art'],
-                    ];
-                }
+            if ($anzahl > 0) {
+                $bedarf[] = [
+                    'datum' => $datum,
+                    'masterschicht_id' => (int)$v['id'],
+                    'name' => $v['name'],
+                    'kuerzel' => $v['kuerzel'],
+                    'von' => substr((string)$v['von'], 0, 5),
+                    'bis' => substr((string)$v['bis'], 0, 5),
+                    'bedarf' => $anzahl,
+                    'status' => (int)$v['auf_abruf'] ? 'provisorisch' : 'geplant',
+                    'feiertag' => $feiertage[$datum]['name'] ?? null,
+                    'art' => $v['art'],
+                    'arbeitszeit_h' => (float)$v['arbeitszeit_h'],
+                ];
             }
             $tag = $tag->modify('+1 day');
         }
     }
 
-    usort($neu, fn($a, $b) => [$a['datum'], $a['von']] <=> [$b['datum'], $b['von']]);
+    usort($bedarf, fn($a, $b) => [$a['datum'], $a['von']] <=> [$b['datum'], $b['von']]);
 
     return [
         'objekt' => [
@@ -177,10 +161,48 @@ function planung_vorschlag(int $objektId, string $von, string $bis): array
             'kanton' => $objekt['kanton'],
             'einsatzart' => $objekt['einsatzart'],
         ],
+        'bedarf' => $bedarf,
+        'vorlagen' => $vorlagen,
+        'feiertage' => $feiertage,
+    ];
+}
+
+// Was aus den Vorlagen im Zeitraum noch NICHT existiert. Baut auf
+// planung_bedarf() auf -- die Bedarfsregel steht nur an einer Stelle.
+function planung_vorschlag(int $objektId, string $von, string $bis): array
+{
+    $b = planung_bedarf($objektId, $von, $bis);
+    if (isset($b['fehler'])) {
+        return $b;
+    }
+
+    $vorhanden = [];
+    $ex = db()->prepare(
+        'SELECT masterschicht_id, datum FROM einsaetze
+         WHERE objekt_id = ? AND datum BETWEEN ? AND ? AND masterschicht_id IS NOT NULL'
+    );
+    $ex->execute([$objektId, $von, $bis]);
+    foreach ($ex->fetchAll() as $r) {
+        $vorhanden[$r['masterschicht_id'] . '|' . $r['datum']] = true;
+    }
+
+    $neu = [];
+    $uebersprungen = 0;
+    foreach ($b['bedarf'] as $s) {
+        if (isset($vorhanden[$s['masterschicht_id'] . '|' . $s['datum']])) {
+            $uebersprungen++;
+            continue;
+        }
+        unset($s['arbeitszeit_h']);   // im Vorschlag nicht gebraucht
+        $neu[] = $s;
+    }
+
+    return [
+        'objekt' => $b['objekt'],
         'neu' => $neu,
         'uebersprungen' => $uebersprungen,
-        'vorlagen' => count($vorlagen),
-        'feiertage' => count($feiertage),
+        'vorlagen' => count($b['vorlagen']),
+        'feiertage' => count($b['feiertage']),
     ];
 }
 
