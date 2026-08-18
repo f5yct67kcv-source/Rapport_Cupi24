@@ -16,6 +16,7 @@ jobs:
           mkdir -p dist/api dist/icons
           cp index.html dist/index.html
           cp dashboard.html dist/dashboard.html
+          cp app.html dist/app.html
           cp manifest.json dist/manifest.json
           cp sw.js dist/sw.js
           cp icons/*.png dist/icons/

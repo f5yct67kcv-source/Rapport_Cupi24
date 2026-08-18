@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cockpit</title>
+<link rel="icon" href="icons/icon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="theme-color" content="#16181D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   MITARBEITER-APP — dieselben Farben wie das Dashboard, aber eigener
+   Aufbau: grosse Flächen, untere Reiterleiste, dicke Zeitangaben.
+   Gedacht für draussen: kurze Blicke, kalte Finger, helles Licht.
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  --shell:  #16181D;  --shell-hi: #1E2128;  --shell-line: #272B33;
+  --shell-txt: #9298A5; --shell-txt-hi: #F3F5F8;
+  --bg: #F4F6F8;  --surface: #FFFFFF;  --line: #E5E8EC;  --line-soft: #EFF1F4;
+  --ink: #14161A;  --ink-2: #545B67;  --ink-3: #8B919D;
+  --accent: #2F5BD7;  --accent-hi: #2549B0;  --accent-soft: #EDF2FE;  --accent-line: #CBD9F9;
+  --pos: #0E7C55;  --pos-soft: #E6F6EF;
+  --neg: #C2382A;  --neg-soft: #FCEDEB;
+  --warn: #9A6B08; --warn-soft: #FBF3E0;
+  --r-sm: 9px; --r: 14px; --r-lg: 20px;
+  --sh-1: 0 1px 2px rgba(16,18,22,.06);
+  --sh-2: 0 10px 30px -10px rgba(16,18,22,.22);
+  --sh-3: 0 -8px 32px -12px rgba(16,18,22,.24);
+  --tab-h: 62px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg); color: var(--ink); font-size: 15px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; overscroll-behavior-y: none;
+}
+.num, .zeit, b, strong { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+svg.i { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+svg.i-sm { width: 17px; height: 17px; }
+
+/* ── Bedienelemente: grosse Ziele, draussen bedienbar */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 18px; border: 1px solid transparent; border-radius: var(--r-sm);
+  font: inherit; font-size: 15px; font-weight: 640; cursor: pointer; text-decoration: none;
+  transition: background .13s, border-color .13s; white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:active { background: var(--accent-hi); }
+.btn-plain { background: var(--surface); border-color: var(--line); color: var(--ink); }
+.btn-plain:active { background: var(--bg); }
+.btn-pos { background: var(--pos-soft); color: var(--pos); border-color: #BCE5D3; }
+.btn-neg { background: var(--neg-soft); color: var(--neg); border-color: #F3C8C2; }
+.btn-wide { width: 100%; }
+.btn:disabled { opacity: .5; }
+.f { margin-bottom: 16px; }
+.f label { display: block; font-size: 12px; font-weight: 660; color: var(--ink-2); letter-spacing: .4px; text-transform: uppercase; margin-bottom: 7px; }
+.inp {
+  width: 100%; min-height: 48px; border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 12px 14px; font: inherit; font-size: 16px; color: var(--ink);
+  background: var(--surface); -webkit-appearance: none; appearance: none;
+}
+.inp:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.msg-err { font-size: 14px; color: var(--neg); background: var(--neg-soft); border-radius: var(--r-sm); padding: 11px 13px; margin-bottom: 16px; }
+
+/* ══════════════════════════════════════════ ZUGANG */
+#gate { position: fixed; inset: 0; z-index: 900; background: var(--shell); display: flex; flex-direction: column; padding: 28px 22px calc(28px + env(safe-area-inset-bottom)); }
+.gate-oben { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+.gate-oben img { width: 66px; height: 66px; border-radius: 18px; background: #fff; padding: 5px; margin-bottom: 18px; }
+.gate-oben .wm { color: var(--shell-txt-hi); font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
+.gate-oben .sub { color: #656B78; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 4px; }
+.gate-form { background: var(--surface); border-radius: var(--r-lg); padding: 22px; box-shadow: var(--sh-2); }
+.sprache { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; }
+.sprache button { min-height: 40px; padding: 0 20px; border-radius: 20px; border: 1px solid var(--shell-line); background: transparent; color: var(--shell-txt); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.sprache button.on { background: var(--shell-hi); color: var(--shell-txt-hi); border-color: #3A404B; }
+
+/* ══════════════════════════════════════════ GERÜST */
+.app { display: none; min-height: 100%; flex-direction: column; }
+.app.on { display: flex; }
+.kopf {
+  background: var(--shell); color: var(--shell-txt-hi);
+  padding: calc(14px + env(safe-area-inset-top)) 20px 16px;
+  display: flex; align-items: center; gap: 14px;
+}
+.kopf .wer { flex: 1; min-width: 0; }
+.kopf .wer b { display: block; font-size: 17px; font-weight: 680; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kopf .wer span { font-size: 12.5px; color: var(--shell-txt); }
+.kopf .kreis { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex: none; }
+
+.inhalt { flex: 1; padding: 18px 16px calc(var(--tab-h) + 26px + env(safe-area-inset-bottom)); }
+.v { display: none; }
+.v.on { display: block; animation: auf .18s ease-out; }
+@keyframes auf { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.titel { font-size: 13px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); margin: 4px 0 12px; }
+.titel:not(:first-child) { margin-top: 28px; }
+
+/* ── Untere Reiterleiste */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  background: rgba(255,255,255,.94); backdrop-filter: saturate(180%) blur(14px); -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border-top: 1px solid var(--line);
+  display: flex; padding-bottom: env(safe-area-inset-bottom);
+}
+.tabs button {
+  flex: 1; min-height: var(--tab-h); border: none; background: transparent; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  color: var(--ink-3); font: inherit; font-size: 11px; font-weight: 620; padding: 6px 2px;
+}
+.tabs button.on { color: var(--accent); }
+.tabs button .punkt { width: 5px; height: 5px; border-radius: 50%; background: var(--neg); position: absolute; margin: -16px 0 0 18px; }
+
+/* ── Karten */
+.karte { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); margin-bottom: 12px; overflow: hidden; }
+.karte-bd { padding: 16px; }
+
+/* ── Schichtkarte: die Zeit ist die wichtigste Angabe */
+.schicht { display: block; width: 100%; text-align: left; border: none; background: transparent; font: inherit; color: inherit; cursor: pointer; padding: 0; }
+.schicht .oben { display: flex; align-items: flex-start; gap: 14px; padding: 16px; }
+.schicht .zeit { font-size: 21px; font-weight: 720; letter-spacing: -.6px; white-space: nowrap; }
+.schicht .zeit .folgetag { display: block; font-size: 11px; font-weight: 620; color: var(--ink-3); letter-spacing: 0; }
+.schicht .was { flex: 1; min-width: 0; }
+.schicht .was b { display: block; font-size: 15.5px; font-weight: 660; }
+.schicht .was span { display: block; font-size: 13.5px; color: var(--ink-2); margin-top: 2px; }
+.schicht .balken { width: 4px; align-self: stretch; border-radius: 3px; background: var(--accent); flex: none; }
+.schicht .balken.prov { background: var(--warn); }
+.schicht .balken.ab { background: var(--ink-3); }
+.schicht .balken.best { background: var(--pos); }
+.fuss { display: flex; align-items: center; gap: 8px; padding: 11px 16px; border-top: 1px solid var(--line-soft); background: #FCFDFE; flex-wrap: wrap; }
+
+.marke { display: inline-flex; align-items: center; gap: 5px; border-radius: 20px; padding: 4px 11px; font-size: 12px; font-weight: 660; white-space: nowrap; }
+.m-n { background: var(--line-soft); color: var(--ink-2); }
+.m-a { background: var(--accent-soft); color: var(--accent); }
+.m-p { background: var(--pos-soft); color: var(--pos); }
+.m-w { background: var(--warn-soft); color: var(--warn); }
+.m-x { background: var(--neg-soft); color: var(--neg); }
+
+/* ── Tagesüberschrift im Plan */
+/* Der Tageskopf muss auch auf 320px halten: der Wochentag wird notfalls
+   gekuerzt, die Anzahl rutscht notfalls auf eine zweite Zeile. */
+.tag-kopf { display: flex; flex-wrap: wrap; align-items: baseline; gap: 9px; margin: 22px 2px 10px; }
+.tag-kopf > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag-kopf .anz { flex: none; margin-left: auto; }
+.tag-kopf b { font-size: 15px; font-weight: 700; letter-spacing: -.2px; }
+.tag-kopf span { font-size: 12.5px; font-weight: 640; letter-spacing: .6px; text-transform: uppercase; color: var(--ink-3); }
+.tag-kopf .sp { flex: 1; }
+
+/* ── Leerzustand */
+.leer { text-align: center; padding: 46px 22px; }
+.leer .ic { width: 52px; height: 52px; border-radius: 16px; background: var(--line-soft); color: var(--ink-3); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.leer h3 { font-size: 16px; font-weight: 660; margin-bottom: 6px; }
+.leer p { font-size: 14px; color: var(--ink-3); line-height: 1.6; }
+
+/* ── Kennzahl-Paar */
+.zahlen { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.zahl { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 15px 16px; box-shadow: var(--sh-1); }
+.zahl b { display: block; font-size: 25px; font-weight: 720; letter-spacing: -.8px; line-height: 1.15; }
+.zahl span { font-size: 11.5px; font-weight: 650; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-3); }
+
+/* ── Angabenliste */
+.dl { display: grid; grid-template-columns: 40% 1fr; gap: 0 12px; }
+.dl dt { font-size: 12px; font-weight: 650; letter-spacing: .3px; text-transform: uppercase; color: var(--ink-3); padding: 11px 0; border-bottom: 1px solid var(--line-soft); }
+.dl dd { font-size: 15px; font-weight: 550; padding: 11px 0; border-bottom: 1px solid var(--line-soft); word-break: break-word; }
+.dl dt:last-of-type, .dl dd:last-of-type { border-bottom: none; }
+
+/* ── Blatt von unten (Schichtdetail, Passwort) */
+.abdunkeln { position: fixed; inset: 0; z-index: 60; background: rgba(16,18,22,.45); opacity: 0; pointer-events: none; transition: opacity .2s; }
+.abdunkeln.on { opacity: 1; pointer-events: auto; }
+.blatt {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 61; max-height: 88vh;
+  background: var(--surface); border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: var(--sh-3);
+  transform: translateY(100%); transition: transform .24s cubic-bezier(.32,.72,0,1);
+  display: flex; flex-direction: column;
+}
+.blatt.on { transform: none; }
+.blatt-griff { padding: 10px 0 4px; display: flex; justify-content: center; flex: none; }
+.blatt-griff i { width: 38px; height: 4px; border-radius: 3px; background: var(--line); display: block; }
+.blatt-kopf { display: flex; align-items: center; gap: 12px; padding: 6px 20px 14px; border-bottom: 1px solid var(--line-soft); flex: none; }
+.blatt-kopf h2 { font-size: 18px; font-weight: 680; letter-spacing: -.3px; flex: 1; min-width: 0; }
+.blatt-bd { padding: 18px 20px; overflow-y: auto; flex: 1; }
+.blatt-ft { padding: 14px 20px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line-soft); display: flex; gap: 10px; flex: none; }
+.blatt-ft .btn { flex: 1; }
+
+/* ── Hinweis */
+.toast { position: fixed; left: 16px; right: 16px; bottom: calc(var(--tab-h) + 18px + env(safe-area-inset-bottom)); background: var(--shell); color: #fff; padding: 13px 18px; border-radius: var(--r-sm); font-size: 14.5px; font-weight: 560; box-shadow: var(--sh-2); z-index: 200; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .18s, transform .18s; text-align: center; }
+.toast.on { opacity: 1; transform: none; }
+
+/* ── Skelett */
+.sk { background: linear-gradient(90deg, var(--line-soft) 25%, #E4E7EC 50%, var(--line-soft) 75%); background-size: 200% 100%; animation: sh 1.3s infinite; border-radius: var(--r-sm); }
+@keyframes sh { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+@media (min-width: 700px) {
+  /* Auf grösseren Geräten mittig halten statt in die Breite ziehen */
+  .app { max-width: 560px; margin: 0 auto; box-shadow: 0 0 0 1px var(--line); min-height: 100vh; }
+  .tabs { max-width: 560px; left: 50%; transform: translateX(-50%); }
+  .blatt { max-width: 560px; left: 50%; transform: translateX(-50%) translateY(100%); }
+  .blatt.on { transform: translateX(-50%); }
+  .toast { max-width: 528px; left: 50%; transform: translateX(-50%) translateY(8px); }
+  .toast.on { transform: translateX(-50%); }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════ ANMELDUNG ══════════════════════════ -->
+<div id="gate">
+  <div class="gate-oben">
+    <img src="icons/icon-192.png" alt="">
+    <div class="wm">Cockpit</div>
+    <div class="sub">CUPI 24 GmbH</div>
+  </div>
+  <div class="sprache">
+    <button id="spDe" class="on" onclick="setzeSprache('de')">DE</button>
+    <button id="spSq" onclick="setzeSprache('sq')">SQ</button>
+  </div>
+  <div class="gate-form">
+    <div id="gErr" class="msg-err" style="display:none"></div>
+    <div class="f"><label for="gName" id="lb-name">Name</label><input class="inp" id="gName" autocomplete="username" autocapitalize="none"></div>
+    <div class="f"><label for="gPass" id="lb-pass">Passwort</label><input class="inp" id="gPass" type="password" autocomplete="current-password"></div>
+    <button class="btn btn-primary btn-wide" id="gBtn" onclick="anmelden()">Anmelden</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════ APP ══════════════════════════ -->
+<div class="app" id="app">
+  <header class="kopf">
+    <div class="kreis" id="kKreis">–</div>
+    <div class="wer">
+      <b id="kName">–</b>
+      <span id="kDatum">–</span>
+    </div>
+    <button class="btn btn-plain" style="min-height:40px;padding:0 12px;background:var(--shell-hi);border-color:var(--shell-line);color:var(--shell-txt-hi)" onclick="allesLaden()" id="kLaden" aria-label="Aktualisieren">
+      <svg class="i i-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    </button>
+  </header>
+
+  <main class="inhalt">
+    <section class="v on" id="v-heute"></section>
+    <section class="v" id="v-plan"></section>
+    <section class="v" id="v-rapport"></section>
+    <section class="v" id="v-profil"></section>
+  </main>
+
+  <nav class="tabs">
+    <button class="on" id="t-heute" onclick="zeige('heute')">
+      <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+      <span id="lb-tab-heute">Heute</span>
+    </button>
+    <button id="t-plan" onclick="zeige('plan')">
+      <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>
+      <span id="lb-tab-plan">Plan</span>
+    </button>
+    <button id="t-rapport" onclick="zeige('rapport')">
+      <svg class="i" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span id="lb-tab-rapport">Rapport</span>
+    </button>
+    <button id="t-profil" onclick="zeige('profil')">
+      <svg class="i" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span id="lb-tab-profil">Profil</span>
+    </button>
+  </nav>
+</div>
+
+<div class="abdunkeln" id="abdunkeln" onclick="blattZu()"></div>
+<div class="blatt" id="blatt" aria-hidden="true">
+  <div class="blatt-griff"><i></i></div>
+  <div class="blatt-kopf">
+    <h2 id="blTitel">–</h2>
+    <button class="btn btn-plain" style="min-height:40px;padding:0 12px" onclick="blattZu()" aria-label="Schliessen">
+      <svg class="i i-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="blatt-bd" id="blBody"></div>
+  <div class="blatt-ft" id="blFuss"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   SPRACHEN — Deutsch und Albanisch, wie in der Erfassung.
+   Begriffe aus dem bestehenden Wörterbuch der Erfassung übernommen,
+   damit dieselbe Sache überall gleich heisst. Neu hinzugekommene
+   albanische Begriffe sind unten mit [neu] gekennzeichnet und noch
+   nicht von einem Muttersprachler geprüft.
+   ══════════════════════════════════════════════════════════════════ */
+const W = {
+  de: {
+    anmelden: 'Anmelden', name: 'Name', passwort: 'Passwort',
+    fehlerAnmeldung: 'Name oder Passwort falsch.', beidesNoetig: 'Name und Passwort erforderlich.',
+    heute: 'Heute', plan: 'Plan', rapport: 'Rapport', profil: 'Profil',
+    schicht: 'Schicht', schichten: 'Schichten', keineHeute: 'Heute kein Einsatz',
+    keineHeuteText: 'Für heute bist du nicht eingeteilt. Der Plan zeigt deine nächsten Schichten.',
+    keinePlan: 'Keine Schichten geplant', keinePlanText: 'Sobald du eingeteilt wirst, erscheint es hier.',
+    naechste: 'Nächster Einsatz', jetztLaeuft: 'Läuft jetzt', gleich: 'Beginnt bald',
+    kunde: 'Kunde', arbeitsort: 'Arbeitsort', zeit: 'Zeit', einsatzart: 'Einsatzart',
+    bemerkung: 'Bemerkung', objekt: 'Objekt', imTeam: 'im Team',
+    zusagen: 'Zusagen', ablehnen: 'Ablehnen', zugesagt: 'Zugesagt', abgelehnt: 'Abgelehnt',
+    offen: 'Noch offen', gemeldet: 'Rückmeldung gespeichert.',
+    geplant: 'Geplant', bestaetigt: 'Bestätigt', provisorisch: 'Auf Abruf', abgesagt: 'Abgesagt',
+    abgesagtHinweis: 'Dieser Einsatz wurde abgesagt.',
+    provisorischHinweis: 'Auf Abruf — ob der Einsatz stattfindet, entscheidet sich kurzfristig.',
+    neuerRapport: 'Neuer Rapport', meineRapporte: 'Meine Rapporte',
+    keineRapporte: 'Noch keine Rapporte', keineRapporteText: 'Erfasste Einsätze erscheinen hier.',
+    zurErfassung: 'Zur Rapporterfassung',
+    diesenMonat: 'Diesen Monat', stunden: 'Stunden', einsaetze: 'Einsätze',
+    persNr: 'Personalnummer', geburtsdatum: 'Geburtsdatum', adresse: 'Adresse',
+    telefon: 'Telefon', mobil: 'Mobil', email: 'E-Mail', anmeldename: 'Anmeldename',
+    passwortAendern: 'Passwort ändern', altesPasswort: 'Bisheriges Passwort',
+    neuesPasswort: 'Neues Passwort', mind6: 'mindestens 6 Zeichen',
+    passwortOk: 'Passwort geändert.', abmelden: 'Abmelden', sprache: 'Sprache',
+    speichern: 'Speichern', abbrechen: 'Abbrechen', schliessen: 'Schliessen',
+    datenHinweis: 'Änderungen an deinen Daten macht die Verwaltung.',
+    netzfehler: 'Keine Verbindung. Bitte nochmals versuchen.',
+    folgetag: 'bis Folgetag',
+  },
+  sq: {
+    anmelden: 'Hyr', name: 'Emri', passwort: 'Fjalëkalimi',
+    fehlerAnmeldung: 'Emri ose fjalëkalimi është i gabuar.', beidesNoetig: 'Emri dhe fjalëkalimi janë të detyrueshëm.',
+    heute: 'Sot', plan: 'Plani', rapport: 'Raport', profil: 'Profili',
+    schicht: 'Turni', schichten: 'Turnet', keineHeute: 'Sot pa shërbim',
+    keineHeuteText: 'Për sot nuk je i planifikuar. Te “Plani” shikon turnet e ardhshme.',
+    keinePlan: 'Nuk ka turne të planifikuara', keinePlanText: 'Sapo të planifikohesh, do të shfaqet këtu.',
+    naechste: 'Shërbimi i ardhshëm', jetztLaeuft: 'Në vazhdim', gleich: 'Fillon së shpejti',
+    kunde: 'Klienti', arbeitsort: 'Vendi i punës', zeit: 'Ora', einsatzart: 'Lloji i Shërbimit',
+    bemerkung: 'Shënime', objekt: 'Objekti', imTeam: 'në ekip',
+    zusagen: 'Konfirmo', ablehnen: 'Refuzo', zugesagt: 'Konfirmuar', abgelehnt: 'Refuzuar',
+    offen: 'Ende e hapur', gemeldet: 'Përgjigjja u ruajt.',
+    geplant: 'E planifikuar', bestaetigt: 'E konfirmuar', provisorisch: 'Në gatishmëri', abgesagt: 'E anuluar',
+    abgesagtHinweis: 'Ky shërbim është anuluar.',
+    provisorischHinweis: 'Në gatishmëri — vendoset në afat të shkurtër nëse shërbimi zhvillohet.',
+    neuerRapport: 'Raport i Ri', meineRapporte: 'Raportet e mia',
+    keineRapporte: 'Nuk ka raporte', keineRapporteText: 'Shërbimet e regjistruara shfaqen këtu.',
+    zurErfassung: 'Te regjistrimi i raportit',
+    diesenMonat: 'Këtë muaj', stunden: 'Orë', einsaetze: 'Shërbime',
+    persNr: 'Nr. i Punonjësit', geburtsdatum: 'Datëlindja', adresse: 'Adresa',
+    telefon: 'Telefoni', mobil: 'Celulari', email: 'E-Mail', anmeldename: 'Emri i hyrjes',
+    passwortAendern: 'Ndrysho fjalëkalimin', altesPasswort: 'Fjalëkalimi aktual',
+    neuesPasswort: 'Fjalëkalimi i ri', mind6: 'të paktën 6 shenja',
+    passwortOk: 'Fjalëkalimi u ndryshua.', abmelden: 'Dilni', sprache: 'Gjuha',
+    speichern: 'Ruaj', abbrechen: 'Anulo', schliessen: 'Mbyll',
+    datenHinweis: 'Ndryshimet në të dhënat e tua i bën administrata.',
+    netzfehler: 'Nuk ka lidhje. Ju lutem provoni përsëri.',
+    folgetag: 'deri ditën tjetër',
+  }
+};
+let sprache = localStorage.getItem('rv3_lang') === 'sq' ? 'sq' : 'de';
+const w = k => (W[sprache] && W[sprache][k]) || W.de[k] || k;
+
+const WOCHENTAG = {
+  de: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'],
+  sq: ['E diel', 'E hënë', 'E martë', 'E mërkurë', 'E enjte', 'E premte', 'E shtunë']
+};
+
+// ── Zustand
+const API = 'api/';
+let token = localStorage.getItem('rv3_token') || '';
+let ich = JSON.parse(localStorage.getItem('rv3_user') || 'null');
+let schichten = [];
+let rapporte = [];
+let profil = null;
+let monat = { anzahl: 0, stunden: 0 };
+let reiter = 'heute';
+let blattId = null;
+
+// ── Hilfen
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nf = (n, d) => Number(n || 0).toLocaleString('de-CH', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+const dmy = d => d ? String(d).slice(0, 10).split('-').reverse().join('.') : '–';
+const hm = t => t ? String(t).slice(0, 5) : '';
+const tagVon = e => String(e.datum || '').slice(0, 10);
+const isoTag = d => { d = d || new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const ueberNacht = e => hm(e.bis) <= hm(e.von);
+
+function initialen(s) {
+  const p = String(s || '').replace(/[._-]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+  return ((p[0] || '?')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
+}
+function vollerName(o) {
+  const n = [o.vorname, o.nachname].filter(Boolean).join(' ').trim();
+  return n || o.name || '';
+}
+function toast(text) {
+  const el = $('toast'); el.textContent = text; el.classList.add('on');
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('on'), 2800);
+}
+// Zeitfenster einer Schicht. Endet sie vor ihrem Beginn, läuft sie über
+// Mitternacht in den Folgetag.
+function spanne(datum, von, bis) {
+  const tag = String(datum || '').slice(0, 10);
+  const a = Date.parse(tag + 'T' + hm(von) + ':00');
+  let b = Date.parse(tag + 'T' + hm(bis) + ':00');
+  if (isNaN(a) || isNaN(b)) return null;
+  if (b <= a) b += 864e5;
+  return [a, b];
+}
+
+function api(pfad, opts) {
+  opts = opts || {};
+  const kopf = { 'Content-Type': 'application/json' };
+  if (token) kopf['X-Auth-Token'] = token;
+  return fetch(API + pfad, {
+    method: opts.method || 'GET', headers: kopf,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  }).then(r => r.json().then(data => ({ ok: r.ok, status: r.status, data })).catch(() => ({ ok: false, status: r.status, data: {} })))
+    .catch(() => ({ ok: false, status: 0, data: {} }));
+}
+
+// ══════════════════════════════════════════ SPRACHE
+function setzeSprache(l) {
+  sprache = l === 'sq' ? 'sq' : 'de';
+  localStorage.setItem('rv3_lang', sprache);
+  document.documentElement.lang = sprache;
+  $('spDe').classList.toggle('on', sprache === 'de');
+  $('spSq').classList.toggle('on', sprache === 'sq');
+  beschriften();
+  if ($('app').classList.contains('on')) zeichne();
+}
+function beschriften() {
+  $('lb-name').textContent = w('name');
+  $('lb-pass').textContent = w('passwort');
+  $('gBtn').textContent = w('anmelden');
+  $('lb-tab-heute').textContent = w('heute');
+  $('lb-tab-plan').textContent = w('plan');
+  $('lb-tab-rapport').textContent = w('rapport');
+  $('lb-tab-profil').textContent = w('profil');
+}
+
+// ══════════════════════════════════════════ ZUGANG
+function anmelden() {
+  const name = $('gName').value.trim(), pass = $('gPass').value;
+  const err = $('gErr'); err.style.display = 'none';
+  if (!name || !pass) { err.textContent = w('beidesNoetig'); err.style.display = ''; return; }
+  const b = $('gBtn'); b.disabled = true;
+  api('login.php', { method: 'POST', body: { name, password: pass } }).then(({ ok, data }) => {
+    b.disabled = false;
+    if (!ok || data.status !== 'ok') { err.textContent = data.message || w('fehlerAnmeldung'); err.style.display = ''; return; }
+    token = data.token;
+    ich = { name: data.name, ist_admin: data.ist_admin };
+    localStorage.setItem('rv3_token', token);
+    localStorage.setItem('rv3_user', JSON.stringify(ich));
+    starten();
+  });
+}
+function abmelden() {
+  api('logout.php', { method: 'POST' });
+  localStorage.removeItem('rv3_token'); localStorage.removeItem('rv3_user');
+  location.reload();
+}
+function starten() {
+  $('gate').style.display = 'none';
+  $('app').classList.add('on');
+  $('kName').textContent = ich.name;
+  $('kKreis').textContent = initialen(ich.name);
+  allesLaden();
+}
+
+// ══════════════════════════════════════════ LADEN
+function allesLaden() {
+  const b = $('kLaden'); b.disabled = true;
+  const heute = new Date();
+  $('kDatum').textContent = WOCHENTAG[sprache][heute.getDay()] + ', ' + dmy(isoTag(heute));
+  return Promise.all([ladeSchichten(), ladeProfil(), ladeRapporte()])
+    .then(() => { b.disabled = false; zeichne(); });
+}
+function ladeSchichten() {
+  return api('meine_schichten.php').then(({ ok, status, data }) => {
+    if (status === 401) return abmelden();
+    schichten = (ok && data.status === 'ok') ? (data.schichten || []) : [];
+  });
+}
+function ladeProfil() {
+  return api('mein_profil.php').then(({ ok, data }) => {
+    if (ok && data.status === 'ok') { profil = data.profil; monat = data.monat || monat; }
+  });
+}
+function ladeRapporte() {
+  return api('rapport_list.php').then(({ ok, data }) => {
+    rapporte = (ok && data.status === 'ok') ? (data.rapporte || []) : [];
+  });
+}
+
+// ══════════════════════════════════════════ NAVIGATION
+function zeige(r) {
+  reiter = r;
+  document.querySelectorAll('.v').forEach(v => v.classList.remove('on'));
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('on'));
+  $('v-' + r).classList.add('on');
+  $('t-' + r).classList.add('on');
+  window.scrollTo(0, 0);
+  zeichne();
+}
+function zeichne() {
+  beschriften();
+  if (reiter === 'heute') zeichneHeute();
+  if (reiter === 'plan') zeichnePlan();
+  if (reiter === 'rapport') zeichneRapport();
+  if (reiter === 'profil') zeichneProfil();
+}
+
+const LEER = (t, p, ic) => `<div class="karte"><div class="leer">
+  <div class="ic"><svg class="i" viewBox="0 0 24 24">${ic || '<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'}</svg></div>
+  <h3>${esc(t)}</h3><p>${esc(p)}</p></div></div>`;
+
+const STATUS_MARKE = {
+  geplant: ['geplant', 'm-n'], bestaetigt: ['bestaetigt', 'm-p'],
+  provisorisch: ['provisorisch', 'm-w'], abgesagt: ['abgesagt', 'm-x']
+};
+const ZUSAGE_MARKE = { zugesagt: ['zugesagt', 'm-p'], abgelehnt: ['abgelehnt', 'm-x'], offen: ['offen', 'm-n'] };
+
+// Eine Schichtkarte. Die Zeit steht vorne und gross -- danach wird draussen
+// zuerst gesucht.
+function schichtKarte(e, mitDatum) {
+  const bal = e.status === 'abgesagt' ? 'ab' : (e.status === 'provisorisch' ? 'prov' : (e.status === 'bestaetigt' ? 'best' : ''));
+  const st = STATUS_MARKE[e.status] || STATUS_MARKE.geplant;
+  const zu = ZUSAGE_MARKE[e.zusage] || ZUSAGE_MARKE.offen;
+  return `<div class="karte">
+    <button class="schicht" onclick="blattAuf(${Number(e.id)})">
+      <div class="oben">
+        <span class="balken ${bal}"></span>
+        <span class="zeit">${hm(e.von)}<br>${hm(e.bis)}${ueberNacht(e) ? `<span class="folgetag">${esc(w('folgetag'))}</span>` : ''}</span>
+        <span class="was">
+          <b>${esc(e.titel || e.kunde_name)}</b>
+          <span>${esc(e.ort)}${e.strasse ? ' · ' + esc(e.strasse) : ''}</span>
+          ${mitDatum ? `<span>${esc(WOCHENTAG[sprache][new Date(tagVon(e) + 'T12:00:00').getDay()])}, ${dmy(e.datum)}</span>` : ''}
+        </span>
+      </div>
+    </button>
+    <div class="fuss">
+      <span class="marke ${st[1]}">${esc(w(st[0]))}</span>
+      ${e.status !== 'abgesagt' ? `<span class="marke ${zu[1]}">${esc(w(zu[0]))}</span>` : ''}
+      ${Number(e.im_team) > 1 ? `<span class="marke m-n">${Number(e.im_team)} ${esc(w('imTeam'))}</span>` : ''}
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════ HEUTE
+function zeichneHeute() {
+  const heute = isoTag();
+  const jetzt = Date.now();
+  // Eine Nachtschicht von gestern gehört noch zu heute, solange sie läuft.
+  const laufend = schichten.filter(e => {
+    const sp = spanne(e.datum, e.von, e.bis);
+    return sp && sp[0] <= jetzt && jetzt < sp[1];
+  });
+  const heutige = schichten.filter(e => tagVon(e) === heute);
+  const zeigen = [...new Set([...laufend, ...heutige])]
+    .sort((a, b) => (spanne(a.datum, a.von, a.bis) || [0])[0] - (spanne(b.datum, b.von, b.bis) || [0])[0]);
+
+  let html = '';
+  if (!zeigen.length) {
+    html = LEER(w('keineHeute'), w('keineHeuteText'), '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>');
+    const naechste = schichten
+      .filter(e => e.status !== 'abgesagt' && (spanne(e.datum, e.von, e.bis) || [0])[0] > jetzt)
+      .sort((a, b) => (spanne(a.datum, a.von, a.bis) || [0])[0] - (spanne(b.datum, b.von, b.bis) || [0])[0])[0];
+    if (naechste) html += `<div class="titel">${esc(w('naechste'))}</div>` + schichtKarte(naechste, true);
+  } else {
+    zeigen.forEach(e => {
+      const sp = spanne(e.datum, e.von, e.bis);
+      const laeuft = sp && sp[0] <= jetzt && jetzt < sp[1];
+      const bald = sp && sp[0] > jetzt && sp[0] - jetzt < 3 * 3600e3;
+      if (laeuft) html += `<div class="titel" style="color:var(--pos)">● ${esc(w('jetztLaeuft'))}</div>`;
+      else if (bald) html += `<div class="titel" style="color:var(--accent)">${esc(w('gleich'))}</div>`;
+      html += schichtKarte(e, tagVon(e) !== heute);
+    });
+  }
+  $('v-heute').innerHTML = html;
+}
+
+// ══════════════════════════════════════════ PLAN
+function zeichnePlan() {
+  const heute = isoTag();
+  const kommend = schichten.filter(e => tagVon(e) >= heute)
+    .sort((a, b) => tagVon(a).localeCompare(tagVon(b)) || String(a.von).localeCompare(String(b.von)));
+  if (!kommend.length) {
+    $('v-plan').innerHTML = LEER(w('keinePlan'), w('keinePlanText'),
+      '<rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/>');
+    return;
+  }
+  let letzter = '', html = '';
+  kommend.forEach(e => {
+    const tag = tagVon(e);
+    if (tag !== letzter) {
+      letzter = tag;
+      const amTag = kommend.filter(x => tagVon(x) === tag && x.status !== 'abgesagt');
+      const wd = WOCHENTAG[sprache][new Date(tag + 'T12:00:00').getDay()];
+      html += `<div class="tag-kopf">
+        <span>${esc(wd)}</span><b>${dmy(tag)}</b>
+        ${tag === heute ? `<span class="marke m-a">${esc(w('heute'))}</span>` : ''}
+        <span class="sp"></span>
+        <span class="anz">${amTag.length} ${esc(amTag.length === 1 ? w('schicht') : w('schichten'))}</span>
+      </div>`;
+    }
+    html += schichtKarte(e, false);
+  });
+  $('v-plan').innerHTML = html;
+}
+
+// ══════════════════════════════════════════ RAPPORT
+function zeichneRapport() {
+  let html = `<div class="zahlen">
+      <div class="zahl"><b>${nf(monat.anzahl)}</b><span>${esc(w('einsaetze'))}</span></div>
+      <div class="zahl"><b>${nf(monat.stunden, 1)}</b><span>${esc(w('stunden'))}</span></div>
+    </div>
+    <a class="btn btn-primary btn-wide" href="index.html" style="margin-bottom:8px">
+      <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      ${esc(w('neuerRapport'))}
+    </a>
+    <p style="font-size:13px;color:var(--ink-3);text-align:center;margin-bottom:6px">${esc(w('zurErfassung'))}</p>
+    <div class="titel">${esc(w('meineRapporte'))}</div>`;
+
+  if (!rapporte.length) {
+    html += LEER(w('keineRapporte'), w('keineRapporteText'),
+      '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>');
+  } else {
+    html += rapporte.slice(0, 40).map(r => `<div class="karte"><div class="oben" style="display:flex;gap:14px;padding:16px">
+        <span class="zeit" style="font-size:16px">${dmy(r.datum)}</span>
+        <span class="was" style="flex:1;min-width:0">
+          <b>${esc(r.kunde)}</b>
+          <span>${esc(r.ort)} · ${hm(r.von)}–${hm(r.bis)}</span>
+        </span>
+        <span class="marke m-p">${nf(r.netto_h, 2)} h</span>
+      </div></div>`).join('');
+  }
+  $('v-rapport').innerHTML = html;
+}
+
+// ══════════════════════════════════════════ PROFIL
+function zeichneProfil() {
+  const p = profil || {};
+  const zeile = (k, v) => v ? `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>` : '';
+  $('v-profil').innerHTML = `
+    <div class="karte"><div class="karte-bd" style="display:flex;align-items:center;gap:14px">
+      <div class="kreis" style="width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700">${esc(initialen(vollerName(p) || (ich && ich.name)))}</div>
+      <div style="min-width:0">
+        <div style="font-size:18px;font-weight:700;letter-spacing:-.3px">${esc(vollerName(p) || (ich && ich.name) || '–')}</div>
+        <div style="font-size:13px;color:var(--ink-3)">${esc(w('anmeldename'))}: ${esc(p.name || (ich && ich.name) || '–')}</div>
+      </div>
+    </div></div>
+
+    <div class="titel">${esc(w('diesenMonat'))}</div>
+    <div class="zahlen">
+      <div class="zahl"><b>${nf(monat.anzahl)}</b><span>${esc(w('einsaetze'))}</span></div>
+      <div class="zahl"><b>${nf(monat.stunden, 1)}</b><span>${esc(w('stunden'))}</span></div>
+    </div>
+
+    <div class="karte"><div class="karte-bd"><dl class="dl">
+      ${zeile(w('persNr'), p.personalnummer)}
+      ${zeile(w('geburtsdatum'), p.geburtsdatum ? dmy(p.geburtsdatum) : '')}
+      ${zeile(w('adresse'), [p.strasse, p.ort].filter(Boolean).join(', '))}
+      ${zeile(w('telefon'), p.telefon)}
+      ${zeile(w('mobil'), p.mobil)}
+      ${zeile(w('email'), p.email)}
+    </dl>
+    <p style="font-size:13px;color:var(--ink-3);margin-top:14px">${esc(w('datenHinweis'))}</p>
+    </div></div>
+
+    <div class="titel">${esc(w('sprache'))}</div>
+    <div class="karte"><div class="karte-bd" style="display:flex;gap:10px">
+      <button class="btn ${sprache === 'de' ? 'btn-primary' : 'btn-plain'}" style="flex:1" onclick="setzeSprache('de')">Deutsch</button>
+      <button class="btn ${sprache === 'sq' ? 'btn-primary' : 'btn-plain'}" style="flex:1" onclick="setzeSprache('sq')">Shqip</button>
+    </div></div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
+      <button class="btn btn-plain btn-wide" onclick="passwortBlatt()">${esc(w('passwortAendern'))}</button>
+      ${p.ist_admin ? `<a class="btn btn-plain btn-wide" href="dashboard.html">Cockpit</a>` : ''}
+      <button class="btn btn-plain btn-wide" style="color:var(--neg)" onclick="abmelden()">${esc(w('abmelden'))}</button>
+    </div>`;
+}
+
+// ══════════════════════════════════════════ BLATT
+function blattAuf(id) {
+  const e = schichten.find(x => Number(x.id) === Number(id));
+  if (!e) return;
+  blattId = Number(id);
+  const st = STATUS_MARKE[e.status] || STATUS_MARKE.geplant;
+  const zu = ZUSAGE_MARKE[e.zusage] || ZUSAGE_MARKE.offen;
+  const wd = WOCHENTAG[sprache][new Date(tagVon(e) + 'T12:00:00').getDay()];
+
+  $('blTitel').textContent = e.titel || e.kunde_name;
+  $('blBody').innerHTML = `
+    ${e.status === 'abgesagt' ? `<div class="msg-err">${esc(w('abgesagtHinweis'))}</div>` : ''}
+    ${e.status === 'provisorisch' ? `<div class="msg-err" style="color:var(--warn);background:var(--warn-soft)">${esc(w('provisorischHinweis'))}</div>` : ''}
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:16px">
+      <div style="font-size:30px;font-weight:730;letter-spacing:-1px">${hm(e.von)}–${hm(e.bis)}</div>
+      ${ueberNacht(e) ? `<div style="font-size:12.5px;color:var(--ink-3);font-weight:620">${esc(w('folgetag'))}</div>` : ''}
+    </div>
+    <dl class="dl">
+      <dt>${esc(w('zeit'))}</dt><dd>${esc(wd)}, ${dmy(e.datum)}</dd>
+      <dt>${esc(w('kunde'))}</dt><dd>${esc(e.kunde_name)}</dd>
+      ${e.objekt_name ? `<dt>${esc(w('objekt'))}</dt><dd>${esc(e.objekt_name)}</dd>` : ''}
+      <dt>${esc(w('arbeitsort'))}</dt><dd>${e.strasse ? esc(e.strasse) + '<br>' : ''}${esc(e.ort)}</dd>
+      <dt>${esc(w('einsatzart'))}</dt><dd>${esc(e.einsatzart)}</dd>
+      <dt>Status</dt><dd><span class="marke ${st[1]}">${esc(w(st[0]))}</span> <span class="marke ${zu[1]}">${esc(w(zu[0]))}</span></dd>
+      ${Number(e.im_team) > 1 ? `<dt>${esc(w('schicht'))}</dt><dd>${Number(e.im_team)} ${esc(w('imTeam'))}</dd>` : ''}
+      ${e.bemerkung ? `<dt>${esc(w('bemerkung'))}</dt><dd>${esc(e.bemerkung)}</dd>` : ''}
+    </dl>`;
+
+  // Rückmeldung ist freiwillig -- die Einteilung bleibt so oder so bestehen.
+  $('blFuss').innerHTML = e.status === 'abgesagt' ? `
+    <button class="btn btn-plain" onclick="blattZu()">${esc(w('schliessen'))}</button>` : `
+    <button class="btn ${e.zusage === 'abgelehnt' ? 'btn-neg' : 'btn-plain'}" onclick="melden('abgelehnt')">${esc(w('ablehnen'))}</button>
+    <button class="btn ${e.zusage === 'zugesagt' ? 'btn-pos' : 'btn-primary'}" onclick="melden('zugesagt')">${esc(w('zusagen'))}</button>`;
+  blattZeigen();
+}
+
+function melden(zusage) {
+  if (!blattId) return;
+  api('meine_zusage.php', { method: 'POST', body: { einsatz_id: blattId, zusage } }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { toast(data.message || w('netzfehler')); return; }
+    const e = schichten.find(x => Number(x.id) === blattId);
+    if (e) e.zusage = zusage;
+    blattZu();
+    zeichne();
+    toast(w('gemeldet'));
+  });
+}
+
+function passwortBlatt() {
+  blattId = null;
+  $('blTitel').textContent = w('passwortAendern');
+  $('blBody').innerHTML = `
+    <div class="msg-err" id="pwErr" style="display:none"></div>
+    <div class="f"><label for="pwAlt">${esc(w('altesPasswort'))}</label><input class="inp" id="pwAlt" type="password" autocomplete="current-password"></div>
+    <div class="f"><label for="pwNeu">${esc(w('neuesPasswort'))}</label><input class="inp" id="pwNeu" type="password" placeholder="${esc(w('mind6'))}" autocomplete="new-password"></div>`;
+  $('blFuss').innerHTML = `
+    <button class="btn btn-plain" onclick="blattZu()">${esc(w('abbrechen'))}</button>
+    <button class="btn btn-primary" id="pwBtn" onclick="passwortSpeichern()">${esc(w('speichern'))}</button>`;
+  blattZeigen();
+}
+function passwortSpeichern() {
+  const err = $('pwErr'); err.style.display = 'none';
+  const alt = $('pwAlt').value, neu = $('pwNeu').value;
+  if (neu.length < 6) { err.textContent = w('mind6'); err.style.display = ''; return; }
+  const b = $('pwBtn'); b.disabled = true;
+  api('mein_passwort.php', { method: 'POST', body: { alt, neu } }).then(({ ok, data }) => {
+    b.disabled = false;
+    if (!ok || data.status !== 'ok') { err.textContent = data.message || w('netzfehler'); err.style.display = ''; return; }
+    blattZu();
+    toast(w('passwortOk'));
+  });
+}
+
+function blattZeigen() {
+  $('abdunkeln').classList.add('on');
+  $('blatt').classList.add('on');
+  $('blatt').setAttribute('aria-hidden', 'false');
+}
+function blattZu() {
+  $('abdunkeln').classList.remove('on');
+  $('blatt').classList.remove('on');
+  $('blatt').setAttribute('aria-hidden', 'true');
+  blattId = null;
+}
+
+// ══════════════════════════════════════════ START
+document.addEventListener('keydown', e => { if (e.key === 'Escape') blattZu(); });
+$('gPass').addEventListener('keydown', e => { if (e.key === 'Enter') anmelden(); });
+$('gName').addEventListener('keydown', e => { if (e.key === 'Enter') $('gPass').focus(); });
+
+setzeSprache(sprache);
+if (token && ich) starten();
+</script>
+</body>
+</html>
