@@ -425,6 +425,50 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .vs-liste .z .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vs-liste .z .zt { color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+
+/* Objektplanung — Tagesstreifen, Schicht- und Mitarbeiterraster */
+.opl-kopf { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.opl-kopf .nm { font-size: 19px; font-weight: 700; letter-spacing: -.4px; }
+.opl-kopf .sub { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+.opl-zahl { text-align: right; }
+.opl-zahl b { display: block; font-size: 19px; font-weight: 700; letter-spacing: -.4px; font-variant-numeric: tabular-nums; }
+.opl-zahl span { font-size: 11px; font-weight: 650; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-3); }
+.opl-zahl.offen b { color: var(--neg); }
+.opl-zahl.voll b { color: var(--pos); }
+
+.gr { overflow-x: auto; }
+.gr table { border-collapse: separate; border-spacing: 0; width: 100%; }
+.gr th, .gr td { border-bottom: 1px solid var(--line-soft); }
+.gr th.lb, .gr td.lb {
+  position: sticky; left: 0; z-index: 2; background: var(--surface);
+  min-width: 190px; max-width: 220px; border-right: 1px solid var(--line);
+  padding: 7px 14px; text-align: left;
+}
+.gr thead th { background: #FBFCFD; padding: 5px 2px; font-size: 10px; font-weight: 700; color: var(--ink-3); text-align: center; }
+.gr thead th.lb { z-index: 3; }
+.gr thead th .wd { display: block; font-size: 9px; font-weight: 600; opacity: .75; }
+.gr thead th.we { color: var(--ink-2); background: #F3F5F8; }
+.gr thead th.fei { color: var(--warn); background: var(--warn-soft); }
+.gr thead th.heute { color: var(--accent); background: var(--accent-soft); }
+.gr td.d { text-align: center; padding: 3px 2px; vertical-align: top; }
+.gr td.d.we { background: #FBFCFD; }
+.gr td.d.fei { background: #FDFAF2; }
+.gr td.lb b { display: block; font-size: 12.5px; font-weight: 620; }
+.gr td.lb span { display: block; font-size: 11px; color: var(--ink-3); }
+.gr .stand { display: inline-flex; min-width: 30px; height: 20px; padding: 0 4px; border-radius: 4px; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; border: none; font-family: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
+.gr .s-voll { background: var(--pos-soft); color: var(--pos); }
+.gr .s-teil { background: var(--warn-soft); color: var(--warn); }
+.gr .s-leer { background: var(--neg-soft); color: var(--neg); }
+.gr .s-prov { background: var(--accent-soft); color: var(--accent); }
+.gr .s-ab   { background: var(--line-soft); color: var(--ink-3); text-decoration: line-through; }
+.gr .s-nix  { color: #D8DCE2; cursor: default; background: transparent; }
+.gr .blk { display: block; border-radius: 4px; padding: 2px 3px; margin-bottom: 2px; font-size: 9.5px; font-weight: 700; line-height: 1.3; border: none; font-family: inherit; cursor: pointer; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.gr .blk.prov { background: var(--warn-soft); color: var(--warn); }
+.gr .blk.ab { background: var(--line-soft); color: var(--ink-3); text-decoration: line-through; }
+.gr tr.leerzeile td.lb b { color: var(--ink-3); font-weight: 550; }
+.gr td.sum { position: sticky; right: 0; background: var(--surface); border-left: 1px solid var(--line); padding: 7px 12px; text-align: right; font-size: 11.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gr thead th.sum { background: #FBFCFD; }
+
 /* ══════════════════════════════════════════ RESPONSIV */
 @media (max-width: 1180px) {
   .g-kpi { grid-template-columns: repeat(2, 1fr); }
@@ -613,6 +657,7 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
         <div class="tabs">
           <button class="tab on" id="ptab-uebersicht" onclick="goTab('uebersicht')">Übersicht</button>
           <button class="tab" id="ptab-einsaetze" onclick="goTab('einsaetze')">Einsätze</button>
+          <button class="tab" id="ptab-objektplan" onclick="goTab('objektplan')">Objektplanung</button>
           <button class="tab" id="ptab-objekte" onclick="goTab('objekte')">Objekte</button>
           <button class="tab" id="ptab-tag" onclick="goTab('tag')">Tagesplan</button>
         </div>
@@ -677,6 +722,27 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
           </button>
         </div>
         <div class="card"><div class="card-bd flush"><div class="tw" id="plTable"></div></div></div>
+        </div>
+
+        <!-- ── Reiter: Objektplanung ── -->
+        <div class="ptab" id="pv-objektplan">
+          <div class="bar-tools">
+            <select class="inp" id="oplObjekt" style="width:auto;max-width:280px" onchange="renderObjektplan()"></select>
+            <input class="inp" type="month" id="oplM" style="width:auto" onchange="renderObjektplan()">
+            <button class="btn btn-quiet btn-sm" onclick="oplSchieben(-1)">‹ Vormonat</button>
+            <button class="btn btn-quiet btn-sm" onclick="oplHeute()">Heute</button>
+            <button class="btn btn-quiet btn-sm" onclick="oplSchieben(1)">Folgemonat ›</button>
+            <div class="sp" style="flex:1"></div>
+            <button class="btn btn-plain btn-sm" onclick="oplStammdaten()">
+              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span class="lbl">Masterschichten</span>
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="oplErzeugen()">
+              <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Schichten erzeugen
+            </button>
+          </div>
+          <div id="oplBody"></div>
         </div>
 
         <!-- ── Reiter: Objekte (Daueraufträge) ── -->
@@ -1110,6 +1176,8 @@ let msTarget = null;   // offene Masterschicht (id)
 let msModus = 'neu';
 let msAlle = false;    // auch abgelaufene Fassungen zeigen
 let vsObjekt = null;   // Objekt der offenen Vorschau
+let oplId = null;      // Objekt der Objektplanung
+let oplMs = [];        // dessen Masterschichten
 let pTab = 'uebersicht';
 let kiMode = 'neu';
 const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email'];
@@ -1287,6 +1355,7 @@ function loadEinsaetze() {
     renderPlanung();
     if ($('pv-uebersicht').classList.contains('on')) renderMatrix();
     if ($('pv-tag').classList.contains('on')) renderTagesplan();
+    if ($('pv-objektplan').classList.contains('on')) renderObjektplan();
   });
 }
 
@@ -1889,11 +1958,19 @@ function goTab(t) {
   $('pgCrumb').textContent = TAB_CRUMB[t] || '';
   if (t === 'uebersicht') renderMatrix();
   if (t === 'einsaetze') renderPlanung();
+  if (t === 'objektplan') {
+    if (!$('oplM').value) $('oplM').value = $('mxM').value || isoTag().slice(0, 7);
+    oplAuswahl();
+    // Immer nachladen: die Vorlagen können sich seit dem letzten Blick geändert
+    // haben, und ohne sie fehlt der ganze Schichtblock.
+    ladeOplMs().then(renderObjektplan);
+  }
   if (t === 'objekte') objekte.length ? renderObjekte() : loadObjekte();
   if (t === 'tag') renderTagesplan();
 }
 const TAB_CRUMB = {
   uebersicht: 'Besetzung im Monat',
+  objektplan: 'Ein Objekt im Detail planen',
   einsaetze:  'Alle geplanten Einsätze',
   objekte:    'Daueraufträge und ihre Masterschichten',
   tag:        'Der Tag im Detail'
@@ -2368,6 +2445,226 @@ function planungEinrichten() {
   });
 }
 
+// ══════════════════════════════════════════ OBJEKTPLANUNG
+// Ein Objekt im Monat: Besetzung gesamt, je Masterschicht und je Person.
+// Alles in EINER Tabelle, damit die drei Blöcke beim Scrollen zueinander
+// ausgerichtet bleiben.
+function zumObjektplan(id) {
+  oplId = Number(id);
+  if (!$('oplM').value) $('oplM').value = $('mxM').value || isoTag().slice(0, 7);
+  goTab('objektplan');
+}
+function oplSchieben(n) {
+  const m = $('oplM').value || isoTag().slice(0, 7);
+  const [j, mo] = m.split('-').map(Number);
+  $('oplM').value = isoTag(new Date(j, mo - 1 + n, 1)).slice(0, 7);
+  renderObjektplan();
+}
+function oplHeute() { $('oplM').value = isoTag().slice(0, 7); renderObjektplan(); }
+function oplStammdaten() { if (oplId) openObjekt(oplId); }
+function oplErzeugen() { if (oplId) openVorschau(oplId); }
+
+function oplAuswahl() {
+  const sel = $('oplObjekt');
+  const liste = objekte.filter(o => o.aktiv || Number(o.id) === Number(oplId));
+  if (!liste.length) { sel.innerHTML = '<option value="">— kein Objekt —</option>'; oplId = null; return; }
+  if (!oplId || !liste.some(o => Number(o.id) === Number(oplId))) oplId = Number(liste[0].id);
+  sel.innerHTML = liste.map(o =>
+    `<option value="${Number(o.id)}"${Number(o.id) === Number(oplId) ? ' selected' : ''}>${esc(o.name)}</option>`).join('');
+}
+
+function ladeOplMs() {
+  if (!oplId) { oplMs = []; return Promise.resolve(); }
+  // "alle=1": auch abgelaufene und künftige Fassungen, damit ein vergangener
+  // Monat mit der Fassung gezeigt wird, die damals galt.
+  return api('masterschicht_list.php?objekt_id=' + oplId + '&alle=1').then(({ ok, data }) => {
+    oplMs = (ok && data.status === 'ok') ? (data.masterschichten || []) : [];
+  });
+}
+
+function renderObjektplan() {
+  const gewaehlt = Number($('oplObjekt').value) || null;
+  if (gewaehlt && gewaehlt !== oplId) {   // Objekt gewechselt → Vorlagen neu holen
+    oplId = gewaehlt;
+    ladeOplMs().then(renderObjektplan);
+    return;
+  }
+  const o = objekte.find(x => Number(x.id) === Number(oplId));
+  if (!o) {
+    $('oplBody').innerHTML = `<div class="card"><div class="card-bd">` + EMPTY('Kein Objekt gewählt',
+      'Objekte legst du im Reiter „Objekte“ an. Danach lässt sich hier jedes einzeln planen.') + `</div></div>`;
+    return;
+  }
+
+  const m = $('oplM').value || isoTag().slice(0, 7);
+  const [jahr, mon] = m.split('-').map(Number);
+  if (!jahr || !mon) return;
+  const heute = isoTag();
+  const tage = Array.from({ length: new Date(jahr, mon, 0).getDate() },
+    (_, i) => `${m}-${String(i + 1).padStart(2, '0')}`);
+
+  // ── Einsätze dieses Objekts im Monat einsortieren
+  const proTag = {}, proMs = {}, proMa = {};
+  einsaetze.forEach(e => {
+    if (Number(e.objekt_id) !== Number(oplId)) return;
+    const d = tagVon(e);
+    if (!d.startsWith(m)) return;
+    (proTag[d] = proTag[d] || []).push(e);
+    (proMs[(e.masterschicht_id || 0) + '|' + d] = proMs[(e.masterschicht_id || 0) + '|' + d] || []).push(e);
+    (e.mitarbeiter || []).forEach(p => {
+      const k = p.id + '|' + d;
+      (proMa[k] = proMa[k] || []).push(e);
+    });
+  });
+
+  // Stunden je Einsatz: die effektive Arbeitszeit der Masterschicht, sonst die
+  // Bruttodauer. Reiner Planungswert -- keine Lohngrundlage.
+  const nachId = {};
+  oplMs.forEach(x => { nachId[x.id] = x; });
+  let brutto = false;
+  const std = e => {
+    const ms = nachId[e.masterschicht_id];
+    if (ms) return Number(ms.arbeitszeit_h);
+    brutto = true;
+    const sp = spanne(e.datum, e.von, e.bis);
+    return sp ? (sp[1] - sp[0]) / 36e5 : 0;
+  };
+
+  // ── Kennzahlen
+  let hGeplant = 0, hBesetzt = 0, stellenOffen = 0;
+  Object.values(proTag).flat().forEach(e => {
+    if (e.status === 'abgesagt') return;
+    const h = std(e);
+    hGeplant += h * Number(e.bedarf);
+    hBesetzt += h * (e.mitarbeiter || []).length;
+    stellenOffen += fehlend(e);
+  });
+  const hOffen = Math.max(0, hGeplant - hBesetzt);
+
+  // ── Kopfzeilen der Tage
+  const kopf = tage.map(d => {
+    const wd = new Date(d + 'T12:00:00').getDay();
+    const kl = [d === heute ? 'heute' : '', feiertage[d] ? 'fei' : (wd === 0 || wd === 6 ? 'we' : '')].filter(Boolean).join(' ');
+    return `<th class="${kl}" title="${esc(dmy(d) + (feiertage[d] ? ' — ' + feiertage[d].name : ''))}">${Number(d.slice(8))}<span class="wd">${WD[wd].slice(0, 2)}</span></th>`;
+  }).join('');
+  const tagKl = d => {
+    const wd = new Date(d + 'T12:00:00').getDay();
+    return feiertage[d] ? 'fei' : (wd === 0 || wd === 6 ? 'we' : '');
+  };
+  const gruppe = titel =>
+    `<tr class="grp"><td colspan="${tage.length + 2}"><div style="position:sticky;left:0;display:inline-block" class="grp-in"><b>${titel}</b></div></td></tr>`;
+
+  // ── Zeile: Besetzung gesamt
+  const gesamtZeile = `<tr>
+    <td class="lb"><b>Alle Schichten</b><span>Besetzung je Tag</span></td>` +
+    tage.map(d => {
+      const liste = proTag[d] || [];
+      const st = zellenStand(liste);
+      const t = liste.length
+        ? dmy(d) + '\n' + liste.map(e => `${hm(e.von)}–${hm(e.bis)} ${e.titel || ''} — ${(e.mitarbeiter || []).length}/${e.bedarf}`).join('\n')
+        : dmy(d) + ' — nichts geplant';
+      return `<td class="d ${tagKl(d)}">` + (liste.length
+        ? (() => {
+            const aktiv = liste.filter(e => e.status !== 'abgesagt');
+            const txt = aktiv.length
+              ? aktiv.reduce((a, e) => a + (e.mitarbeiter || []).length, 0) + '/' + aktiv.reduce((a, e) => a + Number(e.bedarf), 0)
+              : '–';
+            return `<button class="stand ${st.klasse.replace('z-', 's-')}" title="${esc(t)}" onclick="zumTag('${d}')">${txt}</button>`;
+          })()
+        : `<span class="stand s-nix">·</span>`) + `</td>`;
+    }).join('') +
+    `<td class="sum"><b>${nf(hBesetzt, 2)}</b> / ${nf(hGeplant, 2)} h</td></tr>`;
+
+  // ── Zeilen je Masterschicht (nur die im Monat gültigen)
+  const gueltig = oplMs.filter(x =>
+    String(x.gueltig_ab).slice(0, 10) <= tage[tage.length - 1] &&
+    (!x.gueltig_bis || String(x.gueltig_bis).slice(0, 10) >= tage[0]));
+
+  const msZeilen = gueltig.length ? gueltig.map(x => {
+    let hZeile = 0;
+    const zellen = tage.map(d => {
+      const liste = proMs[x.id + '|' + d] || [];
+      const aktiv = liste.filter(e => e.status !== 'abgesagt');
+      hZeile += aktiv.reduce((a, e) => a + Number(x.arbeitszeit_h) * (e.mitarbeiter || []).length, 0);
+      if (!liste.length) return `<td class="d ${tagKl(d)}"><span class="stand s-nix">·</span></td>`;
+      const st = zellenStand(liste);
+      const zug = aktiv.reduce((a, e) => a + (e.mitarbeiter || []).length, 0);
+      const bed = aktiv.reduce((a, e) => a + Number(e.bedarf), 0);
+      return `<td class="d ${tagKl(d)}"><button class="stand ${st.klasse.replace('z-', 's-')}" title="${esc(dmy(d) + ' — ' + x.name)}" onclick="openEinsatz(${Number(liste[0].id)})">${aktiv.length ? zug + '/' + bed : '–'}</button></td>`;
+    }).join('');
+    return `<tr>
+      <td class="lb"><b>${x.kuerzel ? esc(x.kuerzel) + ' · ' : ''}${esc(x.name)}</b><span>${hm(x.von)}–${hm(x.bis)} · ${nf(x.arbeitszeit_h, 2)} h${x.art === 'fahrtzeit' ? ' · Fahrtzeit' : ''}${x.auf_abruf ? ' · auf Abruf' : ''}</span></td>
+      ${zellen}<td class="sum">${nf(hZeile, 2)} h</td></tr>`;
+  }).join('') : `<tr class="leerzeile"><td class="lb"><b>Keine Masterschicht</b></td><td class="d" colspan="${tage.length + 1}" style="text-align:left;padding-left:14px;color:var(--ink-3);font-size:12.5px">In diesem Monat gilt keine Vorlage — ohne Vorlage entsteht keine Schicht.</td></tr>`;
+
+  // ── Zeilen je Mitarbeitendem: erst die eingeteilten, dann die übrigen
+  const mitStunden = mitarbeiter.map(p => {
+    let h = 0, tageMit = 0;
+    tage.forEach(d => {
+      const liste = (proMa[p.id + '|' + d] || []).filter(e => e.status !== 'abgesagt');
+      if (liste.length) tageMit++;
+      h += liste.reduce((a, e) => a + std(e), 0);
+    });
+    return { p, h, tageMit };
+  }).sort((a, b) => b.h - a.h || String(fullName(a.p)).localeCompare(String(fullName(b.p))));
+
+  const maZeilen = mitStunden.map(({ p, h, tageMit }) => {
+    const zellen = tage.map(d => {
+      const liste = proMa[p.id + '|' + d] || [];
+      if (!liste.length) return `<td class="d ${tagKl(d)}"></td>`;
+      return `<td class="d ${tagKl(d)}">` + liste.map(e => {
+        const kl = e.status === 'abgesagt' ? ' ab' : (e.status === 'provisorisch' ? ' prov' : '');
+        const ms = nachId[e.masterschicht_id];
+        const txt = ms && ms.kuerzel ? esc(ms.kuerzel) : hm(e.von);
+        return `<button class="blk${kl}" title="${esc(dmy(d) + ' ' + hm(e.von) + '–' + hm(e.bis) + ' ' + (e.titel || ''))}" onclick="openEinsatz(${Number(e.id)})">${txt}</button>`;
+      }).join('') + `</td>`;
+    }).join('');
+    return `<tr${h ? '' : ' class="leerzeile"'}>
+      <td class="lb"><b>${esc(fullName(p) || p.name)}</b><span>${h ? `${tageMit} ${tageMit === 1 ? 'Tag' : 'Tage'}` : 'nicht eingeteilt'}</span></td>
+      ${zellen}<td class="sum">${h ? nf(h, 2) + ' h' : '<span style="color:var(--ink-3)">–</span>'}</td></tr>`;
+  }).join('');
+
+  $('oplBody').innerHTML = `
+    <div class="card" style="margin-bottom:16px"><div class="card-bd">
+      <div class="opl-kopf">
+        <div>
+          <div class="nm">${esc(o.name)}</div>
+          <div class="sub">${esc(o.kunde_name)} · ${o.strasse ? esc(o.strasse) + ', ' : ''}${esc(o.ort)} · Kanton ${esc(o.kanton)}${o.aktiv ? '' : ' · stillgelegt'}</div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="opl-zahl"><b>${nf(gueltig.length)}</b><span>Masterschichten</span></div>
+        <div class="opl-zahl"><b>${nf(hGeplant, 2)}</b><span>Stunden geplant</span></div>
+        <div class="opl-zahl voll"><b>${nf(hBesetzt, 2)}</b><span>davon besetzt</span></div>
+        <div class="opl-zahl ${hOffen ? 'offen' : ''}"><b>${nf(hOffen, 2)}</b><span>offen</span></div>
+        <div class="opl-zahl ${stellenOffen ? 'offen' : ''}"><b>${nf(stellenOffen)}</b><span>offene Stellen</span></div>
+      </div>
+    </div>
+    <div class="legende">
+      <span>Stundenwerte dienen der Planung. Sie sind <b>keine</b> Lohn- oder Rechnungsgrundlage${brutto ? ' und enthalten bei Schichten ohne Vorlage keinen Pausenabzug' : ''}.</span>
+    </div></div>
+
+    <div class="card"><div class="card-bd flush"><div class="gr">
+      <table>
+        <thead><tr><th class="lb" style="text-transform:none;font-size:12px;color:var(--ink-2)">${esc(new Date(tage[0] + 'T12:00:00').toLocaleDateString('de-CH', { month: 'long', year: 'numeric' }))}</th>${kopf}<th class="sum">Stunden</th></tr></thead>
+        <tbody>
+          ${gruppe('Besetzung gesamt')}
+          ${gesamtZeile}
+          ${gruppe('Schichten')}
+          ${msZeilen}
+          ${gruppe('Mitarbeitende')}
+          ${maZeilen}
+        </tbody>
+      </table>
+    </div></div>
+    <div class="legende">
+      <span><i style="background:var(--pos-soft)"></i>voll besetzt</span>
+      <span><i style="background:var(--warn-soft)"></i>teilweise</span>
+      <span><i style="background:var(--neg-soft)"></i>niemand eingeteilt</span>
+      <span><i style="background:var(--accent-soft)"></i>provisorisch</span>
+      <span style="margin-left:auto">Klick auf eine Zelle öffnet die Schicht.</span>
+    </div></div>`;
+}
+
 // ══════════════════════════════════════════ MONATSÜBERSICHT
 function mxSchieben(n) {
   const m = $('mxM').value || isoTag().slice(0, 7);
@@ -2409,9 +2706,9 @@ function renderMatrix() {
   });
 
   const zeilen = objekte.filter(o => o.aktiv || nachObjekt['o' + o.id])
-    .map(o => ({ schluessel: 'o' + o.id, titel: o.name, unter: o.kunde_name + ' · ' + o.ort }));
+    .map(o => ({ schluessel: 'o' + o.id, id: Number(o.id), titel: o.name, unter: o.kunde_name + ' · ' + o.ort }));
   if (nachObjekt['einzel']) {
-    zeilen.push({ schluessel: 'einzel', titel: 'Einzeleinsätze', unter: 'ohne festes Objekt' });
+    zeilen.push({ schluessel: 'einzel', id: null, titel: 'Einzeleinsätze', unter: 'ohne festes Objekt' });
   }
 
   if (!zeilen.length) {
@@ -2442,7 +2739,12 @@ function renderMatrix() {
           : `<span class="zelle z-nix" title="${esc(titel)}">·</span>`) +
         `</td>`;
     }).join('');
-    return `<tr><td class="obj"><b>${esc(z.titel)}</b><span>${esc(z.unter)}</span></td>${zellen}</tr>`;
+    // Der Objektname führt in die Objektplanung -- dort wird ein Objekt im
+    // Monat gezielt besetzt.
+    const beschriftung = z.id
+      ? `<button class="btn btn-quiet btn-sm" style="padding:0;text-align:left;display:block;width:100%" onclick="zumObjektplan(${z.id})" title="Objekt planen"><b style="display:block;font-size:13px;font-weight:620">${esc(z.titel)}</b><span style="display:block;font-size:11.5px;color:var(--ink-3);font-weight:400">${esc(z.unter)}</span></button>`
+      : `<b>${esc(z.titel)}</b><span>${esc(z.unter)}</span>`;
+    return `<tr><td class="obj">${beschriftung}</td>${zellen}</tr>`;
   }).join('');
 
   $('mxTable').innerHTML = `<table><thead><tr><th class="obj">Objekt</th>${kopf}</tr></thead><tbody>${koerper}</tbody></table>`;
