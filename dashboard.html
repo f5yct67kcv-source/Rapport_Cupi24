@@ -50,6 +50,10 @@
   --nix:        #D8DCE2;   /* der Punkt fuer "hier ist nichts" */
   --we-bg:      #F3F5F8;   /* Wochenende im Raster */
   --fei-bg:     #FDFAF2;   /* Feiertag im Raster */
+  /* Rasterlinie der Monatsmatrix. Bewusst halbdurchsichtig statt einer festen
+     Farbe: so dunkelt sie ab, was darunter liegt, und bleibt damit auch auf
+     den eingefaerbten Feldern sichtbar (ENT-036). */
+  --mx-linie:   rgba(20, 26, 38, .17);
   --glas:       rgba(255,255,255,.86);   /* Milchglas der Kopfzeile */
   --neg-hi:     #A82F23;
   --neg-line:   #F3C8C2;   --neg-flaeche: #FEF8F7;
@@ -92,6 +96,9 @@ html[data-thema="dunkel"] {
   --nix:          #3A3F4A;
   --we-bg:        #1A1D24;
   --fei-bg:       #241F14;
+  /* Im Dunkeln hellt die Linie auf, statt abzudunkeln -- eine dunkle Linie
+     waere auf den ohnehin dunklen Farbfeldern unsichtbar (ENT-036). */
+  --mx-linie:     rgba(255, 255, 255, .15);
 
   --ink:          #F2F4F8;
   --ink-2:        #B6BCC8;
@@ -483,7 +490,7 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 /* Klassisches Raster: jede Zelle bekommt zusätzlich eine feine senkrechte
    Linie. Nur rechts und unten, sonst lägen zwischen zwei Zellen zwei
    Linien übereinander und das Raster würde doppelt so grob (ENT-035). */
-.mx th, .mx td { border-bottom: 1px solid var(--line-soft); border-right: 1px solid var(--line-soft); }
+.mx th, .mx td { border-bottom: 1px solid var(--mx-linie); border-right: 1px solid var(--mx-linie); }
 .mx th.obj, .mx td.obj {
   position: sticky; left: 0; z-index: 2; background: var(--surface);
   min-width: 208px; max-width: 240px; border-right: 1px solid var(--line);
