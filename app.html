@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Cockpit</title>
+<title>GuardControl</title>
 <link rel="icon" href="icons/icon-32.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <meta name="theme-color" content="#16181D">
@@ -229,7 +229,7 @@ svg.i-sm { width: 17px; height: 17px; }
 <div id="gate">
   <div class="gate-oben">
     <img src="icons/icon-192.png" alt="">
-    <div class="wm">Cockpit</div>
+    <div class="wm">GuardControl</div>
     <div class="sub">CUPI 24 GmbH</div>
   </div>
   <div class="gate-form">
@@ -338,7 +338,7 @@ const W = {
     telefon: 'Telefon', mobil: 'Mobil', email: 'E-Mail', anmeldename: 'Anmeldename',
     passwortAendern: 'Passwort ändern', altesPasswort: 'Bisheriges Passwort',
     neuesPasswort: 'Neues Passwort', mind6: 'mindestens 6 Zeichen',
-    passwortOk: 'Passwort geändert.', abmelden: 'Abmelden',
+    passwortOk: 'Passwort geändert.', abmelden: 'Abmelden', verwaltung: 'Verwaltung',
     speichern: 'Speichern', abbrechen: 'Abbrechen', schliessen: 'Schliessen',
     datenHinweis: 'Änderungen an deinen Daten macht die Verwaltung.',
     netzfehler: 'Keine Verbindung. Bitte nochmals versuchen.',
@@ -758,7 +758,7 @@ function zeichneProfil() {
 
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
       <button class="btn btn-plain btn-wide" onclick="passwortBlatt()">${esc(w('passwortAendern'))}</button>
-      ${p.ist_admin ? `<a class="btn btn-plain btn-wide" href="dashboard.html">Cockpit</a>` : ''}
+      ${p.ist_admin ? `<a class="btn btn-plain btn-wide" href="dashboard.html">${esc(w('verwaltung'))}</a>` : ''}
       <button class="btn btn-plain btn-wide" style="color:var(--neg)" onclick="abmelden()">${esc(w('abmelden'))}</button>
     </div>`;
 }

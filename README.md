@@ -54,9 +54,12 @@ der Liste. Er markiert Tage — ueber Zuschlaege oder Entschaedigung sagt er
 ausdruecklich nichts aus (siehe GAV-AUS-003 und GAV-AUS-006 im
 Projekt-Repository).
 
-Der Produktname des Dashboards steht noch nicht fest (Arbeitstitel „Cockpit",
-siehe OP-18). Er haengt an der Konstante `APP_NAME` am Anfang des Skriptblocks
-in `dashboard.html` — eine Zeile aendern genuegt.
+Der Produktname ist **GuardControl** (loest den Arbeitstitel „Cockpit" ab,
+siehe OP-18). Im Dashboard haengt er an der Konstante `APP_NAME` am Anfang des
+Skriptblocks in `dashboard.html`; dieselbe Schreibweise steht als statischer
+Rueckfalltext im `<title>` und in den beiden Wasserzeichen, damit vor dem
+Start des Skripts nicht kurz ein anderer Name aufblitzt. In `app.html` steht
+er im `<title>` und im Wasserzeichen der Anmeldung.
 
 ## Deploy
 

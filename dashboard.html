@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cockpit</title>
+<title>GuardControl</title>
 <link rel="icon" href="icons/icon-32.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <meta name="theme-color" content="#16181D">
@@ -797,7 +797,7 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
     <div class="gate-brand">
       <img src="icons/icon-192.png" alt="">
       <div>
-        <div class="wm" id="gateWm">Cockpit</div>
+        <div class="wm" id="gateWm">GuardControl</div>
         <div class="sub">CUPI 24 GmbH</div>
       </div>
     </div>
@@ -835,7 +835,7 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
     <div class="side-brand">
       <img src="icons/icon-192.png" alt="">
       <div class="txt">
-        <div class="wm" id="sideWm">Cockpit</div>
+        <div class="wm" id="sideWm">GuardControl</div>
         <div class="sub">CUPI 24</div>
       </div>
     </div>
@@ -1615,9 +1615,12 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
 
 <script>
 /* ══════════════════════════════════════════════════════════════════
-   PRODUKTNAME — sobald der endgültige Name feststeht, nur hier ändern.
+   PRODUKTNAME. Bei einer Änderung auch die statischen Rückfalltexte
+   mitziehen: <title> und die zwei Wasserzeichen (gateWm, sideWm) — sonst
+   blitzt vor dem Start des Skripts kurz der alte Name auf. In app.html
+   stehen Titel und Wasserzeichen der Anmeldung nochmals separat.
    ══════════════════════════════════════════════════════════════════ */
-const APP_NAME = 'Cockpit';
+const APP_NAME = 'GuardControl';
 
 // ── Zustand
 const API = 'api/';
