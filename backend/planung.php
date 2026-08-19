@@ -8,6 +8,27 @@
 // beantwortet.
 declare(strict_types=1);
 
+// ── Sparten des Betriebs (ENT-037)
+//
+// CUPI 24 bietet Sicherheit UND Reinigung an. Beides laeuft strikt getrennt
+// durch die Planung, kann aber am selben Objekt gleichzeitig stattfinden --
+// auf einer Baustelle etwa Bewachung waehrend der Bauphase und Endreinigung
+// bei Fertigstellung.
+//
+// WICHTIG fuer alles, was spaeter Zeit oder Lohn rechnet: Die beiden Sparten
+// unterstehen NICHT demselben Gesamtarbeitsvertrag. Das Regelwerk in 90-gav/
+// ist der GAV der Sicherheitsdienstleistungen; fuer Reinigung gilt ein
+// anderer, bislang ungepruefter GAV. Diese Angabe ist genau der Schluessel,
+// an dem eine spaetere Berechnung ihr Regelwerk auswaehlen muss -- sie ist
+// keine blosse Anzeigehilfe (siehe OP-32).
+const SPARTEN = ['sicherheit', 'reinigung'];
+
+function sparte_pruefen($wert, string $vorgabe = 'sicherheit'): string
+{
+    $w = strtolower(trim((string)$wert));
+    return in_array($w, SPARTEN, true) ? $w : $vorgabe;
+}
+
 // Ostersonntag nach der anonymen gregorianischen Berechnung. Bewusst selbst
 // gerechnet: easter_date() braucht die Kalender-Erweiterung, die auf einem
 // geteilten Hosting nicht garantiert ist.
@@ -141,6 +162,9 @@ function planung_bedarf(int $objektId, string $von, string $bis): array
                     'status' => (int)$v['auf_abruf'] ? 'provisorisch' : 'geplant',
                     'feiertag' => $feiertage[$datum]['name'] ?? null,
                     'art' => $v['art'],
+                    // Die Sparte reist von der Vorlage mit, damit die erzeugte
+                    // Schicht in der richtigen Spur landet (ENT-037).
+                    'sparte' => sparte_pruefen($v['sparte'] ?? null),
                     'arbeitszeit_h' => (float)$v['arbeitszeit_h'],
                 ];
             }
@@ -339,16 +363,19 @@ function schichten_anlegen(array $vorschlag, int $adminId): int
     $o = $vorschlag['objekt'];
     $ins = db()->prepare(
         'INSERT INTO einsaetze (kunde_id, kunde_name, objekt_id, masterschicht_id, titel,
-                                strasse, ort, einsatzart, datum, von, bis, bedarf, status, erstellt_von)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                                strasse, ort, einsatzart, sparte, datum, von, bis, bedarf, status, erstellt_von)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     foreach ($vorschlag['neu'] as $s) {
         // Fahrtzeit bleibt als eigene Einsatzart sichtbar. Ob sie bezahlte
         // Arbeitszeit ist, entscheidet dieses Werkzeug nicht (GAV).
         $einsatzart = $s['art'] === 'fahrtzeit' ? 'Fahrtzeit' : $o['einsatzart'];
+        // Vorlage schlaegt Objekt: eine Reinigungsvorlage an einem sonst
+        // bewachten Objekt erzeugt Reinigungsschichten (ENT-037).
+        $sparte = sparte_pruefen($s['sparte'] ?? null, sparte_pruefen($o['sparte'] ?? null));
         $ins->execute([
             $o['kunde_id'], $o['kunde_name'], $o['id'], $s['masterschicht_id'], $s['name'],
-            $o['strasse'], $o['ort'], $einsatzart, $s['datum'], $s['von'], $s['bis'],
+            $o['strasse'], $o['ort'], $einsatzart, $sparte, $s['datum'], $s['von'], $s['bis'],
             $s['bedarf'], $s['status'], $adminId,
         ]);
     }

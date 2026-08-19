@@ -11,6 +11,7 @@
 //   beenden    Gueltigkeit auf ein Datum begrenzen
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require __DIR__ . '/../planung.php';
 
 $user = require_session();
 if (!$user['ist_admin']) {
@@ -118,6 +119,15 @@ if ($rhythmus === 'intervall' && $bedarfIntervall === 0) {
     json_response(['status' => 'error', 'message' => 'Ohne Bedarf entsteht nie eine Schicht'], 400);
 }
 
+// Sparte des Objekts als Rueckfallwert fuer eine Vorlage ohne eigene Angabe.
+function objekt_sparte(int $objektId): string
+{
+    if ($objektId <= 0) { return 'sicherheit'; }
+    $s = db()->prepare('SELECT sparte FROM objekte WHERE id = ?');
+    $s->execute([$objektId]);
+    return sparte_pruefen($s->fetchColumn());
+}
+
 $felder = [
     'objekt_id' => $objektId,
     'name' => $name,
@@ -130,6 +140,9 @@ $felder = [
     'pause_min' => $pauseMin,
     'arbeitszeit_h' => $arbeitszeit,
     'farbe' => trim((string)($in['farbe'] ?? '')) ?: null,
+    // Eigene Sparte je Vorlage. Fehlt die Angabe, gilt die des Objekts --
+    // so bleibt ein reines Sicherheitsobjekt ohne Zutun richtig (ENT-037).
+    'sparte' => sparte_pruefen($in['sparte'] ?? null, objekt_sparte($objektId)),
     'auf_abruf' => !empty($in['auf_abruf']) ? 1 : 0,
     'rhythmus' => $rhythmus,
     'bedarf_mo' => $bedarf['mo'], 'bedarf_di' => $bedarf['di'], 'bedarf_mi' => $bedarf['mi'],
@@ -166,6 +179,10 @@ if ($modus === 'neu') {
 // ── Aenderung mit Stichtag
 $alt = lade($id);
 $felder['objekt_id'] = (int)$alt['objekt_id'];
+// Wie beim Objekt: bei einer Aenderung ohne ausdrueckliche Angabe gilt die
+// bisherige Sparte weiter. Sonst faellt eine Reinigungsvorlage still auf
+// Sicherheit zurueck, weil beim Aendern keine objekt_id mitgeschickt wird.
+$felder['sparte'] = sparte_pruefen($in['sparte'] ?? null, sparte_pruefen($alt['sparte'] ?? null));
 
 if ($gueltigAb <= $alt['gueltig_ab']) {
     // Der Stichtag liegt nicht nach dem Beginn der alten Fassung -- diese hat

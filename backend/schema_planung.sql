@@ -28,6 +28,10 @@ CREATE TABLE objekte (
   -- Einsatzart der daraus entstehenden Schichten. Eigenschaft des
   -- Dauerauftrags, damit sie nicht je Schicht geraten werden muss.
   einsatzart VARCHAR(100) NOT NULL DEFAULT 'Revierdienst',
+  -- Sparte (ENT-037): 'sicherheit' oder 'reinigung'. Am Objekt die Vorgabe,
+  -- verbindlich ist die Sparte am einzelnen Einsatz. Bewusst VARCHAR statt
+  -- ENUM -- eine dritte Sparte braucht dann keine Tabellenaenderung.
+  sparte VARCHAR(20) NOT NULL DEFAULT 'sicherheit',
   aktiv TINYINT(1) NOT NULL DEFAULT 1,
   bemerkung TEXT,
   erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -50,6 +54,9 @@ CREATE TABLE masterschichten (
   -- bezahlte Arbeitszeit ist, eine GAV-Frage ist -- sie wird hier NICHT
   -- beantwortet, nur nachvollziehbar gehalten.
   art VARCHAR(20) NOT NULL DEFAULT 'arbeit',
+  -- Eigene Sparte je Vorlage: dasselbe Objekt kann eine Sicherheits- und
+  -- eine Reinigungsvorlage tragen, auch gleichzeitig (Baustelle, ENT-037).
+  sparte VARCHAR(20) NOT NULL DEFAULT 'sicherheit',
 
   von TIME NOT NULL,
   -- Liegt "bis" vor "von", laeuft die Schicht ueber Mitternacht.
@@ -147,6 +154,8 @@ CREATE TABLE einsaetze (
   ort VARCHAR(200) NOT NULL,
 
   einsatzart VARCHAR(100) NOT NULL DEFAULT 'Verkehrsdienst',
+  -- Hier ist die Sparte verbindlich: danach wird gefiltert und getrennt.
+  sparte VARCHAR(20) NOT NULL DEFAULT 'sicherheit',
 
   datum DATE NOT NULL,
   von TIME NOT NULL,

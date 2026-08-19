@@ -121,12 +121,15 @@ try {
         $titel = trim((string)($vorlage['kuerzel'] ? $vorlage['kuerzel'] . ' · ' : '') . $vorlage['name']);
         $st = $pdo->prepare(
             'INSERT INTO einsaetze (kunde_id, kunde_name, objekt_id, masterschicht_id, titel,
-                                    strasse, ort, einsatzart, datum, von, bis, bedarf, status, erstellt_von)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                                    strasse, ort, einsatzart, sparte, datum, von, bis, bedarf, status, erstellt_von)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $st->execute([
             $objekt['kunde_id'], $objekt['kunde_name'], $objektId, $msId, $titel,
-            $objekt['strasse'], $objekt['ort'], $objekt['einsatzart'], $datum, $von, $bis,
+            $objekt['strasse'], $objekt['ort'], $objekt['einsatzart'],
+            // Vorlage schlaegt Objekt (ENT-037).
+            sparte_pruefen($vorlage['sparte'] ?? null, sparte_pruefen($objekt['sparte'] ?? null)),
+            $datum, $von, $bis,
             max($bedarfTag, count($zuteilung)),
             (int)$vorlage['auf_abruf'] ? 'provisorisch' : 'geplant',
             (int)$user['id'],

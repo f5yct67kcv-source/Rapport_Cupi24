@@ -15,7 +15,7 @@ $bis = trim((string)($_GET['bis'] ?? ''));
 $eingegrenzt = preg_match('/^\d{4}-\d{2}-\d{2}$/', $von) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $bis);
 
 $sql = 'SELECT id, kunde_id, kunde_name, objekt_id, masterschicht_id, titel, strasse, ort,
-               einsatzart, datum, von, bis, bedarf, status, bemerkung, erstellt_am
+               einsatzart, sparte, datum, von, bis, bedarf, status, bemerkung, erstellt_am
         FROM einsaetze';
 $args = [];
 if ($eingegrenzt) {

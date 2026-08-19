@@ -306,6 +306,7 @@ td .sec { font-size: 11.5px; color: var(--ink-3); }
 
 .chip { display: inline-flex; align-items: center; border-radius: var(--r-xs); padding: 2px 8px; font-size: 11px; font-weight: 620; letter-spacing: .1px; white-space: nowrap; }
 .chip-n { background: var(--line-soft); color: var(--ink-2); }
+.chip-rein { background: var(--accent-soft); color: var(--accent); margin-left: 4px; }
 .chip-a { background: var(--accent-soft); color: var(--accent); }
 .chip-p { background: var(--pos-soft); color: var(--pos); }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pos); flex: none; box-shadow: 0 0 0 3px var(--pos-soft); }
@@ -532,7 +533,8 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .mx .z-ab   { background: var(--line-soft); color: var(--ink-3); text-decoration: line-through; }
 .mx .z-nix  { color: var(--nix); cursor: default; }
 .mx td.obj b { display: block; font-size: 13px; font-weight: 620; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mx td.obj span { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.mx td.obj span.unter { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.mx td.obj .chip { font-size: 10px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
 .legende { display: flex; flex-wrap: wrap; gap: 14px; padding: 12px 18px; border-top: 1px solid var(--line-soft); font-size: 11.5px; color: var(--ink-3); }
 .legende i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 
@@ -1281,6 +1283,11 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
               <button class="btn btn-quiet btn-sm" onclick="mxHeute()">Heute</button>
               <button class="btn btn-quiet btn-sm" onclick="mxSchieben(1)" title="Ein Monat weiter">›</button>
             </div>
+            <select class="inp" id="mxSparte" style="width:auto" onchange="renderMatrix()" aria-label="Nach Sparte filtern">
+              <option value="">Beide Sparten</option>
+              <option value="sicherheit">Nur Sicherheit</option>
+              <option value="reinigung">Nur Reinigung</option>
+            </select>
             <select class="inp" id="mxBeleg" style="width:auto" onchange="renderMatrix()" aria-label="Nach Belegung filtern">
               <option value="">Jede Belegung</option>
               <option value="luecke">Nur mit Lücken</option>
@@ -1587,6 +1594,12 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           <input class="inp" id="enNStrasse" placeholder="nicht der Firmensitz des Kunden">
         </div>
         <div class="f"><label for="enNOrt">Arbeitsort — PLZ / Ort *</label><input class="inp" id="enNOrt"></div>
+        <div class="f"><label for="enNSparte">Sparte</label>
+          <select class="inp" id="enNSparte">
+            <option value="sicherheit">Sicherheit</option>
+            <option value="reinigung">Reinigung</option>
+          </select>
+        </div>
         <div class="f"><label for="enNEinsatzart">Einsatzart</label><input class="inp" id="enNEinsatzart" value="Verkehrsdienst"></div>
         <div class="f"><label for="enNDatum">Datum *</label><input class="inp" id="enNDatum" type="date" onchange="pickRefresh('enN')"></div>
         <div class="f"><label for="enNBedarf">Benötigte Mitarbeitende</label><input class="inp" id="enNBedarf" type="number" min="0" max="99" value="1" oninput="pickFoot('enN')"></div>
@@ -1623,11 +1636,17 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <div class="f wide"><label for="obStrasse">Strasse</label><input class="inp" id="obStrasse"></div>
         <div class="f"><label for="obOrt">PLZ / Ort *</label><input class="inp" id="obOrt"></div>
         <div class="f"><label for="obKanton">Kanton</label><input class="inp" id="obKanton" value="SO" maxlength="2" style="text-transform:uppercase"></div>
-        <div class="f wide"><label for="obEinsatzart">Einsatzart</label><input class="inp" id="obEinsatzart" value="Revierdienst"></div>
+        <div class="f"><label for="obSparte">Sparte</label>
+          <select class="inp" id="obSparte">
+            <option value="sicherheit">Sicherheit</option>
+            <option value="reinigung">Reinigung</option>
+          </select>
+        </div>
+        <div class="f"><label for="obEinsatzart">Einsatzart</label><input class="inp" id="obEinsatzart" value="Revierdienst"></div>
         <div class="f wide"><label for="obBemerkung">Bemerkung</label><textarea class="inp" id="obBemerkung" rows="2" style="min-height:56px"></textarea></div>
         <div class="f wide"><label class="check"><input type="checkbox" id="obAktiv" checked> Objekt ist in Betrieb</label></div>
       </div>
-      <p class="zone-note" style="margin-top:4px">Der Kanton bestimmt, welche Feiertage für dieses Objekt gelten.</p>
+      <p class="zone-note" style="margin-top:4px">Der Kanton bestimmt, welche Feiertage für dieses Objekt gelten. Die Sparte ist die Vorgabe für neue Schichten — eine einzelne Vorlage kann davon abweichen, etwa eine Endreinigung an einem bewachten Objekt.</p>
     </div>
     <div class="dlg-ft">
       <button class="btn btn-plain" onclick="closeDlg('dlgObNeu')">Abbrechen</button>
@@ -1653,6 +1672,7 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <div class="f wide"><label for="msName">Bezeichnung *</label><input class="inp" id="msName" placeholder="z. B. Schliessrunde"></div>
         <div class="f"><label for="msKuerzel">Kürzel</label><input class="inp" id="msKuerzel" maxlength="10" placeholder="SR"></div>
         <div class="f"><label for="msArt">Art</label><select class="inp" id="msArt"><option value="arbeit">Arbeit</option><option value="fahrtzeit">Fahrtzeit</option></select></div>
+        <div class="f"><label for="msSparte">Sparte</label><select class="inp" id="msSparte"><option value="sicherheit">Sicherheit</option><option value="reinigung">Reinigung</option></select></div>
         <div class="f"><label for="msVon">Von *</label><input class="inp" id="msVon" type="time" onchange="msRechne()"></div>
         <div class="f"><label for="msBis">Bis *</label><input class="inp" id="msBis" type="time" onchange="msRechne()"></div>
         <div class="f"><label for="msPauseMin">Pause (Minuten)</label><input class="inp" id="msPauseMin" type="number" min="0" max="1440" value="0" oninput="msRechne()"></div>
@@ -1967,6 +1987,13 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf = (n, d) => Number(n || 0).toLocaleString('de-CH', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
 const dmy = d => d ? String(d).slice(0, 10).split('-').reverse().join('.') : '–';
+// Sparte des Betriebs (ENT-037). Sicherheit ist der stille Normalfall und
+// bekommt darum keinen Chip -- sonst traegt jede Zeile eine Marke, die
+// nichts unterscheidet. Nur die Reinigung wird ausgezeichnet.
+const SPARTE_NAME = { sicherheit: 'Sicherheit', reinigung: 'Reinigung' };
+const sparteVon = x => (x && x.sparte) === 'reinigung' ? 'reinigung' : 'sicherheit';
+const sparteChip = x => sparteVon(x) === 'reinigung'
+  ? ' <span class="chip chip-rein">Reinigung</span>' : '';
 // Grobe relative Zeit fuer Ereignislisten -- auf die Minute genau ist hier
 // nicht wichtig, nur die Groessenordnung ("gerade eben" vs. "vor 3 Tagen").
 function relZeit(sqlZeit) {
@@ -2819,9 +2846,9 @@ const EN_STATUS = {
   geplant: ['Geplant', 'chip-n'], bestaetigt: ['Bestätigt', 'chip-p'],
   provisorisch: ['Provisorisch', 'chip-a'], abgesagt: ['Abgesagt', 'chip-x']
 };
-const EN_FELDER = ['kunde_name', 'titel', 'strasse', 'ort', 'einsatzart', 'datum', 'von', 'bis', 'bedarf', 'bemerkung'];
+const EN_FELDER = ['kunde_name', 'titel', 'strasse', 'ort', 'einsatzart', 'sparte', 'datum', 'von', 'bis', 'bedarf', 'bemerkung'];
 const EN_LABEL = { kunde_name: 'Kunde', titel: 'Bezeichnung', strasse: 'Strasse', ort: 'Arbeitsort',
-  einsatzart: 'Einsatzart', datum: 'Datum', von: 'Von', bis: 'Bis', bedarf: 'Anzahl', bemerkung: 'Bemerkung' };
+  einsatzart: 'Einsatzart', sparte: 'Sparte', datum: 'Datum', von: 'Von', bis: 'Bis', bedarf: 'Anzahl', bemerkung: 'Bemerkung' };
 // enN… für den Dialog, enE… für die Schublade — beide nach demselben Muster.
 const enId = (prefix, f) => prefix + f[0].toUpperCase() + f.slice(1);
 
@@ -2968,7 +2995,7 @@ function renderPlanung() {
         <td class="nowrap num">${hm(e.von)}–${hm(e.bis)}${ueberNacht(e) ? '<div class="sec">bis Folgetag</div>' : ''}</td>
         <td class="strong">${esc(e.kunde_name)}${e.titel ? `<div class="sec">${esc(e.titel)}</div>` : ''}</td>
         <td>${esc(e.ort)}${e.strasse ? `<div class="sec">${esc(e.strasse)}</div>` : ''}</td>
-        <td><span class="chip chip-n">${esc(e.einsatzart)}</span></td>
+        <td><span class="chip chip-n">${esc(e.einsatzart)}</span>${sparteChip(e)}</td>
         <td class="num"><span class="chip ${e.status === 'abgesagt' ? 'chip-n' : (fehlt ? 'chip-w' : 'chip-p')}">${zug.length}/${nf(e.bedarf)}</span></td>
         <td>${teile.length ? `<div class="crew">${teile.join('')}</div>` : '<span style="color:var(--ink-3)">–</span>'}</td>
         <td><span class="chip ${st[1]}">${st[0]}</span></td>
@@ -3046,7 +3073,7 @@ function openEinsatzNeu(felder, maNamen) {
     ? 'Aus dem Diktat übernommen. Es ist noch nichts gespeichert.'
     : 'Kunde, Arbeitsort, Datum und Zeit sind Pflicht.';
 
-  const vorgabe = { einsatzart: 'Verkehrsdienst', bedarf: 1, datum: isoTag() };
+  const vorgabe = { einsatzart: 'Verkehrsdienst', sparte: 'sicherheit', bedarf: 1, datum: isoTag() };
   EN_FELDER.forEach(f => {
     const el = $(enId('enN', f));
     const hat = felder[f] !== undefined && felder[f] !== '';
@@ -3086,6 +3113,7 @@ function enSammeln(prefix) {
   const body = {
     kunde_name: v('kunde_name'), titel: v('titel'), strasse: v('strasse'), ort: v('ort'),
     einsatzart: v('einsatzart') || 'Verkehrsdienst',
+    sparte: v('sparte') || 'sicherheit',
     datum: v('datum'), von: v('von'), bis: v('bis'),
     bedarf: Math.min(99, Math.max(0, parseInt(v('bedarf'), 10) || 0)),
     status: v('status') || 'geplant',
@@ -3131,6 +3159,12 @@ function openEinsatz(id) {
       <div class="f wide"><label for="enETitel">Bezeichnung</label><input class="inp" id="enETitel" value="${esc(e.titel || '')}"></div>
       <div class="f wide"><label for="enEStrasse">Arbeitsort — Strasse</label><input class="inp" id="enEStrasse" value="${esc(e.strasse || '')}"></div>
       <div class="f"><label for="enEOrt">Arbeitsort — PLZ / Ort *</label><input class="inp" id="enEOrt" value="${esc(e.ort)}"></div>
+      <div class="f"><label for="enESparte">Sparte</label>
+        <select class="inp" id="enESparte">
+          <option value="sicherheit"${e.sparte !== 'reinigung' ? ' selected' : ''}>Sicherheit</option>
+          <option value="reinigung"${e.sparte === 'reinigung' ? ' selected' : ''}>Reinigung</option>
+        </select>
+      </div>
       <div class="f"><label for="enEEinsatzart">Einsatzart</label><input class="inp" id="enEEinsatzart" value="${esc(e.einsatzart)}"></div>
       <div class="f"><label for="enEDatum">Datum *</label><input class="inp" id="enEDatum" type="date" value="${esc(tagVon(e))}" onchange="pickRefresh('enE')"></div>
       <div class="f"><label for="enEBedarf">Benötigte Mitarbeitende</label><input class="inp" id="enEBedarf" type="number" min="0" max="99" value="${Number(e.bedarf)}" oninput="pickFoot('enE')"></div>
@@ -3259,19 +3293,19 @@ function renderObjekte() {
         <td>${esc(o.kunde_name)}</td>
         <td class="nowrap">${esc(o.ort)}${o.strasse ? `<div class="sec">${esc(o.strasse)}</div>` : ''}</td>
         <td class="nowrap">${esc(o.kanton)}</td>
-        <td><span class="chip chip-n">${esc(o.einsatzart)}</span></td>
+        <td><span class="chip chip-n">${esc(o.einsatzart)}</span>${sparteChip(o)}</td>
         <td class="num">${o.masterschichten ? nf(o.masterschichten) : '<span style="color:var(--ink-3)">–</span>'}</td>
         <td class="num nowrap">${o.masterschichten ? nf(o.stunden_je_einsatz, 2) + ' h' : '<span style="color:var(--ink-3)">–</span>'}</td>
         <td>${o.aktiv ? '<span class="chip chip-p">in Betrieb</span>' : '<span class="chip chip-n">stillgelegt</span>'}</td>
       </tr>`).join('') + `</tbody></table>`;
 }
 
-const OB_FELDER = ['name', 'kunde_name', 'strasse', 'ort', 'kanton', 'einsatzart', 'bemerkung'];
+const OB_FELDER = ['name', 'kunde_name', 'strasse', 'ort', 'kanton', 'einsatzart', 'sparte', 'bemerkung'];
 
 function openObjektNeu(o) {
   obTarget = o ? Number(o.id) : null;
   $('obNeuTitel').textContent = o ? 'Objekt ändern' : 'Neues Objekt';
-  const vorgabe = { kanton: 'SO', einsatzart: 'Revierdienst' };
+  const vorgabe = { kanton: 'SO', einsatzart: 'Revierdienst', sparte: 'sicherheit' };
   OB_FELDER.forEach(f => {
     $('ob' + f[0].toUpperCase() + f.slice(1)).value = o ? (o[f] || '') : (vorgabe[f] || '');
   });
@@ -3322,6 +3356,7 @@ function openObjekt(id) {
       <dt>Adresse</dt><dd>${o.strasse ? esc(o.strasse) + ', ' : ''}${esc(o.ort)}</dd>
       <dt>Kanton</dt><dd>${esc(o.kanton)} <span style="color:var(--ink-3);font-weight:400">— bestimmt die Feiertage</span></dd>
       <dt>Einsatzart</dt><dd>${esc(o.einsatzart)}</dd>
+      <dt>Sparte</dt><dd>${esc(SPARTE_NAME[sparteVon(o)])}</dd>
       <dt>Zustand</dt><dd>${o.aktiv ? 'in Betrieb' : 'stillgelegt'}</dd>
       ${o.bemerkung ? `<dt>Bemerkung</dt><dd>${esc(o.bemerkung)}</dd>` : ''}
     </dl>
@@ -3453,6 +3488,9 @@ function openMs(modus, id) {
   $('msName').value = m ? m.name : '';
   $('msKuerzel').value = m ? (m.kuerzel || '') : '';
   $('msArt').value = m ? m.art : 'arbeit';
+  // Ohne Vorlage gilt die Sparte des Objekts als Vorgabe (ENT-037).
+  $('msSparte').value = (m && m.sparte)
+    || (objekte.find(o => Number(o.id) === Number(oplId)) || {}).sparte || 'sicherheit';
   $('msVon').value = m ? hm(m.von) : '';
   $('msBis').value = m ? hm(m.bis) : '';
   $('msPauseMin').value = m ? m.pause_min : 0;
@@ -3483,7 +3521,7 @@ function openMs(modus, id) {
 
   // Bei der Korrektur bleibt alles andere gesperrt — sonst wäre es doch eine
   // rückwirkende Änderung.
-  ['msArt','msVon','msBis','msPauseMin','msArbeitszeit','msAufAbruf','msRhythmus','msGueltigAb','msGueltigBis',
+  ['msArt','msSparte','msVon','msBis','msPauseMin','msArbeitszeit','msAufAbruf','msRhythmus','msGueltigAb','msGueltigBis',
    'msIntervallTage','msIntervallStart','msBedarf_intervall', ...MS_TAGE.map(t => 'msBedarf_' + t)]
     .forEach(k => { $(k).disabled = (modus === 'korrektur'); });
 
@@ -3523,6 +3561,7 @@ function saveMs() {
 
   if (msModus !== 'korrektur') {
     body.art = $('msArt').value;
+    body.sparte = $('msSparte').value;
     body.von = $('msVon').value;
     body.bis = $('msBis').value;
     body.pause_min = parseInt($('msPauseMin').value, 10) || 0;
@@ -4822,32 +4861,58 @@ function renderMatrix() {
   const tage = Array.from({ length: anzTage }, (_, i) => plusTage(von, i));
   const letzterTag = tage[tage.length - 1];
 
-  // Einsätze des Zeitraums nach Objekt und Tag ordnen
+  // Einsätze des Zeitraums nach Objekt UND Sparte ordnen. Der Schlüssel
+  // trägt beides, weil Sicherheit und Reinigung am selben Objekt strikt
+  // getrennt gehören -- auf einer Baustelle laufen sie zeitweise parallel
+  // (Bewachung während der Bauphase, Endreinigung bei Fertigstellung, ENT-037).
+  const nurSparte = $('mxSparte').value;
   const nachObjekt = {};
+  const spartenJeObjekt = {};
   einsaetze.forEach(e => {
     const d = tagVon(e);
     if (d < von || d > letzterTag) return;
-    const schluessel = e.objekt_id ? 'o' + e.objekt_id : 'einzel';
+    const sp = sparteVon(e);
+    if (nurSparte && sp !== nurSparte) return;
+    const basis = e.objekt_id ? 'o' + e.objekt_id : 'einzel';
+    (spartenJeObjekt[basis] = spartenJeObjekt[basis] || new Set()).add(sp);
+    const schluessel = basis + '|' + sp;
     (nachObjekt[schluessel] = nachObjekt[schluessel] || {});
     (nachObjekt[schluessel][d] = nachObjekt[schluessel][d] || []).push(e);
   });
 
-  let zeilen = objekte.filter(o => o.aktiv || nachObjekt['o' + o.id])
-    .map(o => ({ schluessel: 'o' + o.id, id: Number(o.id), titel: o.name, unter: o.kunde_name + ' · ' + o.ort }));
-  if (nachObjekt['einzel']) {
-    zeilen.push({ schluessel: 'einzel', id: null, titel: 'Einzeleinsätze', unter: 'ohne festes Objekt' });
+  // Je Objekt eine Zeile pro vorkommender Sparte. Hat ein Objekt im Zeitraum
+  // gar keine Einsätze, steht es einmal in seiner eigenen Sparte da.
+  const zeilenFuer = (basis, id, titel, unter, vorgabe) => {
+    const gefunden = [...(spartenJeObjekt[basis] || [])];
+    const liste = gefunden.length ? gefunden.sort() : [vorgabe];
+    return liste
+      .filter(sp => !nurSparte || sp === nurSparte)
+      .map(sp => ({ schluessel: basis + '|' + sp, basis, sparte: sp, id, titel, unter,
+        mehrspurig: gefunden.length > 1 }));
+  };
+
+  let zeilen = [];
+  objekte.filter(o => o.aktiv || spartenJeObjekt['o' + o.id]).forEach(o => {
+    zeilen.push(...zeilenFuer('o' + o.id, Number(o.id), o.name,
+      o.kunde_name + ' · ' + o.ort, sparteVon(o)));
+  });
+  if (spartenJeObjekt['einzel']) {
+    zeilen.push(...zeilenFuer('einzel', null, 'Einzeleinsätze', 'ohne festes Objekt', 'sicherheit'));
   }
 
   // ── Filter: erst das einzelne Objekt, dann die Belegung
   const alle = zeilen.length;
   const nurObjekt = $('mxObj').value;
-  if (nurObjekt) zeilen = zeilen.filter(z => z.schluessel === nurObjekt);
+  if (nurObjekt) zeilen = zeilen.filter(z => z.basis === nurObjekt);
   const nurBeleg = $('mxBeleg').value;
   if (nurBeleg) zeilen = zeilen.filter(z => zeilenStand(nachObjekt[z.schluessel], tage) === nurBeleg);
 
   // Der Hinweis über der Tabelle sagt, was gerade gilt -- sonst sieht eine
   // gefilterte Ansicht aus wie eine leere Planung.
   const teile = [`<b>${esc(dmy(von))}</b> bis <b>${esc(dmy(letzterTag))}</b> (${anzTage} Tage)`];
+  // Die Sparte wird eigens genannt: sie blendet ganze Zeilen aus, bevor
+  // überhaupt gezählt wird -- ohne den Hinweis wirkte die Ansicht schlicht leer.
+  if (nurSparte) teile.push(`nur <b>${esc(SPARTE_NAME[nurSparte])}</b>`);
   if (zeilen.length !== alle) teile.push(`${zeilen.length} von ${alle} Zeilen`);
   if (gekappt) teile.push(`gekürzt auf ${MX_MAX_TAGE} Tage — für längere Zeiträume den Zeitraum enger wählen`);
   $('mxInfo').innerHTML = teile.join(' · ');
@@ -4855,7 +4920,7 @@ function renderMatrix() {
   if (!zeilen.length) {
     $('mxTable').innerHTML = alle
       ? EMPTY('Kein Objekt passt zum Filter',
-          'Im gewählten Zeitraum entspricht keine Zeile dieser Auswahl. Setze den Filter auf „Jede Belegung“ oder wähle einen anderen Zeitraum.')
+          'Im gewählten Zeitraum entspricht keine Zeile dieser Auswahl. Setze die Filter auf „Beide Sparten“ und „Jede Belegung“ oder wähle einen anderen Zeitraum.')
       : EMPTY('Nichts anzuzeigen',
           'Für diesen Zeitraum gibt es weder Objekte noch Einzeleinsätze. Objekte legst du im Reiter „Objekte“ an.');
     return;
@@ -4888,9 +4953,14 @@ function renderMatrix() {
     }).join('');
     // Der Objektname führt in die Objektplanung -- dort wird ein Objekt im
     // Monat gezielt besetzt.
+    // Die Spur wird nur ausgewiesen, wo sie etwas unterscheidet: wenn das
+    // Objekt beide Sparten führt, oder wenn es die Reinigung ist. Sonst
+    // trüge jede Zeile eine Marke, die nichts aussagt (ENT-037).
+    const spur = (z.mehrspurig || z.sparte === 'reinigung')
+      ? ` <span class="chip ${z.sparte === 'reinigung' ? 'chip-rein' : 'chip-n'}">${esc(SPARTE_NAME[z.sparte])}</span>` : '';
     const beschriftung = z.id
-      ? `<button class="btn btn-quiet btn-sm" style="padding:0;text-align:left;display:block;width:100%" onclick="zumObjektplan(${z.id})" title="Objekt planen"><b style="display:block;font-size:13px;font-weight:620">${esc(z.titel)}</b><span style="display:block;font-size:11.5px;color:var(--ink-3);font-weight:400">${esc(z.unter)}</span></button>`
-      : `<b>${esc(z.titel)}</b><span>${esc(z.unter)}</span>`;
+      ? `<button class="btn btn-quiet btn-sm" style="padding:0;text-align:left;display:block;width:100%" onclick="zumObjektplan(${z.id})" title="Objekt planen"><b style="display:block;font-size:13px;font-weight:620">${esc(z.titel)}${spur}</b><span class="unter" style="font-weight:400">${esc(z.unter)}</span></button>`
+      : `<b>${esc(z.titel)}${spur}</b><span class="unter">${esc(z.unter)}</span>`;
     return `<tr><td class="obj">${beschriftung}</td>${zellen}</tr>`;
   }).join('');
 

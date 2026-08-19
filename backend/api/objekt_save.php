@@ -2,6 +2,7 @@
 // Legt ein Objekt an oder aendert es (ENT-021). Ohne "id" wird angelegt.
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require __DIR__ . '/../planung.php';
 
 $user = require_session();
 if (!$user['ist_admin']) {
@@ -21,6 +22,9 @@ $strasse   = trim((string)($input['strasse'] ?? '')) ?: null;
 $ort       = trim((string)($input['ort'] ?? ''));
 $kanton    = strtoupper(trim((string)($input['kanton'] ?? 'SO')));
 $einsatzart = trim((string)($input['einsatzart'] ?? '')) ?: 'Revierdienst';
+// Vorgabe des Objekts. Verbindlich ist die Sparte am einzelnen Einsatz;
+// diese hier wird beim Erzeugen von Schichten vererbt (ENT-037).
+$sparte     = sparte_pruefen($input['sparte'] ?? null);
 $aktiv     = !empty($input['aktiv']) ? 1 : 0;
 $bemerkung = trim((string)($input['bemerkung'] ?? '')) ?: null;
 
@@ -43,9 +47,9 @@ if ($kundeId !== null) {
 if ($id > 0) {
     $stmt = db()->prepare(
         'UPDATE objekte SET kunde_id = ?, kunde_name = ?, name = ?, strasse = ?, ort = ?,
-                kanton = ?, einsatzart = ?, aktiv = ?, bemerkung = ? WHERE id = ?'
+                kanton = ?, einsatzart = ?, sparte = ?, aktiv = ?, bemerkung = ? WHERE id = ?'
     );
-    $stmt->execute([$kundeId, $kundeName, $name, $strasse, $ort, $kanton, $einsatzart, $aktiv, $bemerkung, $id]);
+    $stmt->execute([$kundeId, $kundeName, $name, $strasse, $ort, $kanton, $einsatzart, $sparte, $aktiv, $bemerkung, $id]);
     $chk = db()->prepare('SELECT id FROM objekte WHERE id = ?');
     $chk->execute([$id]);
     if (!$chk->fetch()) {
@@ -53,10 +57,10 @@ if ($id > 0) {
     }
 } else {
     $stmt = db()->prepare(
-        'INSERT INTO objekte (kunde_id, kunde_name, name, strasse, ort, kanton, einsatzart, aktiv, bemerkung)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO objekte (kunde_id, kunde_name, name, strasse, ort, kanton, einsatzart, sparte, aktiv, bemerkung)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
-    $stmt->execute([$kundeId, $kundeName, $name, $strasse, $ort, $kanton, $einsatzart, $aktiv, $bemerkung]);
+    $stmt->execute([$kundeId, $kundeName, $name, $strasse, $ort, $kanton, $einsatzart, $sparte, $aktiv, $bemerkung]);
     $id = (int)db()->lastInsertId();
 }
 

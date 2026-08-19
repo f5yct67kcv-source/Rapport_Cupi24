@@ -69,6 +69,11 @@ CREATE TABLE IF NOT EXISTS objekte (
   ort VARCHAR(200) NOT NULL,
   kanton CHAR(2) NOT NULL DEFAULT 'SO',
   einsatzart VARCHAR(100) NOT NULL DEFAULT 'Revierdienst',
+  -- Sparte des Betriebs (ENT-037): 'sicherheit' oder 'reinigung'. Bewusst
+  -- VARCHAR und nicht ENUM -- eine dritte Sparte braucht dann keine
+  -- Tabellenaenderung. Am Objekt ist sie die Vorgabe, verbindlich ist die
+  -- Sparte am einzelnen Einsatz.
+  sparte VARCHAR(20) NOT NULL DEFAULT 'sicherheit',
   aktiv TINYINT(1) NOT NULL DEFAULT 1,
   bemerkung TEXT,
   erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -83,6 +88,9 @@ CREATE TABLE IF NOT EXISTS masterschichten (
   name VARCHAR(200) NOT NULL,
   kuerzel VARCHAR(10),
   art VARCHAR(20) NOT NULL DEFAULT 'arbeit',
+  -- Eigene Sparte je Vorlage: dasselbe Objekt kann eine Sicherheits- und eine
+  -- Reinigungsvorlage tragen, auch gleichzeitig (Baustelle, ENT-037).
+  sparte VARCHAR(20) NOT NULL DEFAULT 'sicherheit',
   von TIME NOT NULL,
   bis TIME NOT NULL,
   pause_von TIME NULL,
@@ -136,6 +144,8 @@ CREATE TABLE IF NOT EXISTS einsaetze (
   strasse VARCHAR(200),
   ort VARCHAR(200) NOT NULL,
   einsatzart VARCHAR(100) NOT NULL DEFAULT 'Verkehrsdienst',
+  -- Hier ist die Sparte verbindlich: nach ihr wird gefiltert und getrennt.
+  sparte VARCHAR(20) NOT NULL DEFAULT 'sicherheit',
   datum DATE NOT NULL,
   von TIME NOT NULL,
   bis TIME NOT NULL,
@@ -198,6 +208,12 @@ $spalten = [
     ['einsatz_zuteilung', 'zusage',   "ALTER TABLE einsatz_zuteilung ADD COLUMN zusage VARCHAR(20) NOT NULL DEFAULT 'offen' AFTER mitarbeiter_id"],
     ['objekte', 'einsatzart',         "ALTER TABLE objekte ADD COLUMN einsatzart VARCHAR(100) NOT NULL DEFAULT 'Revierdienst' AFTER kanton"],
     ['verfuegbarkeiten', 'gesehen_am', 'ALTER TABLE verfuegbarkeiten ADD COLUMN gesehen_am DATETIME NULL AFTER erfasst_am'],
+    // Sparte (ENT-037). Der Bestand ist ausnahmslos Sicherheit -- die Reinigung
+    // kommt erst mit diesem Schritt dazu. Die Vorgabe traegt die Altdaten also
+    // richtig, ohne dass etwas von Hand nachgetragen werden muss.
+    ['objekte',         'sparte', "ALTER TABLE objekte ADD COLUMN sparte VARCHAR(20) NOT NULL DEFAULT 'sicherheit' AFTER einsatzart"],
+    ['masterschichten', 'sparte', "ALTER TABLE masterschichten ADD COLUMN sparte VARCHAR(20) NOT NULL DEFAULT 'sicherheit' AFTER art"],
+    ['einsaetze',       'sparte', "ALTER TABLE einsaetze ADD COLUMN sparte VARCHAR(20) NOT NULL DEFAULT 'sicherheit' AFTER einsatzart"],
 ];
 foreach ($spalten as [$tabelle, $spalte, $sql]) {
     if (!hat_tabelle($pdo, $tabelle) || hat_spalte($pdo, $tabelle, $spalte)) {

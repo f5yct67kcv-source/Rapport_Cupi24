@@ -23,6 +23,8 @@ $titel      = trim((string)($input['titel'] ?? '')) ?: null;
 $strasse    = trim((string)($input['strasse'] ?? '')) ?: null;
 $ort        = trim((string)($input['ort'] ?? ''));
 $einsatzart = trim((string)($input['einsatzart'] ?? '')) ?: 'Verkehrsdienst';
+// Hier ist die Sparte verbindlich -- danach wird gefiltert und getrennt (ENT-037).
+$sparte     = sparte_pruefen($input['sparte'] ?? null);
 $datum      = trim((string)($input['datum'] ?? ''));
 $von        = trim((string)($input['von'] ?? ''));
 $bis        = trim((string)($input['bis'] ?? ''));
@@ -93,10 +95,10 @@ try {
     if ($id > 0) {
         $stmt = $pdo->prepare(
             'UPDATE einsaetze SET kunde_id = ?, kunde_name = ?, titel = ?, strasse = ?, ort = ?,
-                    einsatzart = ?, datum = ?, von = ?, bis = ?, bedarf = ?, status = ?, bemerkung = ?
+                    einsatzart = ?, sparte = ?, datum = ?, von = ?, bis = ?, bedarf = ?, status = ?, bemerkung = ?
              WHERE id = ?'
         );
-        $stmt->execute([$kundeId, $kundeName, $titel, $strasse, $ort, $einsatzart,
+        $stmt->execute([$kundeId, $kundeName, $titel, $strasse, $ort, $einsatzart, $sparte,
             $datum, $von, $bis, $bedarf, $status, $bemerkung, $id]);
         if ($stmt->rowCount() === 0) {
             // Kein Treffer heisst entweder "gibt es nicht" oder "nichts geaendert" --
@@ -111,11 +113,11 @@ try {
         $pdo->prepare('DELETE FROM einsatz_zuteilung WHERE einsatz_id = ?')->execute([$id]);
     } else {
         $stmt = $pdo->prepare(
-            'INSERT INTO einsaetze (kunde_id, kunde_name, titel, strasse, ort, einsatzart,
+            'INSERT INTO einsaetze (kunde_id, kunde_name, titel, strasse, ort, einsatzart, sparte,
                                     datum, von, bis, bedarf, status, bemerkung, erstellt_von)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([$kundeId, $kundeName, $titel, $strasse, $ort, $einsatzart,
+        $stmt->execute([$kundeId, $kundeName, $titel, $strasse, $ort, $einsatzart, $sparte,
             $datum, $von, $bis, $bedarf, $status, $bemerkung, (int)$user['id']]);
         $id = (int)$pdo->lastInsertId();
     }

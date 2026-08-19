@@ -41,7 +41,7 @@ if (isset($b['fehler'])) {
 // ── Vorhandene Einsaetze dieses Objekts im Zeitraum
 $e = db()->prepare(
     'SELECT id, kunde_id, kunde_name, objekt_id, masterschicht_id, titel, strasse, ort,
-            einsatzart, datum, von, bis, bedarf, status, bemerkung
+            einsatzart, sparte, datum, von, bis, bedarf, status, bemerkung
      FROM einsaetze
      WHERE objekt_id = ? AND datum BETWEEN ? AND ?
      ORDER BY datum, von'
@@ -86,6 +86,7 @@ $vorlagen = array_map(fn($v) => [
     'name' => $v['name'],
     'kuerzel' => $v['kuerzel'],
     'art' => $v['art'],
+    'sparte' => $v['sparte'] ?? 'sicherheit',
     'von' => substr((string)$v['von'], 0, 5),
     'bis' => substr((string)$v['bis'], 0, 5),
     'arbeitszeit_h' => (float)$v['arbeitszeit_h'],

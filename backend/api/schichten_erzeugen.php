@@ -48,16 +48,18 @@ $pdo->beginTransaction();
 try {
     $ins = $pdo->prepare(
         'INSERT INTO einsaetze (kunde_id, kunde_name, objekt_id, masterschicht_id, titel,
-                                strasse, ort, einsatzart, datum, von, bis, bedarf, status, erstellt_von)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                                strasse, ort, einsatzart, sparte, datum, von, bis, bedarf, status, erstellt_von)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     foreach ($v['neu'] as $s) {
         // Fahrtzeit bleibt als eigene Einsatzart sichtbar. Ob sie bezahlte
         // Arbeitszeit ist, entscheidet dieses Werkzeug nicht (GAV).
         $einsatzart = $s['art'] === 'fahrtzeit' ? 'Fahrtzeit' : $o['einsatzart'];
+        // Vorlage schlaegt Objekt (ENT-037).
+        $sparte = sparte_pruefen($s['sparte'] ?? null, sparte_pruefen($o['sparte'] ?? null));
         $ins->execute([
             $o['kunde_id'], $o['kunde_name'], $o['id'], $s['masterschicht_id'], $s['name'],
-            $o['strasse'], $o['ort'], $einsatzart, $s['datum'], $s['von'], $s['bis'],
+            $o['strasse'], $o['ort'], $einsatzart, $sparte, $s['datum'], $s['von'], $s['bis'],
             $s['bedarf'], $s['status'], (int)$user['id'],
         ]);
     }

@@ -141,12 +141,14 @@ try {
             $einsatzart = $s['art'] === 'fahrtzeit' ? 'Fahrtzeit' : $o['einsatzart'];
             $ins = $pdo->prepare(
                 'INSERT INTO einsaetze (kunde_id, kunde_name, objekt_id, masterschicht_id, titel,
-                                        strasse, ort, einsatzart, datum, von, bis, bedarf, status, erstellt_von)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                                        strasse, ort, einsatzart, sparte, datum, von, bis, bedarf, status, erstellt_von)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
+            // Vorlage schlaegt Objekt (ENT-037).
+            $sparte = sparte_pruefen($s['sparte'] ?? null, sparte_pruefen($o['sparte'] ?? null));
             $ins->execute([
                 $o['kunde_id'], $o['kunde_name'], $objektId, $msId, $s['name'],
-                $o['strasse'], $o['ort'], $einsatzart, $datum, $s['von'], $s['bis'],
+                $o['strasse'], $o['ort'], $einsatzart, $sparte, $datum, $s['von'], $s['bis'],
                 max((int)$s['bedarf'], count($frei)), $s['status'], (int)$user['id'],
             ]);
             $einsatzId = (int)$pdo->lastInsertId();

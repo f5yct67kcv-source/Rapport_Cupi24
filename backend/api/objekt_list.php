@@ -11,7 +11,7 @@ if (!$user['ist_admin']) {
 $heute = date('Y-m-d');
 
 $objekte = db()->query(
-    'SELECT id, kunde_id, kunde_name, name, strasse, ort, kanton, einsatzart, aktiv, bemerkung, erstellt_am
+    'SELECT id, kunde_id, kunde_name, name, strasse, ort, kanton, einsatzart, sparte, aktiv, bemerkung, erstellt_am
      FROM objekte ORDER BY aktiv DESC, name'
 )->fetchAll();
 
