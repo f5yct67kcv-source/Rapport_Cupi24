@@ -229,6 +229,23 @@ select.inp { padding-right: 30px; background-image: linear-gradient(45deg, trans
 .nav-item.hat-update { color: var(--warn); }
 .nav-item.hat-update svg.i { stroke: var(--warn); }
 
+/* Aufklappbarer Navigationsbereich (ENT-039) -- bislang der einzige seiner
+   Art. Die Kinder sind nur sichtbar, solange der Bereich aktiv ist: kein
+   Zustand, der beim Verlassen "hängen bleibt" und beim nächsten Öffnen
+   verwirrt. */
+.nav-eltern .chev { margin-left: auto; flex: none; width: 13px; height: 13px; transition: transform .15s; }
+.nav-gruppe.offen .nav-eltern .chev { transform: rotate(180deg); }
+.nav-kinder { display: none; padding-left: 33px; margin-top: 1px; margin-bottom: 4px; }
+.nav-gruppe.offen .nav-kinder { display: block; }
+.nav-kind {
+  display: block; width: 100%; text-align: left; border: none; background: transparent;
+  color: var(--shell-txt); font: inherit; font-size: 13px; font-weight: 550;
+  padding: 7px 10px; margin-bottom: 1px; border-radius: var(--r-sm); cursor: pointer;
+  transition: background .13s, color .13s;
+}
+.nav-kind:hover { background: var(--shell-hi); color: var(--shell-txt-hi); }
+.nav-kind.on { background: var(--shell-hi); color: var(--accent); }
+
 .side-foot { padding: 12px; border-top: 1px solid var(--shell-line); flex: none; }
 .side-user { display: flex; align-items: center; gap: 10px; padding: 7px 8px; }
 .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; letter-spacing: .3px; flex: none; }
@@ -497,6 +514,8 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .tab-nebenan svg.i { width: 15px; height: 15px; }
 .ptab { display: none; }
 .ptab.on { display: block; }
+.ku-tab { display: none; }
+.ku-tab.on { display: block; }
 
 /* Monatsmatrix — erste Spalte bleibt stehen, die Tage scrollen in der Karte */
 .mx-info { font-size: 12px; color: var(--ink-3); margin: -6px 0 12px; }
@@ -622,7 +641,7 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
    sind darum so flach wie lesbar bleibt -- und nur hier, nicht überall. */
 /* Im Objektplan zaehlt jede Zeile: die Abstaende ueber der Tabelle werden
    enger gefasst als sonst im Dashboard. */
-#pv-objektplan .tabs, #view-planung .tabs { margin-bottom: 10px; }
+#pv-objektplan .tabs, #view-planung .tabs, #view-kunden .tabs { margin-bottom: 10px; }
 .opl-leiste { margin-bottom: 9px; }
 .opl-leiste .wo { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
 /* Objektplanung bleibt dicht (ENT-024): schmalere Felder als in der freieren
@@ -820,6 +839,9 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
   .shell.schmal .nav-lbl { display: none; }
   .shell.schmal .nav-item { justify-content: center; gap: 0; padding: 10px 0; }
   .shell.schmal .nav-item .lbl, .shell.schmal .nav-item .tag { display: none; }
+  /* Kein Platz für ein ausgeklapptes Untermenü neben blossen Symbolen --
+     "Kunden" bleibt anklickbar und führt weiterhin auf die Übersicht. */
+  .shell.schmal .nav-eltern .chev, .shell.schmal .nav-kinder { display: none; }
   .shell.schmal .side-brand { justify-content: center; padding: 0 8px; }
   .shell.schmal .side-brand .txt { display: none; }
   .shell.schmal .side-user { justify-content: center; padding: 7px 0; }
@@ -1001,10 +1023,17 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <svg class="i" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span class="lbl">Mitarbeitende</span>
       </button>
-      <button class="nav-item" id="nav-kunden" title="Kunden" onclick="go('kunden')">
-        <svg class="i" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-        <span class="lbl">Kunden</span>
-      </button>
+      <div class="nav-gruppe" id="navg-kunden">
+        <button class="nav-item nav-eltern" id="nav-kunden" title="Kunden" onclick="go('kunden')">
+          <svg class="i" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          <span class="lbl">Kunden</span>
+          <svg class="i chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="nav-kinder">
+          <button class="nav-kind" id="nav-kunden-uebersicht" onclick="go('kunden'); kuGoTab('uebersicht')">Übersicht</button>
+          <button class="nav-kind" id="nav-kunden-objekte" onclick="go('kunden'); kuGoTab('objekte')">Objekte</button>
+        </div>
+      </div>
     </nav>
 
     <div class="side-foot">
@@ -1292,7 +1321,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           <button class="tab on" id="ptab-uebersicht" onclick="goTab('uebersicht')">Übersicht</button>
           <button class="tab" id="ptab-einsaetze" onclick="goTab('einsaetze')">Einsätze</button>
           <button class="tab" id="ptab-objektplan" onclick="goTab('objektplan')">Objektplanung</button>
-          <button class="tab" id="ptab-objekte" onclick="goTab('objekte')">Objekte</button>
           <button class="tab" id="ptab-tag" onclick="goTab('tag')">Tagesplan</button>
           <div class="sp" style="flex:1"></div>
           <!-- Auf der Trennlinie statt in einer eigenen Werkzeugleiste (ENT-038)
@@ -1448,23 +1476,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           <div id="oplBody"></div>
         </div>
 
-        <!-- ── Reiter: Objekte (Daueraufträge) ── -->
-        <div class="ptab" id="pv-objekte">
-          <div class="bar-tools">
-            <div class="search">
-              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input class="inp" type="search" id="oQ" placeholder="Objekt, Kunde oder Ort …" oninput="renderObjekte()">
-            </div>
-            <label class="check" style="font-size:12.5px"><input type="checkbox" id="oInaktiv" onchange="renderObjekte()"> auch stillgelegte</label>
-            <div class="sp" style="flex:1"></div>
-            <button class="btn btn-primary btn-sm" onclick="openObjektNeu()">
-              <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Neues Objekt
-            </button>
-          </div>
-          <div class="card"><div class="card-bd flush"><div class="tw" id="oTable"></div></div></div>
-        </div>
-
         <!-- ── Reiter: Tagesplan ── -->
         <div class="ptab" id="pv-tag">
           <div class="bar-tools">
@@ -1523,22 +1534,47 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
 
       <!-- ─────────── KUNDEN ─────────── -->
       <section class="view" id="view-kunden">
-        <div class="bar-tools">
-          <div class="search">
-            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="inp" type="search" id="kQ" placeholder="Kunde, Ort oder Strasse …" oninput="renderKunden()">
-          </div>
-          <div class="sp" style="flex:1"></div>
-          <button class="btn btn-plain btn-sm" onclick="openKi('kunde')" title="Kundenangaben diktieren statt tippen">
-            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-            Diktat: anlegen
-          </button>
-          <button class="btn btn-primary btn-sm" onclick="openKundeNeu()">
-            <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Neuer Kunde
-          </button>
+        <div class="tabs">
+          <button class="tab on" id="kutab-uebersicht" onclick="kuGoTab('uebersicht')">Übersicht</button>
+          <button class="tab" id="kutab-objekte" onclick="kuGoTab('objekte')">Objekte</button>
         </div>
-        <div class="card"><div class="card-bd flush"><div class="tw" id="kuTable"></div></div></div>
+
+        <!-- ── Reiter: Übersicht (bisheriger Inhalt, unverändert) ── -->
+        <div class="ku-tab on" id="kv-uebersicht">
+          <div class="bar-tools">
+            <div class="search">
+              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="inp" type="search" id="kQ" placeholder="Kunde, Ort oder Strasse …" oninput="renderKunden()">
+            </div>
+            <div class="sp" style="flex:1"></div>
+            <button class="btn btn-plain btn-sm" onclick="openKi('kunde')" title="Kundenangaben diktieren statt tippen">
+              <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              Diktat: anlegen
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="openKundeNeu()">
+              <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Neuer Kunde
+            </button>
+          </div>
+          <div class="card"><div class="card-bd flush"><div class="tw" id="kuTable"></div></div></div>
+        </div>
+
+        <!-- ── Reiter: Objekte (aus der Planung hierher verschoben, ENT-039) ── -->
+        <div class="ku-tab" id="kv-objekte">
+          <div class="bar-tools">
+            <div class="search">
+              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="inp" type="search" id="oQ" placeholder="Objekt, Kunde oder Ort …" oninput="renderObjekte()">
+            </div>
+            <label class="check" style="font-size:12.5px"><input type="checkbox" id="oInaktiv" onchange="renderObjekte()"> auch stillgelegte</label>
+            <div class="sp" style="flex:1"></div>
+            <button class="btn btn-primary btn-sm" onclick="openObjektNeu()">
+              <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Neues Objekt
+            </button>
+          </div>
+          <div class="card"><div class="card-bd flush"><div class="tw" id="oTable"></div></div></div>
+        </div>
       </section>
 
     </div>
@@ -2062,6 +2098,7 @@ let oplNurTeil = false;// nur eingeteilte Personen zeigen
 let oplZelleZiel = null;   // { msId, datum } des offenen Zuteilungsdialogs
 let sperren = {};      // "mitarbeiterId|datum" -> Bemerkung (ENT-028)
 let pTab = 'uebersicht';
+let kuTab = 'uebersicht';   // Kunden: Übersicht oder Objekte (ENT-039)
 let kiMode = 'neu';
 const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email'];
 const MA_LABEL = { personalnummer:'Personalnummer', anrede:'Anrede', vorname:'Vorname', nachname:'Nachname',
@@ -2575,7 +2612,10 @@ function go(view) {
   if (view !== 'planung') weiteAnsicht(false);
   if (view === 'rapporte') renderRapporte();
   if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
-  if (view === 'kunden' && !kunden.length) loadKunden();
+  // Das Untermenü ist nur aufgeklappt, solange Kunden der aktive Bereich ist
+  // -- kein Zustand, der beim Verlassen hängen bleibt (ENT-039).
+  $('navg-kunden').classList.toggle('offen', view === 'kunden');
+  if (view === 'kunden') kuGoTab(kuTab);
   if (view === 'planung') {
     // Die Planung braucht ausser den Einsätzen auch Objekte, Feiertage,
     // Personal (Zuteilung) und Kunden (Eingabehilfe im Formular).
@@ -3380,16 +3420,30 @@ function goTab(t) {
     // haben, und ohne sie fehlt der ganze Schichtblock.
     ladeObjektplan(true).then(renderObjektplan);
   }
-  if (t === 'objekte') objekte.length ? renderObjekte() : loadObjekte();
   if (t === 'tag') renderTagesplan();
 }
 const TAB_CRUMB = {
   uebersicht: 'Besetzung im Monat',
   objektplan: 'Ein Objekt im Detail planen',
   einsaetze:  'Alle geplanten Einsätze',
-  objekte:    'Daueraufträge und ihre Masterschichten',
   tag:        'Der Tag im Detail'
 };
+
+// ══════════════════════════════════════════ KUNDEN: REITER (ENT-039)
+// Objekte sind Daueraufträge von Kunden -- sie stehen seither unter Kunden,
+// nicht mehr in der Planung. Gleiches Muster wie goTab() für die Planung.
+function kuGoTab(t) {
+  kuTab = t;
+  document.querySelectorAll('#view-kunden .ku-tab').forEach(v => v.classList.remove('on'));
+  document.querySelectorAll('#view-kunden .tab').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('.nav-kind').forEach(b => b.classList.remove('on'));
+  $('kv-' + t).classList.add('on');
+  $('kutab-' + t).classList.add('on');
+  $('nav-kunden-' + t).classList.add('on');
+  $('pgCrumb').textContent = t === 'objekte' ? 'Daueraufträge und ihre Masterschichten' : 'Stammdaten';
+  if (t === 'uebersicht') { kunden.length ? renderKunden() : loadKunden(); }
+  if (t === 'objekte') { objekte.length ? renderObjekte() : loadObjekte(); }
+}
 
 // ══════════════════════════════════════════ OBJEKTE
 function loadObjekte() {
@@ -4089,7 +4143,7 @@ function renderObjektplan() {
     $('oplWo').textContent = '';
     $('oplZahlen').innerHTML = '';
     $('oplBody').innerHTML = `<div class="card"><div class="card-bd">` + EMPTY('Kein Objekt gewählt',
-      'Objekte legst du im Reiter „Objekte“ an. Danach lässt sich hier jedes einzeln planen.') + `</div></div>`;
+      'Objekte legst du unter Kunden → Objekte an. Danach lässt sich hier jedes einzeln planen.') + `</div></div>`;
     return;
   }
   if (oplStand !== oplId + '|' + von + '|' + bis) {
@@ -5132,7 +5186,7 @@ function renderMatrix() {
       ? EMPTY('Kein Objekt passt zum Filter',
           'Im gewählten Zeitraum entspricht keine Zeile dieser Auswahl. Setze die Filter auf „Beide Sparten“ und „Jede Belegung“, leere die Suche oder wähle einen anderen Zeitraum.')
       : EMPTY('Nichts anzuzeigen',
-          'Für diesen Zeitraum gibt es weder Objekte noch Einzeleinsätze. Objekte legst du im Reiter „Objekte“ an.');
+          'Für diesen Zeitraum gibt es weder Objekte noch Einzeleinsätze. Objekte legst du unter Kunden → Objekte an.');
     return;
   }
 
