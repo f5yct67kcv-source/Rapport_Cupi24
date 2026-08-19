@@ -32,6 +32,11 @@ $bedarf     = (int)($input['bedarf'] ?? 1);
 $status     = trim((string)($input['status'] ?? 'geplant'));
 $bemerkung  = trim((string)($input['bemerkung'] ?? '')) ?: null;
 
+// Eine abgeglichene Schicht ist festgeschrieben (ENT-045) -- der Plan darf
+// die Grundlage einer bereits bestaetigten Feststellung nicht rueckwirkend
+// verschieben.
+if ($id > 0) { einsatz_sperre_pruefen(db(), $id); }
+
 if ($kundeName === '' || $ort === '' || $datum === '' || $von === '' || $bis === '') {
     json_response(['status' => 'error', 'message' => 'Kunde, Arbeitsort, Datum, Von und Bis erforderlich'], 400);
 }

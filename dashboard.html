@@ -585,16 +585,30 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ag-sammel .btn-quiet { background: var(--surface); border-color: var(--accent-line); color: var(--accent); }
 .ag-sammel .btn-quiet:hover { background: var(--surface-2); }
 
-/* Tabelle des Abgleichs: eine Zeile ist eine Person auf einer Schicht. */
-#agTable td { padding-top: 5px; padding-bottom: 5px; }
-#agTable .inp { padding: 4px 7px; font-size: 12.5px; width: 78px; }
-#agTable .inp.pause { width: 62px; }
-#agTable select.inp { width: auto; padding-right: 24px; }
-#agTable .haken { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
-#agTable tr.gewaehlt > td { background: var(--accent-soft); }
-#agTable .stift { border: none; background: transparent; color: var(--ink-3); cursor: pointer; padding: 5px; border-radius: var(--r-xs); display: inline-flex; }
-#agTable .stift:hover { background: var(--line-soft); color: var(--ink); }
+/* Tabelle des Abgleichs: eine Zeile ist eine Person auf einer Schicht.
+   Kopf und Inhalt teilen die Ausrichtung -- eine linksbündige Überschrift
+   über einem rechtsbündigen Wert liest sich als Fehler. */
+.ag-tab td { padding-top: 5px; padding-bottom: 5px; vertical-align: middle; }
+.ag-tab th.mitte, .ag-tab td.mitte { text-align: center; }
+.ag-tab th.num, .ag-tab td.num { text-align: right; }
+.ag-tab th:not(.mitte):not(.num), .ag-tab td:not(.mitte):not(.num) { text-align: left; }
+.ag-tab .inp { padding: 4px 7px; font-size: 12.5px; width: 82px; text-align: center; }
+.ag-tab .inp.pause { width: 66px; }
+.ag-tab .haken { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+.ag-tab tr.gewaehlt > td { background: var(--accent-soft); }
+.ag-tab .stift { border: none; background: transparent; color: var(--ink-3); cursor: pointer; padding: 5px; border-radius: var(--r-xs); display: inline-flex; }
+.ag-tab .stift:hover { background: var(--line-soft); color: var(--ink); }
 .ag-plan { font-size: 11.5px; color: var(--ink-3); }
+
+/* Festgeschriebene Zeile: sichtbar, aber erkennbar nicht mehr im Zugriff. */
+.ag-tab tr.zu > td { background: var(--surface-2); }
+.ag-tab tr.zu.gewaehlt > td { background: var(--accent-soft); }
+.ag-tab tr.zu .inp:disabled { background: transparent; border-color: transparent; color: var(--ink-2); }
+.i-schloss { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2;
+  stroke-linecap: round; stroke-linejoin: round; margin-right: 4px; vertical-align: -1px; flex: none; }
+.chip .i-schloss { margin-right: 3px; }
+.zu-zone { border-color: var(--warn-line); background: var(--warn-soft); }
+.zu-zone .zone-hd, .zu-zone .zone-note { color: var(--warn); }
 .inp[readonly] { background: var(--surface-2); color: var(--ink-3); cursor: default; }
 .wahl-reihe { display: flex; gap: 18px; align-items: center; min-height: 38px; }
 .wahl-reihe label { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13.5px; font-weight: 500; }
@@ -1600,10 +1614,13 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
             <span class="tool-bis">bis</span>
             <input class="inp" type="date" id="agBis" style="width:auto" onchange="renderAbgleich()" aria-label="Zeitraum bis">
           </div>
+          <!-- Vorgabe ist "Alle": eine abgeglichene Schicht verschwindet nicht
+               aus der Liste, sie wird nur festgeschrieben. Wer die offenen
+               allein sehen will, stellt hier um. -->
           <select class="inp" id="agStatusFilter" style="width:auto" onchange="renderAbgleich()" aria-label="Status">
-            <option value="offen">Nicht abgeglichene</option>
-            <option value="fertig">Abgeglichene</option>
             <option value="">Alle</option>
+            <option value="offen">Nur offene</option>
+            <option value="fertig">Nur abgeglichene</option>
           </select>
           <select class="inp" id="agSparte" style="width:auto" onchange="renderAbgleich()" aria-label="Sparte">
             <option value="">Alle Sparten</option>
@@ -5993,8 +6010,18 @@ const AG_STATUS = {
 let agZeilen = [];        // aufbereitete Zeilen der aktuellen Ansicht
 let agGewaehlt = new Set(); // Schlüssel der angehakten Zeilen
 let agTarget = null;      // Zeile, die in der Schublade offen ist
+// Zeilen, deren Sperre in dieser Sitzung ausdrücklich aufgehoben wurde. Der
+// Weg zurück in die Bearbeitung führt nur hierüber -- und über eine Rückfrage.
+let agEntsperrt = new Set();
+const schlossAuf = '<svg class="i-schloss" viewBox="0 0 24 24" style="vertical-align:-2px"><rect x="3.5" y="11" width="17" height="10" rx="2"/><path d="M7.5 11V7a4.5 4.5 0 0 1 9 0"/></svg>';
 
 const agKey = z => `${z.einsatz_id}:${z.mitarbeiter_id || 0}`;
+
+// Eine abgeglichene Zeile ist festgeschrieben. Sie bleibt sichtbar -- sie zu
+// verstecken hiesse, die geleistete Arbeit aus dem Blick zu nehmen --, aber
+// sie lässt sich nicht mehr nebenbei ändern. Wer sie doch ändern muss, hebt
+// die Sperre ausdrücklich auf und bestätigt das ein zweites Mal.
+const agGesperrt = z => (z.ist_status || 'offen') !== 'offen';
 
 // Abzugleichen ist, was vorbei ist. Abgesagte Schichten fehlen: die Absage
 // ist bereits die Feststellung, dass nichts stattgefunden hat.
@@ -6084,41 +6111,47 @@ function renderAbgleich() {
   }
 
   const stiftSvg = '<svg class="i i-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>';
+  // Geschlossenes Vorhaengeschloss: eine abgeglichene Zeile ist festgeschrieben.
+  const schlossSvg = '<svg class="i-schloss" viewBox="0 0 24 24"><rect x="3.5" y="11" width="17" height="10" rx="2"/><path d="M7.5 11V7a4.5 4.5 0 0 1 9 0v4"/></svg>';
   const alleGewaehlt = agZeilen.every(z => agGewaehlt.has(agKey(z)));
 
-  $('agTable').innerHTML = `<table><thead><tr>
-      <th style="width:34px"><input type="checkbox" class="haken" id="agAlle" ${alleGewaehlt ? 'checked' : ''} onchange="agAlleUm(this.checked)" aria-label="Alle auswählen"></th>
-      <th style="width:34px"></th>
-      <th>Planung</th><th>Mitarbeitende</th><th>Datum</th>
-      <th>von</th><th>bis</th><th>Pause</th><th class="num">Dauer</th>
-      <th>Kunde</th><th>Status</th>
+  $('agTable').innerHTML = `<table class="ag-tab"><thead><tr>
+      <th class="mitte"><input type="checkbox" class="haken" id="agAlle" ${alleGewaehlt ? 'checked' : ''} onchange="agAlleUm(this.checked)" aria-label="Alle auswählen"></th>
+      <th>Planung</th><th>Mitarbeitende</th><th class="nowrap">Datum</th>
+      <th class="mitte">von</th><th class="mitte">bis</th><th class="mitte">Pause</th><th class="num">Dauer</th>
+      <th>Kunde</th><th>Status</th><th class="mitte">Bearbeiten</th>
     </tr></thead><tbody>` + agZeilen.map(z => {
     const k = agKey(z);
     const gew = agGewaehlt.has(k);
     const st = AG_STATUS[z.ist_status || 'offen'] || AG_STATUS.offen;
     const erst = (z.ist_status || 'offen') === 'offen';
+    // Abgeglichene Zeilen bleiben stehen, sind aber festgeschrieben: die
+    // Felder sind gesperrt, geändert wird nur über den Stift und erst nach
+    // ausdrücklichem Aufheben der Sperre.
+    const zu = agGesperrt(z);
     // Beim ersten Mal steht der Plan in den Feldern -- der Normalfall ist,
     // dass es so lief wie geplant. Gespeichert wird trotzdem erst auf Klick.
     const vVon = erst ? hm(z.von) : (z.ist_von ? hm(z.ist_von) : '');
     const vBis = erst ? hm(z.bis) : (z.ist_bis ? hm(z.ist_bis) : '');
     const vPause = z.ist_pause_min === null || z.ist_pause_min === undefined ? '' : z.ist_pause_min;
-    const ohne = z.ist_status === 'abwesend' || z.ist_status === 'ausgefallen';
+    // Gesperrt oder ohne Anwesenheit: in beiden Fällen sind die Zeitfelder tot.
+    const ohne = zu || z.ist_status === 'abwesend' || z.ist_status === 'ausgefallen';
     return `
-      <tr class="${gew ? 'gewaehlt' : ''}" data-k="${esc(k)}">
-        <td><input type="checkbox" class="haken" ${gew ? 'checked' : ''} onchange="agWaehlen('${esc(k)}', this.checked)" aria-label="Zeile auswählen"></td>
-        <td><button class="stift" onclick="openAbgleich('${esc(k)}')" title="Details" aria-label="Details">${stiftSvg}</button></td>
+      <tr class="${gew ? 'gewaehlt' : ''}${zu ? ' zu' : ''}" data-k="${esc(k)}">
+        <td class="mitte"><input type="checkbox" class="haken" ${gew ? 'checked' : ''} onchange="agWaehlen('${esc(k)}', this.checked)" aria-label="Zeile auswählen"></td>
         <td>${z.titel ? esc(z.titel) : `<span style="color:var(--ink-3)">${esc(z.einsatzart)}</span>`}
             <div class="ag-plan">${esc(z.ort)}${z.sparte === 'reinigung' ? ' · Reinigung' : ''}</div></td>
         <td>${z.mitarbeiter_id
           ? `${esc(z.wer)}${z.personalnummer ? ` <span class="ag-plan">(${esc(z.personalnummer)})</span>` : ''}`
           : '<span style="color:var(--neg)">niemand eingeteilt</span>'}</td>
-        <td class="nowrap num">${dmy(z.datum)}<div class="ag-plan">${hm(z.von)}–${hm(z.bis)}</div></td>
-        <td><input class="inp" type="time" value="${esc(vVon)}" ${ohne ? 'disabled' : ''} data-ag="von" data-k="${esc(k)}" aria-label="Tatsächlich von"></td>
-        <td><input class="inp" type="time" value="${esc(vBis)}" ${ohne ? 'disabled' : ''} data-ag="bis" data-k="${esc(k)}" aria-label="Tatsächlich bis"></td>
-        <td><input class="inp pause" type="number" min="0" max="600" step="5" value="${esc(String(vPause))}" ${ohne ? 'disabled' : ''} data-ag="pause" data-k="${esc(k)}" aria-label="Pause in Minuten"></td>
-        <td class="num nowrap" data-dauer="${esc(k)}">${ohne ? '–' : esc(agDauer(vVon, vBis, vPause))}</td>
+        <td class="nowrap">${dmy(z.datum)}<div class="ag-plan">${hm(z.von)}–${hm(z.bis)}</div></td>
+        <td class="mitte"><input class="inp" type="time" value="${esc(vVon)}"${ohne ? ' disabled' : ''} data-ag="von" data-k="${esc(k)}" aria-label="Tatsächlich von"></td>
+        <td class="mitte"><input class="inp" type="time" value="${esc(vBis)}"${ohne ? ' disabled' : ''} data-ag="bis" data-k="${esc(k)}" aria-label="Tatsächlich bis"></td>
+        <td class="mitte"><input class="inp pause" type="number" min="0" max="600" step="5" value="${esc(String(vPause))}"${ohne ? ' disabled' : ''} data-ag="pause" data-k="${esc(k)}" aria-label="Pause in Minuten"></td>
+        <td class="num nowrap" data-dauer="${esc(k)}">${ohne && !zu ? '–' : esc(agDauer(vVon, vBis, vPause))}</td>
         <td>${esc(z.kunde_name)}</td>
-        <td><span class="chip ${st[1]}">${esc(st[0])}</span></td>
+        <td class="nowrap"><span class="chip ${st[1]}">${zu ? schlossSvg : ''}${esc(st[0])}</span></td>
+        <td class="mitte"><button class="stift" onclick="openAbgleich('${esc(k)}')" title="${zu ? 'Festgeschrieben — zum Ändern Sperre aufheben' : 'Details'}" aria-label="Bearbeiten">${stiftSvg}</button></td>
       </tr>`;
   }).join('') + `</tbody></table>`;
 
@@ -6173,7 +6206,8 @@ function agMasterZeiten() {
     });
     agDauerNachfuehren(k);
   });
-  toast(`Zeiten auf ${nf(agGewaehlt.size)} Zeilen gesetzt — noch nicht gespeichert.`);
+  const offen = agZeilen.filter(z => agGewaehlt.has(agKey(z)) && !agGesperrt(z)).length;
+  toast(`Zeiten auf ${nf(offen)} ${offen === 1 ? 'Zeile' : 'Zeilen'} gesetzt — noch nicht gespeichert.`);
 }
 function agMasterPause() {
   const p = $('agMzPause').value;
@@ -6183,7 +6217,8 @@ function agMasterPause() {
     if (el && !el.disabled) el.value = p;
     agDauerNachfuehren(k);
   });
-  toast(`Pause auf ${nf(agGewaehlt.size)} Zeilen gesetzt — noch nicht gespeichert.`);
+  const offenP = agZeilen.filter(z => agGewaehlt.has(agKey(z)) && !agGesperrt(z)).length;
+  toast(`Pause auf ${nf(offenP)} ${offenP === 1 ? 'Zeile' : 'Zeilen'} gesetzt — noch nicht gespeichert.`);
 }
 
 // ── Speichern ─────────────────────────────────────────────────────────────
@@ -6193,6 +6228,7 @@ function agSenden(zeilen, meldung) {
   api('einsatz_abgleich.php', { method: 'POST', body: { zeilen } }).then(({ ok, data }) => {
     if (!ok || data.status !== 'ok') { toast(data.message || 'Speichern fehlgeschlagen.'); return; }
     agGewaehlt.clear();
+    agEntsperrt.clear();
     closeDrawer();
     loadEinsaetze().then(() => { renderAbgleich(); toast(meldung); });
   });
@@ -6201,7 +6237,34 @@ function agSenden(zeilen, meldung) {
 function agSammelSpeichern(status) {
   const gewaehlt = agZeilen.filter(z => agGewaehlt.has(agKey(z)));
   if (!gewaehlt.length) { toast('Nichts ausgewählt.'); return; }
-  const zeilen = gewaehlt.map(z => {
+
+  // Festgeschriebene Zeilen lassen sich nicht nebenbei überschreiben.
+  if (status !== 'offen') {
+    const zu = gewaehlt.filter(agGesperrt).length;
+    if (zu === gewaehlt.length) {
+      toast('Alle ausgewählten Zeilen sind bereits abgeglichen und gesperrt.');
+      return;
+    }
+    if (zu) {
+      toast(`${nf(zu)} bereits abgeglichene ${zu === 1 ? 'Zeile bleibt' : 'Zeilen bleiben'} unverändert.`);
+    }
+  }
+  // Das Aufheben einer Sperre ist der eine Weg zurück -- und wird bestätigt.
+  if (status === 'offen') {
+    const zu = gewaehlt.filter(agGesperrt);
+    if (!zu.length) { toast('Keine der ausgewählten Zeilen ist abgeglichen.'); return; }
+    askConfirm('Abgleich aufheben',
+      `${nf(zu.length)} bereits festgeschriebene ${zu.length === 1 ? 'Zeile wird' : 'Zeilen werden'} wieder zur Bearbeitung freigegeben. `
+      + 'Die bisher erfassten Ist-Zeiten gehen dabei verloren.',
+      'Sperre aufheben',
+      () => agSenden(zu.map(z => ({
+        einsatz_id: z.einsatz_id, mitarbeiter_id: z.mitarbeiter_id, ist_status: 'offen',
+        ist_von: '', ist_bis: '', ist_pause_min: '', ist_bemerkung: z.ist_bemerkung || '',
+      })), `${nf(zu.length)} ${zu.length === 1 ? 'Sperre' : 'Sperren'} aufgehoben.`));
+    return;
+  }
+
+  const zeilen = gewaehlt.filter(z => !agGesperrt(z)).map(z => {
     const k = agKey(z);
     const f = a => document.querySelector(`#agTable [data-ag="${a}"][data-k="${CSS.escape(k)}"]`);
     return {
@@ -6212,13 +6275,12 @@ function agSammelSpeichern(status) {
       ist_bemerkung: z.ist_bemerkung || '',
     };
   });
-  if (status !== 'offen' && zeilen.some(z => !z.ist_von || !z.ist_bis)) {
+  if (!zeilen.length) { toast('Nichts zu speichern.'); return; }
+  if (zeilen.some(z => !z.ist_von || !z.ist_bis)) {
     toast('Bei mindestens einer Zeile fehlen die Zeiten.');
     return;
   }
-  agSenden(zeilen, status === 'offen'
-    ? `${nf(zeilen.length)} Abgleich${zeilen.length === 1 ? '' : 'e'} zurückgenommen.`
-    : `${nf(zeilen.length)} ${zeilen.length === 1 ? 'Zeile' : 'Zeilen'} abgeglichen.`);
+  agSenden(zeilen, `${nf(zeilen.length)} ${zeilen.length === 1 ? 'Zeile' : 'Zeilen'} abgeglichen.`);
 }
 
 // ── Schublade für eine einzelne Zeile ─────────────────────────────────────
@@ -6229,9 +6291,11 @@ function openAbgleich(k) {
   agTarget = z;
 
   const erst = (z.ist_status || 'offen') === 'offen';
+  const zu = agGesperrt(z) && !agEntsperrt.has(k);
   const vorwahl = erst ? (z.mitarbeiter_id ? 'anwesend' : 'ausgefallen') : z.ist_status;
   const opt = Object.keys(AG_STATUS)
     .map(s => `<option value="${s}"${vorwahl === s ? ' selected' : ''}>${AG_STATUS[s][0]}</option>`).join('');
+  const sperr = zu ? ' disabled' : '';
 
   $('drTitle').textContent = `${dmy(z.datum)} · ${z.mitarbeiter_id ? z.wer : z.kunde_name}`;
   $('drBody').innerHTML = `
@@ -6245,17 +6309,27 @@ function openAbgleich(k) {
         ${z.bemerkung ? `<br><br>Bemerkung aus der Planung: ${esc(z.bemerkung)}` : ''}
       </div>
     </div>
+    ${zu ? `<div class="zone zu-zone">
+      <div class="zone-hd">${schlossAuf} Diese Zeile ist festgeschrieben</div>
+      <div class="zone-note">
+        Sie wurde am ${esc(z.abgeglichen_am ? dmy(String(z.abgeglichen_am).slice(0, 10)) : '–')} abgeglichen und
+        lässt sich nicht mehr nebenbei ändern — auch in der Planung nicht.
+        Zum Ändern die Sperre ausdrücklich aufheben; die bisher erfassten
+        Ist-Zeiten gehen dabei verloren.
+      </div>
+      <button class="btn btn-plain btn-sm" type="button" onclick="agdEntsperren('${esc(k)}')">Sperre aufheben und bearbeiten</button>
+    </div>` : ''}
     <div class="form-grid" style="margin-top:16px">
       <div class="f wide"><label for="agdStatus">Was ist passiert?</label>
-        <select class="inp" id="agdStatus" onchange="agdStatusUm()">${opt}</select></div>
+        <select class="inp" id="agdStatus" onchange="agdStatusUm()"${sperr}>${opt}</select></div>
       <div class="f"><label for="agdVon">Tatsächlich von</label>
-        <input class="inp" id="agdVon" type="time" value="${esc(erst ? hm(z.von) : (z.ist_von ? hm(z.ist_von) : ''))}"></div>
+        <input class="inp" id="agdVon" type="time"${sperr} value="${esc(erst ? hm(z.von) : (z.ist_von ? hm(z.ist_von) : ''))}"></div>
       <div class="f"><label for="agdBis">Tatsächlich bis</label>
-        <input class="inp" id="agdBis" type="time" value="${esc(erst ? hm(z.bis) : (z.ist_bis ? hm(z.ist_bis) : ''))}"></div>
+        <input class="inp" id="agdBis" type="time"${sperr} value="${esc(erst ? hm(z.bis) : (z.ist_bis ? hm(z.ist_bis) : ''))}"></div>
       <div class="f"><label for="agdPause">Pause (Minuten)</label>
-        <input class="inp" id="agdPause" type="number" min="0" max="600" step="5" value="${esc(String(z.ist_pause_min ?? ''))}"></div>
+        <input class="inp" id="agdPause" type="number" min="0" max="600" step="5"${sperr} value="${esc(String(z.ist_pause_min ?? ''))}"></div>
       <div class="f wide"><label for="agdBemerkung">Abweichung / Bemerkung</label>
-        <textarea class="inp" id="agdBemerkung" rows="2" style="min-height:60px" placeholder="z. B. andere Besetzung als geplant">${esc(z.ist_bemerkung || '')}</textarea></div>
+        <textarea class="inp" id="agdBemerkung" rows="2" style="min-height:60px"${sperr} placeholder="z. B. andere Besetzung als geplant">${esc(z.ist_bemerkung || '')}</textarea></div>
     </div>
     <div class="zone">
       <div class="zone-hd">Hier wird nur festgehalten, nicht gerechnet</div>
@@ -6270,9 +6344,9 @@ function openAbgleich(k) {
   $('drFoot').innerHTML =
     `<button class="btn btn-plain" onclick="closeDrawer()">Schliessen</button>
      <div style="flex:1"></div>
-     <button class="btn btn-primary" onclick="agdSpeichern()">Abgleich speichern</button>`;
+     ${zu ? '' : '<button class="btn btn-primary" onclick="agdSpeichern()">Abgleich speichern</button>'}`;
   showDrawer();
-  agdStatusUm();
+  if (!zu) agdStatusUm();
 }
 
 // Wer nicht da war oder wessen Schicht ausfiel, hat keine Ist-Zeiten — die
@@ -6281,6 +6355,17 @@ function agdStatusUm() {
   const s = $('agdStatus').value;
   const ohne = s === 'abwesend' || s === 'ausgefallen' || s === 'offen';
   ['agdVon', 'agdBis', 'agdPause'].forEach(id => { $(id).closest('.f').style.display = ohne ? 'none' : ''; });
+}
+
+// Doppelbestätigung: erst dieser Knopf, dann die Rückfrage. Aufgehoben wird
+// nur in der Ansicht -- gespeichert ist erst, was danach bewusst gespeichert
+// wird.
+function agdEntsperren(k) {
+  askConfirm('Sperre aufheben',
+    'Diese Zeile wurde bereits abgeglichen und ist festgeschrieben. Zum Ändern wird die Sperre aufgehoben — '
+    + 'die bisher erfassten Ist-Zeiten bleiben stehen, bis du neu speicherst.',
+    'Sperre aufheben',
+    () => { agEntsperrt.add(k); openAbgleich(k); });
 }
 
 function agdSpeichern() {

@@ -4,6 +4,7 @@
 // betroffen -- sie haengen nicht am Einsatz.
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require __DIR__ . '/../planung.php';
 
 $user = require_session();
 if (!$user['ist_admin']) {
@@ -18,6 +19,8 @@ $id = (int)($input['id'] ?? 0);
 if ($id <= 0) {
     json_response(['status' => 'error', 'message' => 'id erforderlich'], 400);
 }
+// Was abgeglichen ist, wird nicht mehr geloescht (ENT-045).
+einsatz_sperre_pruefen(db(), $id);
 
 $stmt = db()->prepare('DELETE FROM einsaetze WHERE id = ?');
 $stmt->execute([$id]);

@@ -381,3 +381,37 @@ function schichten_anlegen(array $vorschlag, int $adminId): int
     }
     return count($vorschlag['neu']);
 }
+
+// ── Sperre abgeglichener Schichten (ENT-045) ─────────────────────────────
+//
+// Ist eine Schicht einmal abgeglichen, ist sie festgeschrieben: sie hat
+// festgehalten, was tatsaechlich geleistet wurde. Wer danach den Plan
+// aendert, veraendert rueckwirkend die Grundlage einer Feststellung, die
+// jemand geprueft und bestaetigt hat. Das ist dieselbe Regel wie beim
+// versionierten Regelwerk in CLAUDE.md: eine spaetere Aenderung darf einen
+// abgeschlossenen Vorgang nie rueckwirkend verschieben.
+//
+// Die Sperre liegt bewusst hier im Server und nicht nur in der Oberflaeche --
+// eine Sperre, die man am Browser vorbei umgehen kann, ist keine.
+function einsatz_abgeglichen(PDO $pdo, int $einsatzId): bool
+{
+    $s = $pdo->prepare(
+        "SELECT 1 FROM einsaetze WHERE id = ? AND ist_status <> 'offen'
+         UNION ALL
+         SELECT 1 FROM einsatz_zuteilung WHERE einsatz_id = ? AND ist_status <> 'offen'
+         LIMIT 1"
+    );
+    $s->execute([$einsatzId, $einsatzId]);
+    return (bool)$s->fetchColumn();
+}
+
+// Bricht mit einer verstaendlichen Meldung ab, wenn die Schicht gesperrt ist.
+function einsatz_sperre_pruefen(PDO $pdo, int $einsatzId): void
+{
+    if ($einsatzId <= 0) { return; }
+    if (einsatz_abgeglichen($pdo, $einsatzId)) {
+        json_response(['status' => 'error', 'gesperrt' => true, 'message' =>
+            'Diese Schicht ist bereits abgeglichen und damit festgeschrieben. '
+            . 'Zum Aendern zuerst unter Abgleich die Sperre aufheben.'], 409);
+    }
+}

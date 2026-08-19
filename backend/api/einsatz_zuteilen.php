@@ -68,6 +68,10 @@ $vh->execute([$objektId, $msId, $datum]);
 $einsatz = $vh->fetch();
 $id = $einsatz ? (int)$einsatz['id'] : 0;
 
+// Eine abgeglichene Schicht ist festgeschrieben -- auch die Zuteilung wird
+// nicht mehr veraendert (ENT-045). Sonst verloere der Ist-Stand seinen Bezug.
+einsatz_sperre_pruefen(db(), $id);
+
 $von = substr((string)$vorlage['von'], 0, 5);
 $bis = substr((string)$vorlage['bis'], 0, 5);
 if ($einsatz) {
