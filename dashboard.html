@@ -590,6 +590,25 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
    die wirklich unmoeglich ist. */
 .ma-pick .who .sperrtag { display: block; font-size: 11.5px; font-weight: 620; color: var(--warn); margin-top: 2px; }
 
+/* ── Begrüssungs-Container mit Diktat-Router (ENT-032) */
+.begr-karte .card-bd { padding: 22px 24px; }
+.begr-kopf h2 { font-size: 21px; font-weight: 720; letter-spacing: -.3px; margin-bottom: 4px; }
+.begr-kopf p { font-size: 13.5px; color: var(--ink-2); line-height: 1.5; min-height: 1.4em; }
+.begr-router { margin-top: 18px; }
+.begr-eingabe { position: relative; border-radius: var(--r-sm); transition: outline-color .15s; outline: 2px dashed transparent; outline-offset: 2px; }
+.begr-eingabe.rt-ueber { outline-color: var(--accent); background: var(--accent-soft); }
+.begr-router textarea#rtText { resize: vertical; }
+.rt-bild { position: relative; display: inline-block; margin-top: 10px; }
+.rt-bild img { display: block; max-width: 220px; max-height: 140px; border-radius: var(--r-sm); border: 1px solid var(--line); object-fit: cover; }
+.rt-bild button { position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--sh-2); }
+.rt-bild button:hover { color: var(--neg); }
+.begr-router .sprach { margin-top: 10px; }
+.begr-router .sprach .sp { flex: 1; }
+@media (max-width: 620px) {
+  .begr-router .sprach { flex-wrap: wrap; }
+  .begr-router .sprach .sp { flex-basis: 100%; height: 0; }
+}
+
 /* ── Konfigurierbares Dashboard (ENT-031)
    Die Container liegen in einem Flex-Fluss statt in einem starren Raster,
    damit sich beliebige Reihenfolgen ergeben koennen -- ein starres 2:1-Raster
@@ -979,6 +998,60 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
       <!-- ─────────── ÜBERSICHT ─────────── -->
       <section class="view on" id="view-uebersicht">
         <div class="dash-flow" id="dashFlow" ondragover="dashDragUeber(event)">
+
+          <div class="dash-item dw-voll" data-widget="begruessung">
+            <div class="dash-werk">
+            <button class="griff" draggable="true" ondragstart="dashDragStart(event)" ondragend="dashDragEnde(event)" title="Verschieben" aria-label="Verschieben">
+              <svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
+            </button>
+            <button onclick="dashBewegen('begruessung',-1)" title="Weiter vorne" aria-label="Weiter vorne">
+              <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button onclick="dashBewegen('begruessung',1)" title="Weiter hinten" aria-label="Weiter hinten">
+              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <button onclick="dashSichtbarUm('begruessung')" class="dash-auge" title="Ein- oder ausblenden" aria-label="Ein- oder ausblenden">
+              <svg class="i-auge-an" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="i-auge-aus" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 4.22-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 8 11 8a20.4 20.4 0 0 1-2.68 3.9M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+            <div class="card begr-karte">
+              <div class="card-bd">
+                <div class="begr-kopf">
+                  <h2 id="begrGruss">Guten Tag</h2>
+                  <p id="begrNaechstes">Einen Moment …</p>
+                </div>
+                <div class="begr-router">
+                  <div class="begr-eingabe" id="begrDropzone" ondragover="rtDragUeber(event)" ondragleave="rtDragWeg(event)" ondrop="rtDrop(event)">
+                    <textarea class="inp" id="rtText" rows="2" placeholder="Diktieren, tippen oder ein Bild einfügen (Strg+V) — z. B. „Neuer Einsatz für die Borner AG morgen 7 bis 16 Uhr“ oder ein Screenshot einer Auftrags-E-Mail." onpaste="rtEinfuegen(event)"></textarea>
+                    <div id="rtBildVorschau" class="rt-bild" style="display:none">
+                      <img id="rtBildImg" alt="">
+                      <button type="button" onclick="rtBildEntfernen()" title="Bild entfernen" aria-label="Bild entfernen">
+                        <svg class="i i-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="sprach" id="rtSprach">
+                    <button class="sprach-btn" id="rtMik" onclick="sprachUm('rtText','rt')">
+                      <span class="pkt"></span>
+                      <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                      <span class="lb">Sprechen</span>
+                    </button>
+                    <div class="viz" id="rtViz"></div>
+                    <div class="sp"></div>
+                    <input type="file" id="rtDatei" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none" onchange="rtDateiGewaehlt(this.files[0])">
+                    <button class="btn btn-plain btn-sm" onclick="$('rtDatei').click()" title="Bild auswählen">
+                      <svg class="i i-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                      <span class="lbl">Bild</span>
+                    </button>
+                    <button class="btn btn-primary btn-sm" id="rtBtn" onclick="rtErkennen()">Erkennen</button>
+                  </div>
+                  <div class="sprach-hint" id="rtSprachHint"></div>
+                  <div class="msg-err" id="rtErr" style="display:none"></div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div class="dash-item dw-voll" data-widget="kpi">
             <div class="dash-werk">
@@ -1916,6 +1989,7 @@ function enter() {
   $('uRole').textContent = 'Administration';
   $('uAvatar').textContent = initials(me.name);
   dashInit();
+  sprachBereit('rt');
   reloadAll();
 }
 
@@ -1940,6 +2014,7 @@ const TITLES = {
 // ihn automatisch ein, ohne die gespeicherte Anordnung der bestehenden
 // Container zu verwerfen.
 const DASH_WIDGETS = [
+  { id: 'begruessung', titel: 'Begrüssung' },
   { id: 'kpi', titel: 'Kennzahlen' },
   { id: 'verlauf', titel: 'Stundenverlauf' },
   { id: 'angemeldet', titel: 'Angemeldete Benutzer' },
@@ -2066,6 +2141,191 @@ function dashDragUeber(e) {
   };
 }
 
+// ══════════════════════════════════════════ BEGRÜSSUNG UND DIKTAT-ROUTER (ENT-032)
+// Persoenliche Begruessung mit wechselnden Formulierungen, ein Kurzueberblick
+// und ein Diktat-/Bild-Router, der erkennt, in welchen Bereich ein Eingabe
+// gehoert, und den passenden bestehenden Dialog vorbefuellt oeffnet. Deckt
+// bewusst nur die NEUANLAGE ab (Mitarbeiter, Kunde, Einsatz) -- eine
+// Aenderung bestehender Datensaetze braucht einen eindeutig getroffenen
+// Datensatz und bleibt den bestehenden Einzel-Diktaten vorbehalten.
+const BEGR_GRUSS = {
+  morgen: ['Guten Morgen', 'Guten Morgen', 'Einen guten Start'],
+  tag: ['Guten Tag', 'Schön, dass du da bist', 'Willkommen zurück'],
+  abend: ['Guten Abend', 'Noch spät unterwegs?', 'Guten Abend'],
+};
+let naechstesDaten = null;
+let rtBild = null;   // { base64, mime, url } eines vorbereiteten Bildes
+
+function begrTageszeit() {
+  const h = new Date().getHours();
+  return h < 11 ? 'morgen' : h < 18 ? 'tag' : 'abend';
+}
+
+function ladeNaechstes() {
+  // Fuer den Vornamen in der Begruessung -- der Login liefert nur den
+  // technischen Namen, den echten Vornamen kennt erst die Personalliste.
+  const mitarbeiterDa = mitarbeiter.length ? Promise.resolve() : loadMitarbeiter();
+  return Promise.all([
+    api('naechstes.php').then(({ ok, data }) => { naechstesDaten = (ok && data.status === 'ok') ? data : null; }),
+    mitarbeiterDa,
+  ]).then(renderBegruessung);
+}
+
+function renderBegruessung() {
+  const zeit = begrTageszeit();
+  const formen = BEGR_GRUSS[zeit];
+  const gruss = formen[Math.floor(Math.random() * formen.length)];
+  // Erst die echte Personalliste fragen -- der Login-Name ist nicht
+  // zuverlaessig in Vor-/Nachname zerlegbar (z.B. "adrianvonarb").
+  const eintrag = mitarbeiter.find(m => m.name === (me && me.name));
+  const vorname = (eintrag && eintrag.vorname) || ((me && me.name) || '').split(/[.\s]/)[0];
+  $('begrGruss').textContent = vorname ? `${gruss}, ${esc(vorname)}` : gruss;
+
+  const n = naechstesDaten;
+  if (!n) { $('begrNaechstes').textContent = 'Einen Moment …'; return; }
+
+  const teile = [];
+  const e = n.naechster_einsatz;
+  if (e) {
+    const heute = isoTag();
+    const wannWort = e.datum === heute ? 'heute' : e.datum === isoTag(new Date(Date.now() + 864e5)) ? 'morgen' : `am ${dmy(e.datum)}`;
+    const wo = e.objekt_name || e.titel || e.kunde_name;
+    const offen = Math.max(0, e.bedarf - e.zugeteilt);
+    const zeitSatz = [
+      `${wannWort} um ${hmKurz(e.von)} steht „${esc(wo)}“ an`,
+      `${wannWort}, ${hmKurz(e.von)} Uhr: „${esc(wo)}“`,
+      `als Nächstes: „${esc(wo)}“ ${wannWort} um ${hmKurz(e.von)}`,
+    ];
+    let satz = zeitSatz[Math.floor(Math.random() * zeitSatz.length)];
+    if (offen > 0) satz += ` — noch ${offen} ${offen === 1 ? 'Stelle offen' : 'Stellen offen'}`;
+    teile.push(satz);
+  } else {
+    teile.push('kein anstehender Einsatz geplant');
+  }
+  if (n.neue_sperrtage > 0) {
+    teile.push(`${n.neue_sperrtage} ${n.neue_sperrtage === 1 ? 'neuer Sperrtag' : 'neue Sperrtage'}`);
+  }
+  if (n.offene_zusagen > 0) {
+    teile.push(`${n.offene_zusagen} offene ${n.offene_zusagen === 1 ? 'Rückmeldung' : 'Rückmeldungen'}`);
+  }
+  $('begrNaechstes').innerHTML = esc(teile[0].charAt(0).toUpperCase() + teile[0].slice(1))
+    + (teile.length > 1 ? '. ' + teile.slice(1).map(esc).join(', ') + '.' : '.');
+  // Klick fuehrt zum naechsten Einsatz, wenn es einen gibt.
+  $('begrNaechstes').style.cursor = e ? 'pointer' : '';
+  $('begrNaechstes').onclick = e ? () => { pTab = 'tag'; $('tgD').value = e.datum; go('planung'); } : null;
+}
+const hmKurz = t => String(t || '').slice(0, 5);
+
+// ── Router: Text/Diktat
+function rtErkennen() {
+  if (rtBild) { rtBildErkennen(); return; }
+  const text = $('rtText').value.trim();
+  const err = $('rtErr'); err.style.display = 'none';
+  if (!text) { err.textContent = 'Bitte etwas eingeben, diktieren oder ein Bild einfügen.'; err.style.display = ''; return; }
+  const b = $('rtBtn'); b.disabled = true; b.textContent = 'Erkenne …';
+  api('ki_router_parse.php', { method: 'POST', body: { text, heute: isoTag() } }).then(({ ok, data }) => {
+    b.disabled = false; b.textContent = 'Erkennen';
+    if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Erkennung fehlgeschlagen.'; err.style.display = ''; return; }
+    rtDialogOeffnen(data.bereich, data.felder, data.mitarbeiter_login_namen);
+    rtZuruecksetzen();
+  }).catch(() => { b.disabled = false; b.textContent = 'Erkennen'; err.textContent = 'Netzwerkfehler.'; err.style.display = ''; });
+}
+
+// Der Router kann auf der Übersicht laufen, bevor Mitarbeiter- oder
+// Kundenliste je geladen wurden -- ohne sie zeigt der Dialog faelschlich
+// "keine vorhanden" an. Darum hier, wie schon beim Wechsel in die
+// jeweilige Ansicht, gezielt nachladen.
+function rtDialogOeffnen(bereich, felder, maNamen) {
+  const bereit = bereich === 'einsatz'
+    ? Promise.all([mitarbeiter.length ? null : loadMitarbeiter(), kunden.length ? null : loadKunden()])
+    : bereich === 'kunde' ? (kunden.length ? Promise.resolve() : loadKunden())
+    : (mitarbeiter.length ? Promise.resolve() : loadMitarbeiter());
+  Promise.resolve(bereit).then(() => {
+    if (bereich === 'mitarbeiter') { openMaNeu(felder || {}); return; }
+    if (bereich === 'kunde') { openKundeNeu(felder || {}, {}); return; }
+    openEinsatzNeu(felder || {}, maNamen || []);
+  });
+}
+
+function rtZuruecksetzen() {
+  $('rtText').value = '';
+  rtBildEntfernen();
+}
+
+// ── Router: Bild
+function rtBildErkennen() {
+  if (!rtBild) return;
+  const err = $('rtErr'); err.style.display = 'none';
+  const b = $('rtBtn'); b.disabled = true; b.textContent = 'Lese Bild …';
+  api('ki_einsatz_bild.php', { method: 'POST', body: { bild: rtBild.base64, mime: rtBild.mime, heute: isoTag() } })
+    .then(({ ok, data }) => {
+      b.disabled = false; b.textContent = 'Erkennen';
+      if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Erkennung fehlgeschlagen.'; err.style.display = ''; return; }
+      openEinsatzNeu(data.felder || {}, data.mitarbeiter_login_namen || []);
+      rtZuruecksetzen();
+    }).catch(() => { b.disabled = false; b.textContent = 'Erkennen'; err.textContent = 'Netzwerkfehler.'; err.style.display = ''; });
+}
+
+function rtDragUeber(e) { e.preventDefault(); $('begrDropzone').classList.add('rt-ueber'); }
+function rtDragWeg() { $('begrDropzone').classList.remove('rt-ueber'); }
+function rtDrop(e) {
+  e.preventDefault();
+  $('begrDropzone').classList.remove('rt-ueber');
+  const datei = [...(e.dataTransfer.files || [])].find(f => f.type.startsWith('image/'));
+  if (datei) rtBildSetzen(datei);
+}
+function rtEinfuegen(e) {
+  const eintrag = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+  if (!eintrag) return;   // normaler Text darf ganz normal eingefuegt werden
+  e.preventDefault();
+  rtBildSetzen(eintrag.getAsFile());
+}
+function rtDateiGewaehlt(datei) {
+  if (datei) rtBildSetzen(datei);
+  $('rtDatei').value = '';
+}
+
+function rtBildSetzen(datei) {
+  bildVerkleinern(datei).then(({ base64, mime, url }) => {
+    rtBild = { base64, mime, url };
+    $('rtBildImg').src = url;
+    $('rtBildVorschau').style.display = '';
+    $('rtErr').style.display = 'none';
+    $('rtBtn').textContent = 'Erkennen';
+  }).catch(() => { $('rtErr').textContent = 'Dieses Bild liess sich nicht lesen.'; $('rtErr').style.display = ''; });
+}
+function rtBildEntfernen() {
+  rtBild = null;
+  $('rtBildVorschau').style.display = 'none';
+  $('rtBildImg').src = '';
+}
+
+// Auf eine vernuenftige Groesse verkleinern, bevor es zum Server geht --
+// ein Bildschirmfoto in voller Aufloesung ist fuer das Lesen von Text
+// unnoetig gross und macht den Upload nur langsamer.
+function bildVerkleinern(datei) {
+  return new Promise((resolve, reject) => {
+    const bild = new Image();
+    const url = URL.createObjectURL(datei);
+    bild.onload = () => {
+      const max = 1600;
+      const skala = Math.min(1, max / Math.max(bild.width, bild.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(bild.width * skala);
+      c.height = Math.round(bild.height * skala);
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(bild, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      const dataUrl = c.toDataURL('image/jpeg', 0.85);
+      resolve({ base64: dataUrl.split(',')[1], mime: 'image/jpeg', url: dataUrl });
+    };
+    bild.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Bild ungueltig')); };
+    bild.src = url;
+  });
+}
+
 // ══════════════════════════════════════════ HELL ODER DUNKEL (ENT-029)
 // Die Wahl gilt fuer dieses Geraet und bleibt gespeichert. Der Wert wird
 // schon im Kopf der Seite gesetzt, hier wird nur noch umgeschaltet.
@@ -2135,7 +2395,7 @@ function seiteUm() {
 // ══════════════════════════════════════════ LADEN
 function reloadAll() {
   const b = $('btnReload'); b.disabled = true;
-  Promise.all([loadStats(), loadRapporte()]).then(() => { b.disabled = false; });
+  Promise.all([loadStats(), loadRapporte(), ladeNaechstes()]).then(() => { b.disabled = false; });
   if (mitarbeiter.length) loadMitarbeiter();
   if (kunden.length) loadKunden();
   if (einsaetze.length || $('view-planung').classList.contains('on')) loadEinsaetze();

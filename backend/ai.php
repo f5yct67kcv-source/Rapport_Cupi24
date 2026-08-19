@@ -441,3 +441,177 @@ function anthropic_extract_zuteilung(string $text, array $vorlagen, array $mitar
 
     return anthropic_tool_call($tool, $userContent);
 }
+
+// Ordnet ein Diktat einem Bereich zu und extrahiert im selben Zug dessen
+// Felder (ENT-032) -- ein Aufruf statt zwei, damit der Router nicht spuerbar
+// langsamer ist als die bestehenden Einzel-Diktate. Deckt nur die NEUANLAGE
+// ab (Mitarbeiter, Kunde, Einsatz), keine Aenderung bestehender Datensaetze --
+// ein falsch getroffener Datensatz waere bei einer Aenderung riskanter als
+// bei einer Neuanlage, wo noch nichts ueberschrieben werden kann.
+function anthropic_route_diktat(string $text, array $kunden, array $mitarbeiter, string $heute): ?array
+{
+    $tool = [
+        'name' => 'route_diktat',
+        'description' => 'Ordnet einen diktierten oder getippten Text einem Bereich zu und extrahiert dessen Felder.',
+        'input_schema' => [
+            'type' => 'object',
+            'properties' => [
+                'bereich' => [
+                    'type' => 'string',
+                    'enum' => ['mitarbeiter', 'kunde', 'einsatz'],
+                    'description' => 'mitarbeiter: eine neue Person fuers Personal. kunde: eine neue Firma fuer '
+                        . 'die Kundendatei. einsatz: ein geplanter Auftrag oder Termin mit Datum und Zeit.',
+                ],
+                'mitarbeiter' => [
+                    'type' => 'object',
+                    'description' => 'Nur ausfuellen, wenn bereich = mitarbeiter.',
+                    'properties' => [
+                        'vorname' => ['type' => 'string'], 'nachname' => ['type' => 'string'],
+                        'personalnummer' => ['type' => 'string'],
+                        'anrede' => ['type' => 'string', 'enum' => ['Herr', 'Frau', 'Divers']],
+                        'geburtsdatum' => ['type' => 'string', 'description' => 'Format JJJJ-MM-TT'],
+                        'strasse' => ['type' => 'string'], 'ort' => ['type' => 'string'],
+                        'telefon' => ['type' => 'string'], 'mobil' => ['type' => 'string'],
+                        'email' => ['type' => 'string'],
+                    ],
+                ],
+                'kunde' => [
+                    'type' => 'object',
+                    'description' => 'Nur ausfuellen, wenn bereich = kunde.',
+                    'properties' => [
+                        'name' => ['type' => 'string'], 'strasse' => ['type' => 'string'],
+                        'ort' => ['type' => 'string'], 'telefon' => ['type' => 'string'],
+                        'email' => ['type' => 'string'],
+                    ],
+                ],
+                'einsatz' => [
+                    'type' => 'object',
+                    'description' => 'Nur ausfuellen, wenn bereich = einsatz.',
+                    'properties' => [
+                        'kunde_name' => ['type' => 'string', 'description' => 'Steht er in der Kundenliste, exakt so schreiben wie dort.'],
+                        'titel' => ['type' => 'string'], 'strasse' => ['type' => 'string'],
+                        'ort' => ['type' => 'string', 'description' => 'PLZ und Ort des Arbeitsortes.'],
+                        'datum' => ['type' => 'string', 'description' => 'Format JJJJ-MM-TT'],
+                        'von' => ['type' => 'string', 'description' => 'Format HH:MM'],
+                        'bis' => ['type' => 'string', 'description' => 'Format HH:MM'],
+                        'bedarf' => ['type' => 'integer'],
+                        'einsatzart' => ['type' => 'string'],
+                        'mitarbeiter_login_namen' => ['type' => 'array', 'items' => ['type' => 'string']],
+                        'bemerkung' => ['type' => 'string'],
+                    ],
+                ],
+            ],
+            'required' => ['bereich'],
+        ],
+    ];
+
+    $kundenText = $kunden ? implode("\n", array_map(fn($k) => '- ' . $k, $kunden)) : '(keine Kunden erfasst)';
+    $maText = $mitarbeiter
+        ? implode("\n", array_map(fn($m) => "- {$m['name']}: " . trim(($m['vorname'] ?? '') . ' ' . ($m['nachname'] ?? '')), $mitarbeiter))
+        : '(keine Mitarbeitenden erfasst)';
+
+    $userContent =
+        "Heutiges Datum: {$heute}.\n\n"
+        . "Bekannte Kunden:\n{$kundenText}\n\n"
+        . "Bekannte Mitarbeitende (Login-Name: Vorname Nachname):\n{$maText}\n\n"
+        . "Erkenne, ob der Text eine neue Person, eine neue Firma oder einen geplanten Einsatz beschreibt, "
+        . "und fuelle nur das passende der drei Felder. Erfinde nichts -- ein Feld, das im Text nicht "
+        . "vorkommt, laesst du weg.\n\n"
+        . "Text:\n{$text}";
+
+    return anthropic_tool_call($tool, $userContent);
+}
+
+// Liest einen Einsatz aus einem Bild (Screenshot einer E-Mail, eines Auftrags-
+// zettels o.ae.) heraus (ENT-032). Fuer Bilder wird das staerkere Modell
+// verwendet -- Text in einem Foto zuverlaessig zu lesen ist schwerer als
+// einen bereits sauberen Satz zu zerlegen.
+function anthropic_extract_einsatz_bild(string $bildBase64, string $mimeType, array $kunden, array $mitarbeiter, string $heute): ?array
+{
+    $apiKey = '__ANTHROPIC_API_KEY__';
+    if ($apiKey === '' || str_contains($apiKey, '__ANTHROPIC_API_KEY')) {
+        return null;
+    }
+
+    $tool = [
+        'name' => 'extract_einsatz_bild',
+        'description' => 'Extrahiert einen geplanten Einsatz aus einem Bild.',
+        'input_schema' => [
+            'type' => 'object',
+            'properties' => [
+                'kunde_name' => ['type' => 'string', 'description' => 'Steht er in der Kundenliste, exakt so schreiben wie dort.'],
+                'titel' => ['type' => 'string'],
+                'strasse' => ['type' => 'string', 'description' => 'Strasse des ARBEITSORTES, nicht der Firmensitz.'],
+                'ort' => ['type' => 'string', 'description' => 'PLZ und Ort des ARBEITSORTES.'],
+                'datum' => ['type' => 'string', 'description' => 'Format JJJJ-MM-TT'],
+                'von' => ['type' => 'string', 'description' => 'Format HH:MM'],
+                'bis' => ['type' => 'string', 'description' => 'Format HH:MM'],
+                'bedarf' => ['type' => 'integer'],
+                'einsatzart' => ['type' => 'string'],
+                'mitarbeiter_login_namen' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'bemerkung' => ['type' => 'string', 'description' => 'Zusatzangaben, die in kein anderes Feld passen.'],
+                'unsicher' => [
+                    'type' => 'boolean',
+                    'description' => 'true, wenn das Bild keinen erkennbaren Auftrag zeigt oder wesentliche Angaben fehlen.',
+                ],
+            ],
+        ],
+    ];
+
+    $kundenText = $kunden ? implode("\n", array_map(fn($k) => '- ' . $k, $kunden)) : '(keine Kunden erfasst)';
+    $maText = $mitarbeiter
+        ? implode("\n", array_map(fn($m) => "- {$m['name']}: " . trim(($m['vorname'] ?? '') . ' ' . ($m['nachname'] ?? '')), $mitarbeiter))
+        : '(keine Mitarbeitenden erfasst)';
+    $system =
+        "Heutiges Datum: {$heute}. Relative Angaben (\"morgen\", \"naechsten Montag\") darauf beziehen.\n\n"
+        . "Bekannte Kunden:\n{$kundenText}\n\nBekannte Mitarbeitende (Login-Name: Vorname Nachname):\n{$maText}\n\n"
+        . "Das Bild zeigt vermutlich eine E-Mail, eine Nachricht oder einen Auftragszettel eines Kunden. "
+        . "Lies daraus einen geplanten Einsatz heraus. Erfinde nichts -- ein Feld, das nicht eindeutig "
+        . "aus dem Bild hervorgeht, laesst du weg. Ist kein Auftrag erkennbar, setze unsicher auf true "
+        . "und fuelle so viel wie moeglich trotzdem aus.";
+
+    $payload = [
+        'model' => 'claude-sonnet-5',
+        'max_tokens' => 1024,
+        'system' => $system,
+        'tools' => [$tool],
+        'tool_choice' => ['type' => 'tool', 'name' => 'extract_einsatz_bild'],
+        'messages' => [[
+            'role' => 'user',
+            'content' => [
+                ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $mimeType, 'data' => $bildBase64]],
+                ['type' => 'text', 'text' => 'Lies den Auftrag aus diesem Bild.'],
+            ],
+        ]],
+    ];
+
+    $ch = curl_init('https://api.anthropic.com/v1/messages');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            'content-type: application/json',
+            'x-api-key: ' . $apiKey,
+            'anthropic-version: 2023-06-01',
+        ],
+        CURLOPT_POSTFIELDS => json_encode($payload),
+        CURLOPT_TIMEOUT => 45,
+    ]);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($response === false || $httpCode !== 200) {
+        return null;
+    }
+    $data = json_decode($response, true);
+    if (($data['stop_reason'] ?? '') === 'refusal') {
+        return null;
+    }
+    foreach (($data['content'] ?? []) as $block) {
+        if (($block['type'] ?? '') === 'tool_use' && ($block['name'] ?? '') === 'extract_einsatz_bild') {
+            return $block['input'] ?? [];
+        }
+    }
+    return null;
+}
