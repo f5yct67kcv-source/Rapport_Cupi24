@@ -15,7 +15,8 @@ $bis = trim((string)($_GET['bis'] ?? ''));
 $eingegrenzt = preg_match('/^\d{4}-\d{2}-\d{2}$/', $von) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $bis);
 
 $sql = 'SELECT id, kunde_id, kunde_name, objekt_id, masterschicht_id, titel, strasse, ort,
-               einsatzart, sparte, datum, von, bis, bedarf, status, bemerkung, erstellt_am
+               einsatzart, sparte, datum, von, bis, bedarf, status, bemerkung, erstellt_am,
+               ist_status, ist_von, ist_bis, ist_bemerkung, abgeglichen_am
         FROM einsaetze';
 $args = [];
 if ($eingegrenzt) {
@@ -30,7 +31,7 @@ $einsaetze = $stmt->fetchAll();
 
 // Zuteilungen in einem Zug holen und zuordnen -- eine Abfrage je Einsatz waere
 // bei einem Monatsplan schnell dreistellig.
-$zsql = 'SELECT z.einsatz_id, z.mitarbeiter_id, z.zusage, m.name, m.vorname, m.nachname
+$zsql = 'SELECT z.einsatz_id, z.mitarbeiter_id, z.zusage, z.anwesend, m.name, m.vorname, m.nachname
          FROM einsatz_zuteilung z
          JOIN mitarbeiter m ON m.id = z.mitarbeiter_id';
 if ($eingegrenzt) {
@@ -48,6 +49,9 @@ foreach ($zstmt->fetchAll() as $z) {
         'vorname' => $z['vorname'],
         'nachname' => $z['nachname'],
         'zusage' => $z['zusage'],
+        // null heisst "noch nicht abgeglichen" und ist bewusst von false
+        // ("war nicht da") unterschieden (ENT-045).
+        'anwesend' => $z['anwesend'] === null ? null : (bool)$z['anwesend'],
     ];
 }
 

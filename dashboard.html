@@ -565,6 +565,20 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
    wiederholbaren Kommunikationszeilen und Ansprechpersonen. */
 .kdlg-tab { display: none; }
 .kdlg-tab.on { display: block; }
+
+/* Schichtabgleich (ENT-045) */
+.nav-zahl { margin-left: auto; font-size: 11px; font-weight: 700; background: var(--warn); color: #fff;
+  border-radius: 999px; padding: 1px 7px; min-width: 20px; text-align: center; }
+.nav-zahl:empty { display: none; }
+.shell.schmal .nav-zahl { display: none; }
+/* Eigene Schrift statt der Feldbeschriftung: eine Zeile im Formular ist eine
+   Person, keine Überschrift — .f label würde sie in Grossbuchstaben setzen. */
+.ag-person { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--line-soft);
+  text-transform: none; letter-spacing: normal; font-weight: 400; margin-bottom: 0; cursor: pointer; }
+.ag-person:last-child { border-bottom: none; }
+.ag-person input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; flex: none; }
+.ag-person .wer { flex: 1; font-size: 13.5px; }
+.ag-person .zus { font-size: 11.5px; color: var(--ink-3); }
 .inp[readonly] { background: var(--surface-2); color: var(--ink-3); cursor: default; }
 .wahl-reihe { display: flex; gap: 18px; align-items: center; min-height: 38px; }
 .wahl-reihe label { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13.5px; font-weight: 500; }
@@ -1079,6 +1093,16 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/><line x1="7.5" y1="14" x2="12" y2="14"/><line x1="7.5" y1="17.5" x2="15" y2="17.5"/></svg>
         <span class="lbl">Planung</span>
       </button>
+      <!-- Rückschau statt Vorausplanung (ENT-045): hier wird festgehalten, was
+           tatsächlich stattgefunden hat. Eigener Bereich, weil es ein eigener
+           Arbeitsschritt ist -- die Planung schaut nach vorn, der Abgleich
+           zurück. Die Zahl zeigt, wieviel noch aussteht. -->
+      <button class="nav-item" id="nav-abgleich" title="Schichten abgleichen" onclick="go('abgleich')">
+        <svg class="i" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <span class="lbl">Abgleich</span>
+        <span class="nav-zahl" id="abgleichZahl"></span>
+      </button>
+
       <div class="nav-lbl" style="margin-top:16px">Stammdaten</div>
       <button class="nav-item" id="nav-mitarbeiter" title="Mitarbeitende" onclick="go('mitarbeiter')">
         <svg class="i" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -1546,6 +1570,29 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           </div>
           <div id="tgBody"></div>
         </div>
+      </section>
+
+      <!-- ─────────── SCHICHTEN ABGLEICHEN (ENT-045) ───────────
+           Chronologische Rückschau: was war geplant, was hat stattgefunden.
+           Zeigt ausschliesslich vergangene Schichten — was noch nicht war,
+           lässt sich nicht abgleichen. Abgesagte Schichten fehlen bewusst:
+           die Absage ist bereits die Feststellung. -->
+      <section class="view" id="view-abgleich">
+        <div class="bar-tools">
+          <div class="tool-gruppe">
+            <input class="inp" type="date" id="agVon" style="width:auto" onchange="renderAbgleich()" aria-label="Zeitraum von">
+            <span class="tool-bis">bis</span>
+            <input class="inp" type="date" id="agBis" style="width:auto" onchange="renderAbgleich()" aria-label="Zeitraum bis">
+          </div>
+          <div class="search">
+            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="inp" type="search" id="agQ" placeholder="Kunde, Ort, Bezeichnung oder Mitarbeitende …" oninput="renderAbgleich()">
+          </div>
+          <div class="sp" style="flex:1"></div>
+          <label class="check" style="font-size:12.5px"><input type="checkbox" id="agNurOffen" checked onchange="renderAbgleich()"> nur offene</label>
+        </div>
+        <div class="mx-info" id="agInfo"></div>
+        <div class="card"><div class="card-bd flush"><div class="tw" id="agTable"></div></div></div>
       </section>
 
       <!-- ─────────── MITARBEITENDE ─────────── -->
@@ -2359,6 +2406,7 @@ function enter() {
 const TITLES = {
   uebersicht:  ['Übersicht', 'Laufender Monat'],
   planung:     ['Planung', 'Geplante Einsätze'],
+  abgleich:    ['Schichten abgleichen', 'Was tatsächlich stattgefunden hat'],
   mitarbeiter: ['Mitarbeitende', 'Stammdaten'],
   kunden:      ['Kunden', 'Stammdaten']
 };
@@ -2764,6 +2812,19 @@ function go(view) {
   $('btnSprechen').style.display = view === 'uebersicht' ? 'none' : '';
   if (view !== 'planung') weiteAnsicht(false);
   if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
+  if (view === 'abgleich') {
+    // Vorgabe: der zurückliegende Monat bis heute. Wer weiter zurück will,
+    // stellt den Zeitraum um -- was nicht geladen ist, wird auch nicht gezeigt.
+    if (!$('agVon').value) {
+      const h = new Date();
+      $('agVon').value = isoTag(new Date(h.getFullYear(), h.getMonth() - 1, h.getDate()));
+      $('agBis').value = isoTag();
+    }
+    (einsaetze.length ? Promise.resolve() : loadEinsaetze()).then(() => {
+      if (!mitarbeiter.length) loadMitarbeiter();
+      renderAbgleich();
+    });
+  }
   // Das Untermenü ist nur aufgeklappt, solange Kunden der aktive Bereich ist
   // -- kein Zustand, der beim Verlassen hängen bleibt (ENT-039).
   $('navg-kunden').classList.toggle('offen', view === 'kunden');
@@ -2815,6 +2876,7 @@ function loadStats() {
     if (!ok || data.status !== 'ok') { toast(data.message || 'Kennzahlen konnten nicht geladen werden.'); return; }
     stats = data;
     renderKpi(); renderChart(); renderAngemeldet(); renderLetzte(); renderProMa(); renderSperrFeed();
+    agZahlAktualisieren();
   });
 }
 
@@ -2863,6 +2925,7 @@ function loadEinsaetze() {
       return;
     }
     einsaetze = data.einsaetze || [];
+    agZahlAktualisieren();
     renderPlanung();
     if ($('pv-uebersicht').classList.contains('on')) renderMatrix();
     if ($('pv-tag').classList.contains('on')) renderTagesplan();
@@ -5853,6 +5916,214 @@ function askRemoveMa() {
       closeDrawer();
       Promise.all([loadMitarbeiter(), loadStats()]).then(() => toast('Mitarbeitender entfernt.'));
     }));
+}
+
+// ══════════════════════════════════════════ SCHICHTEN ABGLEICHEN (ENT-045)
+// Rückschau statt Vorausplanung: was war geplant, was hat stattgefunden.
+// Bis hierher kannte das System nur den Plan — Bedarf, Zuteilung, Zusage.
+// Eine spätere Abrechnung oder Auswertung braucht aber die Leistung, und die
+// lässt sich nicht nachträglich rekonstruieren. Darum wird sie ab sofort
+// festgehalten, auch ohne dass die Abrechnung selbst gebaut wäre
+// (siehe `rechnungsstellung-kernfrage.md`, Abschnitt 6b/6c).
+//
+// Bewusst OHNE jede Berechnung: hier stehen Zeiten und Anwesenheiten, keine
+// Stunden, keine Zuschläge, keine Auslagen. Daraus etwas abzuleiten wäre
+// GAV-Auslegung und bleibt gesperrt, bis das Auslegungsregister es hergibt.
+const AG_STATUS = {
+  offen:       ['Offen', 'chip-n'],
+  bestaetigt:  ['Wie geplant', 'chip-p'],
+  abweichend:  ['Abweichend', 'chip-a'],
+  ausgefallen: ['Ausgefallen', 'chip-x'],
+};
+let agTarget = null;   // Einsatz, der gerade abgeglichen wird
+
+// Abzugleichen ist, was vorbei ist. Abgesagte Schichten fehlen bewusst: die
+// Absage ist bereits die Feststellung, dass nichts stattgefunden hat.
+function agKandidaten() {
+  const heute = isoTag();
+  return einsaetze.filter(e => String(e.datum) <= heute && e.status !== 'abgesagt');
+}
+function agOffeneZahl() {
+  return agKandidaten().filter(e => (e.ist_status || 'offen') === 'offen').length;
+}
+// Die Zahl an der Seitenleiste ist die einzige Erinnerung, dass hier etwas
+// aussteht — ohne sie verlässt sich die Erfassung darauf, dass jemand von
+// selbst nachschaut, und genau daran scheitert so eine Rückschau sonst.
+function agZahlAktualisieren() {
+  // Sind die Einsätze geladen, gilt der lokale Stand — er stimmt unmittelbar
+  // nach einem Abgleich, ohne auf die nächste Statistik zu warten. Sonst die
+  // Zahl aus der Übersicht, die schon beim Anmelden mitkommt; ohne sie wäre
+  // die Erinnerung erst sichtbar, wenn man ohnehin schon hingeschaut hat.
+  const n = einsaetze.length ? agOffeneZahl() : Number((stats && stats.abgleich_offen) || 0);
+  $('abgleichZahl').textContent = n ? String(n) : '';
+}
+
+function agGefiltert() {
+  const q = ($('agQ').value || '').toLowerCase().trim();
+  const von = $('agVon').value, bis = $('agBis').value;
+  const nurOffen = $('agNurOffen').checked;
+  return agKandidaten().filter(e => {
+    if (von && String(e.datum) < von) return false;
+    if (bis && String(e.datum) > bis) return false;
+    if (nurOffen && (e.ist_status || 'offen') !== 'offen') return false;
+    if (!q) return true;
+    const wer = (e.mitarbeiter || []).map(m => `${m.vorname || ''} ${m.nachname || ''} ${m.name}`).join(' ');
+    return [e.kunde_name, e.ort, e.titel, e.einsatzart, wer]
+      .some(f => String(f || '').toLowerCase().includes(q));
+  }).sort((a, b) => String(a.datum).localeCompare(String(b.datum)) || String(a.von).localeCompare(String(b.von)));
+}
+
+function renderAbgleich() {
+  agZahlAktualisieren();
+  const d = agGefiltert();
+  const offen = agOffeneZahl();
+  $('agInfo').innerHTML = offen
+    ? `<b>${nf(offen)}</b> Schicht${offen === 1 ? '' : 'en'} ${offen === 1 ? 'wartet' : 'warten'} auf den Abgleich. Angezeigt: <b>${nf(d.length)}</b>.`
+    : `Nichts offen — alle vergangenen Schichten sind abgeglichen. Angezeigt: <b>${nf(d.length)}</b>.`;
+  $('pgCrumb').textContent = `${nf(d.length)} ${d.length === 1 ? 'Schicht' : 'Schichten'} · ${nf(offen)} offen`;
+
+  if (!d.length) {
+    $('agTable').innerHTML = agKandidaten().length
+      ? EMPTY('Keine Treffer', 'Für diesen Zeitraum und diese Suche gibt es nichts abzugleichen. Häkchen „nur offene“ entfernen, um auch Erledigtes zu sehen.')
+      : EMPTY('Noch nichts abzugleichen', 'Sobald eine geplante Schicht in der Vergangenheit liegt, erscheint sie hier zur Prüfung.');
+    return;
+  }
+
+  $('agTable').innerHTML = `<table><thead><tr>
+      <th>Datum</th><th>Geplant</th><th>Tatsächlich</th><th>Kunde / Objekt</th>
+      <th>Sparte</th><th class="num">Besetzung</th><th>Abgleich</th>
+    </tr></thead><tbody>` + d.map(e => {
+    const st = AG_STATUS[e.ist_status || 'offen'] || AG_STATUS.offen;
+    const zug = (e.mitarbeiter || []).length;
+    const da = (e.mitarbeiter || []).filter(m => m.anwesend === true).length;
+    const abgeglichen = (e.ist_status || 'offen') !== 'offen';
+    const istZeit = e.ist_von && e.ist_bis ? `${hm(e.ist_von)}–${hm(e.ist_bis)}` : '';
+    const gleich = istZeit && istZeit === `${hm(e.von)}–${hm(e.bis)}`;
+    return `
+      <tr class="click" onclick="openAbgleich(${Number(e.id)})">
+        <td class="nowrap num">${dmy(e.datum)}</td>
+        <td class="nowrap num" style="color:var(--ink-3)">${hm(e.von)}–${hm(e.bis)}</td>
+        <td class="nowrap num">${e.ist_status === 'ausgefallen'
+          ? '<span style="color:var(--ink-3)">–</span>'
+          : istZeit ? (gleich ? `<span style="color:var(--ink-3)">gleich</span>` : `<b>${esc(istZeit)}</b>`)
+          : '<span style="color:var(--ink-3)">–</span>'}</td>
+        <td><b>${esc(e.kunde_name)}</b>${e.titel ? `<div class="sec">${esc(e.titel)}</div>` : ''}</td>
+        <td class="nowrap">${e.sparte === 'reinigung' ? 'Reinigung' : 'Sicherheit'}</td>
+        <td class="num nowrap">${abgeglichen && e.ist_status !== 'ausgefallen'
+          ? `${nf(da)} von ${nf(zug)}` : `${nf(zug)} eingeteilt`}</td>
+        <td class="nowrap"><span class="chip ${st[1]}">${esc(st[0])}</span></td>
+      </tr>`;
+  }).join('') + `</tbody></table>`;
+}
+
+// ── Abgleich-Schublade ────────────────────────────────────────────────────
+function openAbgleich(id) {
+  const e = einsaetze.find(x => Number(x.id) === Number(id));
+  if (!e) { toast('Schicht nicht gefunden — bitte aktualisieren.'); return; }
+  drawerId = null; maTarget = null; enTarget = null;
+  agTarget = Number(id);
+
+  const ist = e.ist_status || 'offen';
+  // Beim ersten Öffnen die geplanten Zeiten vorbelegen und alle Eingeteilten
+  // als anwesend annehmen -- der Normalfall ist, dass es so lief wie geplant.
+  // Wer abweicht, hakt ab; wer bestätigt, klickt einmal. Beim erneuten Öffnen
+  // steht der gespeicherte Stand da, nicht wieder die Vorgabe.
+  const erstmals = ist === 'offen';
+  const vonWert = erstmals ? hm(e.von) : (e.ist_von ? hm(e.ist_von) : hm(e.von));
+  const bisWert = erstmals ? hm(e.bis) : (e.ist_bis ? hm(e.ist_bis) : hm(e.bis));
+
+  // Beim ersten Öffnen steht „Wie geplant“ da, nicht „Offen“: Zeiten und
+  // Besetzung sind mit dem Plan vorbelegt, der Normalfall ist ein einziger
+  // Klick auf Speichern. Gespeichert wird trotzdem erst durch diesen Klick —
+  // dasselbe Prüfschritt-Muster wie beim Diktat (ENT-015).
+  const vorwahl = erstmals ? 'bestaetigt' : ist;
+  const opt = Object.keys(AG_STATUS)
+    .map(s => `<option value="${s}"${vorwahl === s ? ' selected' : ''}>${AG_STATUS[s][0]}</option>`).join('');
+
+  const personen = (e.mitarbeiter || []).map(m => {
+    const an = erstmals ? true : m.anwesend === true;
+    const name = [m.vorname, m.nachname].filter(Boolean).join(' ') || m.name;
+    return `
+      <label class="ag-person">
+        <input type="checkbox" data-ag-ma="${Number(m.id)}"${an ? ' checked' : ''}>
+        <span class="wer">${esc(name)}${m.anwesend === null && !erstmals ? ' <span class="zus">· nicht geprüft</span>' : ''}</span>
+        <span class="zus">${m.zusage === 'zugesagt' ? 'zugesagt' : m.zusage === 'abgelehnt' ? 'abgelehnt' : 'offen'}</span>
+      </label>`;
+  }).join('') || '<div class="zone-note" style="padding:6px 0">Für diese Schicht war niemand eingeteilt.</div>';
+
+  $('drTitle').textContent = `${dmy(e.datum)} · ${e.kunde_name}`;
+  $('drBody').innerHTML = `
+    <div class="zone" style="margin-top:0">
+      <div class="zone-hd">Geplant war</div>
+      <div class="zone-note">
+        ${esc(hm(e.von))}–${esc(hm(e.bis))} Uhr · Bedarf ${nf(Number(e.bedarf))} ·
+        ${esc(e.einsatzart)} · ${e.sparte === 'reinigung' ? 'Reinigung' : 'Sicherheit'}<br>
+        ${esc(e.strasse ? e.strasse + ', ' : '')}${esc(e.ort)}
+        ${e.bemerkung ? `<br><br>Bemerkung aus der Planung: ${esc(e.bemerkung)}` : ''}
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top:16px">
+      <div class="f wide"><label for="agStatus">Was ist passiert?</label>
+        <select class="inp" id="agStatus" onchange="agStatusUm()">${opt}</select></div>
+      <div class="f"><label for="agIstVon">Tatsächlich von</label><input class="inp" id="agIstVon" type="time" value="${esc(vonWert)}"></div>
+      <div class="f"><label for="agIstBis">Tatsächlich bis</label><input class="inp" id="agIstBis" type="time" value="${esc(bisWert)}"></div>
+      <div class="f wide" id="agPersonenFeld">
+        <label>Tatsächlich im Einsatz</label>
+        <div>${personen}</div>
+      </div>
+      <div class="f wide"><label for="agBemerkung">Abweichung / Bemerkung</label>
+        <textarea class="inp" id="agBemerkung" rows="2" style="min-height:60px" placeholder="z. B. andere Besetzung als geplant">${esc(e.ist_bemerkung || '')}</textarea></div>
+    </div>
+    <div class="zone">
+      <div class="zone-hd">Hier wird nur festgehalten, nicht gerechnet</div>
+      <div class="zone-note">
+        Der Abgleich hält Zeiten und Anwesenheiten fest. Aus diesen Angaben werden
+        <b>keine</b> Stunden, Zuschläge oder Auslagen berechnet — das wäre eine
+        Auslegung des GAV und bleibt gesperrt, solange sie nicht im
+        Auslegungsregister geklärt ist.
+      </div>
+    </div>`;
+  $('drFoot').innerHTML =
+    `<button class="btn btn-plain" onclick="closeDrawer()">Schliessen</button>
+     <div style="flex:1"></div>
+     <button class="btn btn-primary" onclick="saveAbgleich()">Abgleich speichern</button>`;
+  showDrawer();
+  agStatusUm();
+}
+
+// Ein Ausfall hat keine Zeiten und niemanden im Einsatz — die Felder
+// verschwinden, statt Werte anzubieten, die dann verworfen würden.
+function agStatusUm() {
+  const aus = $('agStatus').value === 'ausgefallen';
+  ['agIstVon', 'agIstBis'].forEach(id => { $(id).closest('.f').style.display = aus ? 'none' : ''; });
+  $('agPersonenFeld').style.display = aus ? 'none' : '';
+}
+
+function saveAbgleich() {
+  if (!agTarget) return;
+  const status = $('agStatus').value;
+  const body = {
+    id: agTarget,
+    ist_status: status,
+    ist_von: $('agIstVon').value,
+    ist_bis: $('agIstBis').value,
+    ist_bemerkung: $('agBemerkung').value.trim(),
+    anwesend: Array.from(document.querySelectorAll('#drBody [data-ag-ma]')).map(el => ({
+      mitarbeiter_id: Number(el.dataset.agMa), anwesend: el.checked,
+    })),
+  };
+  if (status !== 'ausgefallen' && status !== 'offen' && (!body.ist_von || !body.ist_bis)) {
+    toast('Bitte die tatsächlichen Zeiten angeben.');
+    return;
+  }
+  api('einsatz_abgleich.php', { method: 'POST', body }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { toast(data.message || 'Speichern fehlgeschlagen.'); return; }
+    closeDrawer();
+    loadEinsaetze().then(() => {
+      renderAbgleich();
+      toast(status === 'offen' ? 'Abgleich zurückgenommen.' : 'Abgleich gespeichert.');
+    });
+  });
 }
 
 // ══════════════════════════════════════════ KUNDEN PFLEGEN

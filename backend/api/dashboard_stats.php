@@ -101,9 +101,28 @@ $letzte = db()->query(
      LIMIT 8'
 )->fetchAll();
 
+// Wieviele vergangene Schichten noch auf den Abgleich warten (ENT-045).
+// Bewusst hier und nicht aus der Einsatzliste gerechnet: die Zahl soll schon
+// beim Anmelden stehen, ohne dass dafuer saemtliche Einsaetze geladen werden.
+// Abgesagte zaehlen nicht mit -- die Absage ist bereits die Feststellung.
+//
+// Der Griff ist abgesichert: Solange die Tabelle oder die Spalte fehlt (vor
+// dem Einrichten-Lauf), bleibt die Zahl 0, statt die ganze Uebersicht mit
+// einem Datenbankfehler mitzureissen.
+$abgleichOffen = 0;
+try {
+    $abgleichOffen = (int)db()->query(
+        "SELECT COUNT(*) FROM einsaetze
+         WHERE datum <= CURDATE() AND status <> 'abgesagt' AND ist_status = 'offen'"
+    )->fetchColumn();
+} catch (Throwable $e) {
+    $abgleichOffen = 0;
+}
+
 json_response([
     'status' => 'ok',
     'stand'  => date('c'),
+    'abgleich_offen' => $abgleichOffen,
     'kpi' => [
         'rapporte_monat'    => (int)($kpi['rapporte_monat'] ?? 0),
         'rapporte_vormonat' => (int)($kpi['rapporte_vormonat'] ?? 0),

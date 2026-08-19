@@ -152,6 +152,14 @@ CREATE TABLE IF NOT EXISTS einsaetze (
   bis TIME NOT NULL,
   bedarf INT NOT NULL DEFAULT 1,
   status VARCHAR(20) NOT NULL DEFAULT 'geplant',
+  -- Das Ist neben dem Plan (ENT-045). Bis dahin wusste das System nur, was
+  -- geplant war; abgerechnet und ausgewertet wird aber, was geleistet wurde.
+  ist_status VARCHAR(20) NOT NULL DEFAULT 'offen',
+  ist_von TIME NULL,
+  ist_bis TIME NULL,
+  ist_bemerkung TEXT NULL,
+  abgeglichen_von INT NULL,
+  abgeglichen_am DATETIME NULL,
   bemerkung TEXT,
   erstellt_von INT NULL,
   erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -160,7 +168,8 @@ CREATE TABLE IF NOT EXISTS einsaetze (
   FOREIGN KEY (kunde_id) REFERENCES kunden(id) ON DELETE SET NULL,
   FOREIGN KEY (objekt_id) REFERENCES objekte(id) ON DELETE SET NULL,
   FOREIGN KEY (masterschicht_id) REFERENCES masterschichten(id) ON DELETE SET NULL,
-  FOREIGN KEY (erstellt_von) REFERENCES mitarbeiter(id) ON DELETE SET NULL
+  FOREIGN KEY (erstellt_von) REFERENCES mitarbeiter(id) ON DELETE SET NULL,
+  FOREIGN KEY (abgeglichen_von) REFERENCES mitarbeiter(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
 'einsatz_zuteilung' => "
@@ -268,6 +277,20 @@ $spalten = [
     ['kunden', 'plz',         'ALTER TABLE kunden ADD COLUMN plz VARCHAR(10) NULL AFTER adresszusatz'],
     ['kunden', 'uid',         'ALTER TABLE kunden ADD COLUMN uid VARCHAR(20) NULL AFTER ort'],
     ['kunden', 'mwst_nr',     'ALTER TABLE kunden ADD COLUMN mwst_nr VARCHAR(20) NULL AFTER uid'],
+    // Schichtabgleich (ENT-045): das Ist neben dem Plan. Vorgabe 'offen', damit
+    // der Bestand sichtbar unabgeglichen bleibt, statt faelschlich als
+    // bestaetigt zu gelten -- was nie geprueft wurde, darf nicht so aussehen,
+    // als waere es geprueft worden.
+    ['einsaetze', 'ist_status',      "ALTER TABLE einsaetze ADD COLUMN ist_status VARCHAR(20) NOT NULL DEFAULT 'offen' AFTER status"],
+    ['einsaetze', 'ist_von',         'ALTER TABLE einsaetze ADD COLUMN ist_von TIME NULL AFTER ist_status'],
+    ['einsaetze', 'ist_bis',         'ALTER TABLE einsaetze ADD COLUMN ist_bis TIME NULL AFTER ist_von'],
+    ['einsaetze', 'ist_bemerkung',   'ALTER TABLE einsaetze ADD COLUMN ist_bemerkung TEXT NULL AFTER ist_bis'],
+    ['einsaetze', 'abgeglichen_von', 'ALTER TABLE einsaetze ADD COLUMN abgeglichen_von INT NULL AFTER ist_bemerkung'],
+    ['einsaetze', 'abgeglichen_am',  'ALTER TABLE einsaetze ADD COLUMN abgeglichen_am DATETIME NULL AFTER abgeglichen_von'],
+    // Anwesenheit je zugeteilter Person -- NULL heisst "noch nicht abgeglichen"
+    // und ist bewusst von 0 ("war nicht da") unterschieden. Gebraucht wird das
+    // fuer alles, was pro Mitarbeitendem anfaellt.
+    ['einsatz_zuteilung', 'anwesend', 'ALTER TABLE einsatz_zuteilung ADD COLUMN anwesend TINYINT(1) NULL AFTER zusage'],
 ];
 foreach ($spalten as [$tabelle, $spalte, $sql]) {
     if (!hat_tabelle($pdo, $tabelle) || hat_spalte($pdo, $tabelle, $spalte)) {
@@ -327,6 +350,7 @@ if (hat_spalte($pdo, 'kunden', 'plz')) {
 $verweise = [
     ['einsaetze', 'objekt_id',        'ALTER TABLE einsaetze ADD FOREIGN KEY (objekt_id) REFERENCES objekte(id) ON DELETE SET NULL'],
     ['einsaetze', 'masterschicht_id', 'ALTER TABLE einsaetze ADD FOREIGN KEY (masterschicht_id) REFERENCES masterschichten(id) ON DELETE SET NULL'],
+    ['einsaetze', 'abgeglichen_von',  'ALTER TABLE einsaetze ADD FOREIGN KEY (abgeglichen_von) REFERENCES mitarbeiter(id) ON DELETE SET NULL'],
 ];
 foreach ($verweise as [$tabelle, $spalte, $sql]) {
     if (!hat_spalte($pdo, $tabelle, $spalte) || hat_fremdschluessel($pdo, $tabelle, $spalte)) {
