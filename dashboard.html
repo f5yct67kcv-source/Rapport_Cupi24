@@ -480,7 +480,10 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .mx-info b { color: var(--ink-2); font-weight: 600; }
 .mx { overflow-x: auto; }
 .mx table { border-collapse: separate; border-spacing: 0; }
-.mx th, .mx td { border-bottom: 1px solid var(--line-soft); }
+/* Klassisches Raster: jede Zelle bekommt zusätzlich eine feine senkrechte
+   Linie. Nur rechts und unten, sonst lägen zwischen zwei Zellen zwei
+   Linien übereinander und das Raster würde doppelt so grob (ENT-035). */
+.mx th, .mx td { border-bottom: 1px solid var(--line-soft); border-right: 1px solid var(--line-soft); }
 .mx th.obj, .mx td.obj {
   position: sticky; left: 0; z-index: 2; background: var(--surface);
   min-width: 208px; max-width: 240px; border-right: 1px solid var(--line);
@@ -492,10 +495,29 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .mx thead th.we { color: var(--ink-2); background: var(--we-bg); }
 .mx thead th.fei { color: var(--warn); background: var(--warn-soft); }
 .mx thead th.heute { color: var(--accent); background: var(--accent-soft); }
-.mx td.d { text-align: center; padding: 3px 2px; }
+/* Kein Innenabstand: die Zelle selbst füllt das Feld vollständig aus, damit
+   die Farbfläche das ganze Tagesfeld ist und nicht nur ein Plättchen darin.
+   Der anklickbare Bereich wächst dadurch auf das ganze Feld mit. */
+/* height:1px ist kein Tippfehler: eine Tabellenzelle behandelt eine
+   angegebene Höhe als Mindestmass und wächst trotzdem auf die Zeilenhöhe.
+   Erst dadurch lässt sich die Höhe des Knopfs darin in Prozent auflösen --
+   sonst bliebe er auf seiner Mindesthöhe stehen und das gefärbte Feld wäre
+   nur zum Teil anklickbar. */
+.mx td.d { text-align: center; padding: 0; height: 1px; }
 .mx td.d.we { background: var(--surface-2); }
 .mx td.d.fei { background: var(--fei-bg); }
-.mx .zelle { display: inline-flex; width: 21px; height: 21px; border-radius: 5px; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; border: none; padding: 0; font-family: inherit; cursor: pointer; }
+/* Die Farbfläche sitzt auf dem Tagesfeld, nicht nur auf dem Knopf darin.
+   Die Zeilenhöhe richtet sich nach der Objektspalte (zwei Textzeilen) --
+   ein Knopf mit fester Höhe würde darum unten einen Streifen frei lassen.
+   Dieselben Farbtoken wie bisher, nur eine Ebene weiter aussen. Sie stehen
+   nach „we“/„fei“, damit die Belegung das Wochenende übermalt und nicht
+   umgekehrt (ENT-035). */
+.mx td.d.z-voll { background: var(--pos-soft); }
+.mx td.d.z-teil { background: var(--warn-soft); }
+.mx td.d.z-leer { background: var(--neg-soft); }
+.mx td.d.z-prov { background: var(--accent-soft); }
+.mx td.d.z-ab   { background: var(--line-soft); }
+.mx .zelle { display: flex; width: 100%; height: 100%; min-height: 30px; border-radius: 0; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; border: none; padding: 0; font-family: inherit; cursor: pointer; }
 .mx .z-voll { background: var(--pos-soft); color: var(--pos); }
 .mx .z-teil { background: var(--warn-soft); color: var(--warn); }
 .mx .z-leer { background: var(--neg-soft); color: var(--neg); }
@@ -4848,7 +4870,10 @@ function renderMatrix() {
       const titel = liste.length
         ? dmy(d) + '\n' + liste.map(e => `${hm(e.von)}–${hm(e.bis)} ${e.titel || e.kunde_name} — ${(e.mitarbeiter || []).length}/${e.bedarf}${e.status !== 'geplant' ? ' (' + e.status + ')' : ''}`).join('\n')
         : dmy(d) + ' — nichts geplant';
-      return `<td class="d ${kl}">` +
+      // Der Belegungszustand steht auch am Tagesfeld selbst, damit die Farbe
+      // das ganze Feld füllt und nicht nur den Knopf darin (ENT-035).
+      const zk = liste.length ? st.klasse : 'z-nix';
+      return `<td class="d ${kl} ${zk}">` +
         (liste.length
           ? `<button class="zelle ${st.klasse}" title="${esc(titel)}" onclick="zumTag('${d}')">${st.text}</button>`
           : `<span class="zelle z-nix" title="${esc(titel)}">·</span>`) +
