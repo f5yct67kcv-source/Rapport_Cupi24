@@ -750,6 +750,8 @@ tbody tr.zu .i-schloss { color: var(--warn); }
 .gr .blk.prov { background: var(--warn-soft); color: var(--warn); }
 .gr .blk.ab { background: var(--line-soft); color: var(--ink-3); text-decoration: line-through; }
 /* Festgeschrieben (ENT-045): Rahmen statt Farbwechsel -- die Farbe traegt schon Status und Sparte. */
+.gr .stand.zu { box-shadow: inset 0 0 0 1.5px var(--warn); }
+.gr .stand.zu .i-schloss { width: 9px; height: 9px; margin-right: 2px; stroke-width: 2.8; vertical-align: 0; }
 .gr .blk.zu { box-shadow: inset 0 0 0 1.5px var(--warn); }
 .gr .blk.zu .i-schloss { width: 9px; height: 9px; margin-right: 1px; stroke-width: 2.8; }
 .gr tr.leerzeile td.lb b { color: var(--ink-3); font-weight: 550; }
@@ -4731,9 +4733,12 @@ function renderObjektplan() {
       const st = oplZellstand(c);
       if (!st) return `<td class="d ${tagKl(t)}"></td>`;
       zIst += c.h * c.ist; zSoll += c.h * c.soll;
-      const hin = `${dmy(t)} · ${v.von}–${v.bis}\n${v.name}\n${st.wort}` +
+      // Festgeschrieben: die Zelle ist der Klickweg zum Einteilen -- wer hier
+      // klickt, soll vorher sehen, dass nichts mehr zu verteilen ist.
+      const zu = c.aktiv.some(enGesperrt);
+      const hin = `${dmy(t)} · ${v.von}–${v.bis}\n${v.name}\n${st.wort}${zu ? ' — abgeglichen, festgeschrieben' : ''}` +
         (c.aktiv.length ? '\n' + c.aktiv.flatMap(e => (e.mitarbeiter || []).map(p => fullName(p) || p.name)).join(', ') : '');
-      return `<td class="d ${tagKl(t)}"><button class="stand ${st.kl}" title="${esc(hin)}" onclick="oplZelleAuf(${Number(v.id)},'${t}')">${st.txt}</button></td>`;
+      return `<td class="d ${tagKl(t)}"><button class="stand ${st.kl}${zu ? ' zu' : ''}" title="${esc(hin)}" onclick="oplZelleAuf(${Number(v.id)},'${t}')">${zu ? SCHLOSS_ZU : ''}${st.txt}</button></td>`;
     }).join('');
     return `<tr><td class="lb"><div class="zeile">
       <b title="${esc(v.name)}">${v.kuerzel ? esc(v.kuerzel) + ' · ' : ''}${esc(v.name)}</b>

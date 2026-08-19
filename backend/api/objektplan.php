@@ -41,7 +41,8 @@ if (isset($b['fehler'])) {
 // ── Vorhandene Einsaetze dieses Objekts im Zeitraum
 $e = db()->prepare(
     'SELECT id, kunde_id, kunde_name, objekt_id, masterschicht_id, titel, strasse, ort,
-            einsatzart, sparte, datum, von, bis, bedarf, status, bemerkung
+            einsatzart, sparte, datum, von, bis, bedarf, status, bemerkung,
+            ist_status, abgeglichen_am
      FROM einsaetze
      WHERE objekt_id = ? AND datum BETWEEN ? AND ?
      ORDER BY datum, von'
@@ -54,7 +55,8 @@ if ($einsaetze) {
     $ids = array_column($einsaetze, 'id');
     $marken = implode(',', array_fill(0, count($ids), '?'));
     $z = db()->prepare(
-        "SELECT z.einsatz_id, z.mitarbeiter_id, z.zusage, m.name, m.vorname, m.nachname
+        "SELECT z.einsatz_id, z.mitarbeiter_id, z.zusage, z.ist_status, z.abgeglichen_am,
+                m.name, m.vorname, m.nachname
          FROM einsatz_zuteilung z
          JOIN mitarbeiter m ON m.id = z.mitarbeiter_id
          WHERE z.einsatz_id IN ($marken)
@@ -68,6 +70,11 @@ if ($einsaetze) {
             'vorname' => $r['vorname'],
             'nachname' => $r['nachname'],
             'zusage' => $r['zusage'],
+            // Traegt die Sperre abgeglichener Schichten in die Objektplanung
+            // (ENT-045). Ohne dieses Feld koennte das Raster nie ein Schloss
+            // zeigen -- die Sperre griffe, waere aber unsichtbar.
+            'ist_status' => $r['ist_status'],
+            'abgeglichen_am' => $r['abgeglichen_am'],
         ];
     }
 }
