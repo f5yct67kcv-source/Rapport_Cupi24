@@ -332,6 +332,48 @@ td .sec { font-size: 11.5px; color: var(--ink-3); }
 .strong { font-weight: 620; }
 .nowrap { white-space: nowrap; }
 
+/* Sortierbare Spaltenköpfe (ENT-040) -- ein Klick auf den Kopf sortiert nach
+   dieser Spalte, ein zweiter kehrt die Richtung um. Nur ein Pfeil pro
+   Tabelle: welche Spalte gerade sortiert, macht klarer als alle Köpfe
+   gleichzeitig als klickbar zu markieren. */
+th.sortbar { cursor: pointer; user-select: none; }
+th.sortbar:hover { color: var(--ink-2); }
+th.sortbar .pf { margin-left: 4px; opacity: .5; }
+th.sortbar.aktiv .pf { opacity: 1; color: var(--accent); }
+
+/* Zeilen-Aktionsmenü: ein einzelnes schwebendes Menü, je nach Klick neu
+   positioniert -- kein DOM-Popover pro Zeile (erstes Kontextmenü der App). */
+.rowmenu-btn { color: var(--ink-3); }
+.rowmenu-pop {
+  position: fixed; z-index: 60; min-width: 200px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--r-sm); box-shadow: var(--sh-3);
+  padding: 4px; display: none;
+}
+.rowmenu-pop.on { display: block; }
+.rowmenu-pop button {
+  display: block; width: 100%; text-align: left; border: none; background: transparent;
+  font: inherit; font-size: 13px; color: var(--ink); padding: 8px 11px; border-radius: var(--r-xs); cursor: pointer;
+}
+.rowmenu-pop button:hover:not(:disabled) { background: var(--surface-3); }
+.rowmenu-pop button:disabled { color: var(--ink-3); cursor: not-allowed; }
+.rowmenu-pop button.warn:hover { background: var(--warn-soft); color: var(--warn); }
+.rowmenu-pop hr { border: none; border-top: 1px solid var(--line-soft); margin: 4px 2px; }
+
+/* Kunden-Detailseite (ENT-040): eigene Unteransicht statt Schublade, weil sie
+   selbst wieder Reiter braucht (Übersicht/Rapporte/Offerten) -- eine
+   Schublade daneben waere dafuer zu schmal. */
+.ku-detail-hd { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.ku-detail-hd h2 { font-size: 20px; margin: 0; }
+.ku-detail-hd .sub { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+.ku-zurueck {
+  display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+  border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); color: var(--ink-2); cursor: pointer; flex: none;
+}
+.ku-zurueck:hover { background: var(--surface-3); }
+.ku-detail-info dt { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-3); margin-top: 12px; }
+.ku-detail-info dt:first-child { margin-top: 0; }
+.ku-detail-info dd { margin: 2px 0 0; font-size: 13.5px; }
+
 .chip { display: inline-flex; align-items: center; border-radius: var(--r-xs); padding: 2px 8px; font-size: 11px; font-weight: 620; letter-spacing: .1px; white-space: nowrap; }
 .chip-n { background: var(--line-soft); color: var(--ink-2); }
 .chip-rein { background: var(--accent-soft); color: var(--accent); margin-left: 4px; }
@@ -516,6 +558,8 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ptab.on { display: block; }
 .ku-tab { display: none; }
 .ku-tab.on { display: block; }
+.kd-tab { display: none; }
+.kd-tab.on { display: block; }
 
 /* Monatsmatrix — erste Spalte bleibt stehen, die Tage scrollen in der Karte */
 .mx-info { font-size: 12px; color: var(--ink-3); margin: -6px 0 12px; }
@@ -1534,17 +1578,23 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
 
       <!-- ─────────── KUNDEN ─────────── -->
       <section class="view" id="view-kunden">
-        <div class="tabs">
+        <div class="tabs" id="kuHauptTabs">
           <button class="tab on" id="kutab-uebersicht" onclick="kuGoTab('uebersicht')">Übersicht</button>
           <button class="tab" id="kutab-objekte" onclick="kuGoTab('objekte')">Objekte</button>
         </div>
 
-        <!-- ── Reiter: Übersicht (bisheriger Inhalt, unverändert) ── -->
+        <!-- ── Reiter: Übersicht -- Kundenliste, ueberarbeitet (ENT-040):
+             eigener Alle/Archiviert-Umschalter, sortierbare Spalten,
+             erweiterte Suche, Zeilen-Aktionsmenü. ── -->
         <div class="ku-tab on" id="kv-uebersicht">
+          <div class="tabs" id="kuArchivTabs" style="margin-bottom:10px">
+            <button class="tab on" id="kuatab-alle" onclick="kuArchivGo('alle')">Alle</button>
+            <button class="tab" id="kuatab-archiv" onclick="kuArchivGo('archiv')">Archiviert</button>
+          </div>
           <div class="bar-tools">
             <div class="search">
               <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input class="inp" type="search" id="kQ" placeholder="Kunde, Ort oder Strasse …" oninput="renderKunden()">
+              <input class="inp" type="search" id="kQ" placeholder="Kunde, Nummer, Kontaktperson, Notiz …" oninput="renderKunden()">
             </div>
             <div class="sp" style="flex:1"></div>
             <button class="btn btn-plain btn-sm" onclick="openKi('kunde')" title="Kundenangaben diktieren statt tippen">
@@ -1575,6 +1625,37 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           </div>
           <div class="card"><div class="card-bd flush"><div class="tw" id="oTable"></div></div></div>
         </div>
+
+        <!-- ── Detailseite eines einzelnen Kunden (ENT-040), nur per Klick auf
+             eine Zeile erreichbar -- kein eigener Reiter oben, kein eigener
+             Seitenleisten-Eintrag. ── -->
+        <div class="ku-tab" id="kv-detail">
+          <div class="ku-detail-hd">
+            <button class="ku-zurueck" onclick="kuGoTab('uebersicht')" aria-label="Zurück zur Kundenliste">
+              <svg class="i" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div style="flex:1">
+              <h2 id="kdName">–</h2>
+              <div class="sub" id="kdSub">–</div>
+            </div>
+            <button class="btn btn-plain btn-sm" id="kdArchivBtn" onclick="kdArchivKlick()"></button>
+            <button class="btn btn-primary btn-sm" onclick="kdBearbeiten()">Bearbeiten</button>
+          </div>
+          <div class="tabs" id="kdTabs" style="margin-bottom:14px">
+            <button class="tab on" id="kdtab-uebersicht" onclick="kdGoTab('uebersicht')">Übersicht</button>
+            <button class="tab" id="kdtab-rapporte" onclick="kdGoTab('rapporte')">Rapporte</button>
+            <button class="tab" id="kdtab-offerten" onclick="kdGoTab('offerten')">Offerten</button>
+          </div>
+          <div class="kd-tab on" id="kd-uebersicht">
+            <div class="card"><div class="card-bd" id="kdInfo"></div></div>
+          </div>
+          <div class="kd-tab" id="kd-rapporte">
+            <div class="card"><div class="card-bd flush" id="kdRapporte"></div></div>
+          </div>
+          <div class="kd-tab" id="kd-offerten">
+            <div class="card"><div class="card-bd" id="kdOfferten"></div></div>
+          </div>
+        </div>
       </section>
 
     </div>
@@ -1594,6 +1675,10 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
   <div class="drawer-bd" id="drBody"></div>
   <div class="drawer-ft" id="drFoot"></div>
 </aside>
+
+<!-- Zeilen-Aktionsmenü (ENT-040): ein einzelnes Element, wird bei jedem Klick
+     neu befüllt und positioniert statt eines je Zeile. -->
+<div class="rowmenu-pop" id="rowmenuPop"></div>
 
 <!-- ══════════════════════════ DIALOGE ══════════════════════════ -->
 
@@ -1652,7 +1737,9 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <div class="f wide"><label for="kuNeuStrasse">Strasse *</label><input class="inp" id="kuNeuStrasse"></div>
         <div class="f"><label for="kuNeuOrt">PLZ / Ort *</label><input class="inp" id="kuNeuOrt"></div>
         <div class="f"><label for="kuNeuTelefon">Telefon *</label><input class="inp" id="kuNeuTelefon"></div>
-        <div class="f wide"><label for="kuNeuEmail">E-Mail</label><input class="inp" id="kuNeuEmail" type="email"></div>
+        <div class="f"><label for="kuNeuKontaktperson">Kontaktperson</label><input class="inp" id="kuNeuKontaktperson"></div>
+        <div class="f"><label for="kuNeuEmail">E-Mail</label><input class="inp" id="kuNeuEmail" type="email"></div>
+        <div class="f wide"><label for="kuNeuNotiz">Notiz</label><textarea class="inp" id="kuNeuNotiz" rows="2" style="min-height:56px"></textarea></div>
       </div>
     </div>
     <div class="dlg-ft">
@@ -2098,7 +2185,12 @@ let oplNurTeil = false;// nur eingeteilte Personen zeigen
 let oplZelleZiel = null;   // { msId, datum } des offenen Zuteilungsdialogs
 let sperren = {};      // "mitarbeiterId|datum" -> Bemerkung (ENT-028)
 let pTab = 'uebersicht';
-let kuTab = 'uebersicht';   // Kunden: Übersicht oder Objekte (ENT-039)
+let kuTab = 'uebersicht';   // Kunden: Übersicht, Objekte oder Detail (ENT-039/040)
+let kuArchivTab = 'alle';   // Kundenliste: aktive oder archivierte Kunden (ENT-040)
+let kuSortFeld = 'kundennummer';
+let kuSortRichtung = 'auf'; // 'auf' oder 'ab'
+let kdId = null;            // id des Kunden auf der Detailseite
+let kdTab = 'uebersicht';   // Detailseite: Übersicht, Rapporte oder Offerten
 let kiMode = 'neu';
 const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email'];
 const MA_LABEL = { personalnummer:'Personalnummer', anrede:'Anrede', vorname:'Vorname', nachname:'Nachname',
@@ -2688,8 +2780,11 @@ function loadKunden() {
     if (!ok || data.status !== 'ok') return;
     kunden = data.kunden || [];
     renderKunden();
-    // Eingabehilfe der Planung mitführen
-    $('dlKunden').innerHTML = kunden.map(k => `<option value="${esc(k.name)}"></option>`).join('');
+    // Eingabehilfe der Planung mitführen -- archivierte Kunden schlagen sich
+    // hier nicht mehr vor, ein neuer Einsatz soll nicht versehentlich an
+    // einem archivierten Kunden landen (ENT-040).
+    $('dlKunden').innerHTML = kunden.filter(k => Number(k.aktiv ?? 1))
+      .map(k => `<option value="${esc(k.name)}"></option>`).join('');
   });
 }
 
@@ -2968,29 +3063,100 @@ function renderMitarbeiter() {
 }
 
 // ══════════════════════════════════════════ KUNDEN
+// Erweiterte Suche (ENT-040): findet nicht nur die sichtbaren Spalten,
+// sondern auch Kontaktperson und Notiz, die absichtlich keine eigene Spalte
+// haben -- die Liste bliebe sonst zu breit fuer Angaben, die selten gebraucht
+// werden, aber trotzdem auffindbar sein sollen.
+function kuTh(feld, label, num) {
+  const aktiv = kuSortFeld === feld;
+  const pfeil = aktiv && kuSortRichtung === 'ab' ? '▼' : '▲';
+  return `<th class="sortbar${aktiv ? ' aktiv' : ''}${num ? ' num' : ''}" onclick="kuSort('${feld}')">${esc(label)}<span class="pf">${pfeil}</span></th>`;
+}
+function kuSort(feld) {
+  kuSortRichtung = (kuSortFeld === feld && kuSortRichtung === 'auf') ? 'ab' : 'auf';
+  kuSortFeld = feld;
+  renderKunden();
+}
+function kuArchivGo(t) {
+  kuArchivTab = t;
+  document.querySelectorAll('#kuArchivTabs .tab').forEach(b => b.classList.remove('on'));
+  $('kuatab-' + t).classList.add('on');
+  renderKunden();
+}
 function renderKunden() {
   const q = ($('kQ').value || '').toLowerCase().trim();
-  const d = kunden.filter(k => !q ||
-    [k.name, k.ort, k.strasse, k.email].some(f => String(f || '').toLowerCase().includes(q)));
+  const wollAktiv = kuArchivTab === 'alle' ? 1 : 0;
+  const d = kunden.filter(k => Number(k.aktiv ?? 1) === wollAktiv && (!q ||
+    [k.kundennummer, k.name, k.ort, k.strasse, k.telefon, k.kontaktperson, k.email, k.notiz]
+      .some(f => String(f || '').toLowerCase().includes(q))));
+  d.sort((a, b) => {
+    const c = String(a[kuSortFeld] || '').localeCompare(String(b[kuSortFeld] || ''), 'de', { numeric: true, sensitivity: 'base' });
+    return kuSortRichtung === 'auf' ? c : -c;
+  });
   if (!d.length) {
     $('kuTable').innerHTML = kunden.length
-      ? EMPTY('Keine Treffer', 'Für diese Suche gibt es keine Kunden.')
+      ? EMPTY('Keine Treffer', kuArchivTab === 'alle' ? 'Für diese Suche gibt es keine Kunden.' : 'Für diese Suche gibt es keine archivierten Kunden.')
       : EMPTY('Noch keine Kunden', 'Kunden werden im Admin-Bereich der Erfassung angelegt.');
     return;
   }
   const zaehl = {};
   rapporte.forEach(r => { zaehl[r.kunde] = (zaehl[r.kunde] || 0) + 1; });
   $('kuTable').innerHTML = `<table><thead><tr>
-      <th>Kunde</th><th>Strasse</th><th>Ort</th><th>Telefon</th><th>E-Mail</th><th class="num">Rapporte</th>
+      ${kuTh('kundennummer', 'Nr.')}${kuTh('name', 'Kunde')}${kuTh('strasse', 'Strasse')}${kuTh('ort', 'Ort')}${kuTh('telefon', 'Telefon', true)}<th>E-Mail</th><th class="num">Rapporte</th><th class="num">Aktion</th>
     </tr></thead><tbody>` + d.map(k => `
-      <tr class="click" onclick="openKunde(${kunden.indexOf(k)})">
+      <tr class="click" onclick="openKundeDetail(${Number(k.id)})">
+        <td class="nowrap">${dash(k.kundennummer)}</td>
         <td class="strong">${esc(k.name)}</td>
         <td>${dash(k.strasse)}</td>
         <td class="nowrap">${dash(k.ort)}</td>
         <td class="nowrap num">${dash(k.telefon)}</td>
         <td>${dash(k.email)}</td>
         <td class="num">${zaehl[k.name] ? nf(zaehl[k.name]) : '<span style="color:var(--ink-3)">–</span>'}</td>
+        <td class="num" onclick="event.stopPropagation()">
+          <button class="btn btn-quiet btn-sm rowmenu-btn" onclick="kuMenuOeffnen(event, ${Number(k.id)})" aria-label="Aktionen">
+            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+          </button>
+        </td>
       </tr>`).join('') + `</tbody></table>`;
+}
+
+// Zeilen-Aktionsmenü: ein einzelnes schwebendes Element statt eines je Zeile
+// (erstes Kontextmenü der App). "Offerte/Rechnung erstellen" sind bewusst
+// ausgegraut -- diese Funktionen gibt es im System noch nicht (ENT-040).
+function kuMenuOeffnen(ev, id) {
+  ev.stopPropagation();
+  const k = kunden.find(x => Number(x.id) === id);
+  if (!k) return;
+  const pop = $('rowmenuPop');
+  if (pop.classList.contains('on') && pop.dataset.kundeId === String(id)) { kuMenuSchliessen(); return; }
+  pop.innerHTML = `
+    <button onclick="kuMenuSchliessen(); openKundeBearbeiten(${id})">Bearbeiten</button>
+    <button disabled title="Noch nicht verfügbar">Offerte erstellen</button>
+    <button disabled title="Noch nicht verfügbar">Rechnung erstellen</button>
+    <hr>
+    <button onclick="kuMenuSchliessen(); toggleArchivKunde(${id}, ${k.aktiv ? 0 : 1})">${k.aktiv ? 'Archivieren' : 'Wiederherstellen'}</button>`;
+  pop.dataset.kundeId = String(id);
+  pop.classList.add('on');
+  const r = ev.currentTarget.getBoundingClientRect();
+  const breite = 200;
+  pop.style.left = Math.max(8, r.right - breite) + 'px';
+  pop.style.top = (r.bottom + 4) + 'px';
+}
+function kuMenuSchliessen() {
+  $('rowmenuPop').classList.remove('on');
+  delete $('rowmenuPop').dataset.kundeId;
+}
+function toggleArchivKunde(id, aktiv) {
+  api('kunden_archivieren.php', { method: 'POST', body: { id, aktiv } }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
+    closeDrawer();
+    Promise.all([loadKunden(), loadStats()]).then(() => {
+      toast(aktiv ? 'Kunde wiederhergestellt.' : 'Kunde archiviert.');
+      // Auf der Detailseite bleibt man -- Status und Knopf zeigen den neuen
+      // Zustand direkt an, kein Zurückspringen in die Liste (ENT-040).
+      if (kuTab === 'detail') renderKundeDetail();
+    });
+  });
 }
 
 // ══════════════════════════════════════════ PLANUNG
@@ -3448,14 +3614,75 @@ function kuNavKlick() {
 function kuGoTab(t) {
   kuTab = t;
   document.querySelectorAll('#view-kunden .ku-tab').forEach(v => v.classList.remove('on'));
-  document.querySelectorAll('#view-kunden .tab').forEach(b => b.classList.remove('on'));
+  // Nur die oberste Reiterleiste umschalten -- die Detailseite hat ihre
+  // eigenen, tiefer verschachtelten Reiter (Übersicht/Rapporte/Offerten),
+  // die davon unberührt bleiben muessen (ENT-040).
+  document.querySelectorAll('#kuHauptTabs .tab').forEach(b => b.classList.remove('on'));
   document.querySelectorAll('.nav-kind').forEach(b => b.classList.remove('on'));
   $('kv-' + t).classList.add('on');
-  $('kutab-' + t).classList.add('on');
-  $('nav-kunden-' + t).classList.add('on');
-  $('pgCrumb').textContent = t === 'objekte' ? 'Daueraufträge und ihre Masterschichten' : 'Stammdaten';
+  const kopf = $('kutab-' + t);
+  if (kopf) kopf.classList.add('on');
+  // Die Detailseite ist kein eigener Seitenleisten-Ziel, sondern ein
+  // Drilldown aus der Übersicht -- "Übersicht" bleibt entsprechend markiert.
+  ($('nav-kunden-' + t) || $('nav-kunden-uebersicht')).classList.add('on');
+  $('pgCrumb').textContent = t === 'objekte' ? 'Daueraufträge und ihre Masterschichten'
+    : t === 'detail' ? 'Kundendetails' : 'Stammdaten';
   if (t === 'uebersicht') { kunden.length ? renderKunden() : loadKunden(); }
   if (t === 'objekte') { objekte.length ? renderObjekte() : loadObjekte(); }
+}
+
+// ── Kunden-Detailseite (ENT-040) ──────────────────────────────────────────
+function openKundeDetail(id) {
+  kdId = id;
+  kuGoTab('detail');
+  kdGoTab('uebersicht');
+}
+function kdGoTab(t) {
+  kdTab = t;
+  document.querySelectorAll('#kdTabs .tab').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('#kv-detail .kd-tab').forEach(v => v.classList.remove('on'));
+  $('kdtab-' + t).classList.add('on');
+  $('kd-' + t).classList.add('on');
+  renderKundeDetail();
+}
+function renderKundeDetail() {
+  const k = kunden.find(x => Number(x.id) === Number(kdId));
+  if (!k) { kuGoTab('uebersicht'); return; }
+  $('kdName').textContent = k.name;
+  $('kdSub').textContent = (k.kundennummer || '–') + (Number(k.aktiv) ? '' : ' · archiviert');
+  $('kdArchivBtn').textContent = Number(k.aktiv) ? 'Archivieren' : 'Wiederherstellen';
+  if (kdTab === 'uebersicht') {
+    $('kdInfo').innerHTML = `
+      <dl class="ku-detail-info">
+        <dt>Adresse</dt><dd>${esc(k.strasse || '–')}<br>${esc(k.ort || '–')}</dd>
+        <dt>Telefon</dt><dd>${dash(k.telefon)}</dd>
+        <dt>Kontaktperson</dt><dd>${dash(k.kontaktperson)}</dd>
+        <dt>E-Mail</dt><dd>${dash(k.email)}</dd>
+        <dt>Notiz</dt><dd>${k.notiz ? esc(k.notiz).replace(/\n/g, '<br>') : '<span style="color:var(--ink-3)">–</span>'}</dd>
+      </dl>`;
+  }
+  if (kdTab === 'rapporte') {
+    // Verknuepfung ueber den Kundennamen, wie schon beim Rapport-Zaehler in
+    // der Übersicht (ENT-040) -- rapporte.kunde ist ein Textfeld ohne echten
+    // Verweis, siehe Risiko in ENT-040.
+    const treffer = rapporte.filter(r => r.kunde === k.name);
+    $('kdRapporte').innerHTML = treffer.length
+      ? `<table><thead><tr><th>Datum</th><th>Mitarbeitende</th><th>Zeit</th><th class="num">Netto</th><th>Auftrag-Nr.</th></tr></thead><tbody>` +
+        treffer.map(r => `<tr class="click" onclick="openDrawer(${Number(r.id)})">
+          <td class="nowrap num">${dmy(r.datum)}</td><td>${esc(r.mitarbeiter)}</td>
+          <td class="nowrap">${hm(r.von)}–${hm(r.bis)}</td><td class="num">${nf(Number(r.netto_h), 2)} h</td>
+          <td>${dash(r.auftrag_nr)}</td></tr>`).join('') + `</tbody></table>`
+      : EMPTY('Keine Rapporte', 'Für diesen Kunden liegt noch kein Rapport vor.');
+  }
+  if (kdTab === 'offerten') {
+    $('kdOfferten').innerHTML = EMPTY('Noch nicht verfügbar', 'Offerten gibt es in diesem System noch nicht als eigene Funktion.');
+  }
+}
+function kdBearbeiten() { openKundeBearbeiten(kdId); }
+function kdArchivKlick() {
+  const k = kunden.find(x => Number(x.id) === Number(kdId));
+  if (!k) return;
+  toggleArchivKunde(Number(k.id), Number(k.aktiv) ? 0 : 1);
 }
 
 // ══════════════════════════════════════════ OBJEKTE
@@ -5538,8 +5765,12 @@ function askRemoveMa() {
 }
 
 // ══════════════════════════════════════════ KUNDEN PFLEGEN
-const KU_FELDER = ['name', 'strasse', 'ort', 'telefon', 'email'];
-const KU_LABEL = { name: 'Name', strasse: 'Strasse', ort: 'PLZ / Ort', telefon: 'Telefon', email: 'E-Mail' };
+// Kontaktperson und Notiz (ENT-040) sind bewusst Teil von KU_FELDER: sie
+// fliessen durchs selbe Diktat-Hervorhebungsmuster wie alle anderen Felder,
+// auch wenn der Diktat-Router sie heute noch nicht befuellt.
+const KU_FELDER = ['name', 'strasse', 'ort', 'telefon', 'kontaktperson', 'email', 'notiz'];
+const KU_LABEL = { name: 'Name', strasse: 'Strasse', ort: 'PLZ / Ort', telefon: 'Telefon',
+  kontaktperson: 'Kontaktperson', email: 'E-Mail', notiz: 'Notiz' };
 const kuNeuId = f => 'kuNeu' + f[0].toUpperCase() + f.slice(1);
 
 function openKundeNeu(felder, meta) {
@@ -5589,7 +5820,8 @@ function createKunde() {
   const body = {
     name: $('kuNeuName').value.trim(), strasse: $('kuNeuStrasse').value.trim(),
     ort: $('kuNeuOrt').value.trim(), telefon: $('kuNeuTelefon').value.trim(),
-    email: $('kuNeuEmail').value.trim()
+    kontaktperson: $('kuNeuKontaktperson').value.trim(),
+    email: $('kuNeuEmail').value.trim(), notiz: $('kuNeuNotiz').value.trim()
   };
   if (!body.name || !body.strasse || !body.ort || !body.telefon) {
     err.textContent = 'Name, Strasse, Ort und Telefon sind Pflicht.'; err.style.display = ''; return;
@@ -5603,8 +5835,11 @@ function createKunde() {
   });
 }
 
-function openKunde(i) {
-  const k = kunden[i];
+// Bearbeiten-Schublade: erreichbar über das Zeilenmenü und über den
+// "Bearbeiten"-Knopf der Detailseite (ENT-040) -- ein einziges Formular,
+// zwei Einstiege. Archivieren ersetzt das frühere endgültige Löschen.
+function openKundeBearbeiten(id) {
+  const k = kunden.find(x => Number(x.id) === Number(id));
   if (!k) return;
   drawerId = null; maTarget = null;
   kuTarget = k.id;
@@ -5615,12 +5850,16 @@ function openKunde(i) {
       <div class="f wide"><label for="kuE_strasse">Strasse *</label><input class="inp" id="kuE_strasse" value="${esc(k.strasse || '')}"></div>
       <div class="f"><label for="kuE_ort">PLZ / Ort *</label><input class="inp" id="kuE_ort" value="${esc(k.ort || '')}"></div>
       <div class="f"><label for="kuE_telefon">Telefon *</label><input class="inp" id="kuE_telefon" value="${esc(k.telefon || '')}"></div>
-      <div class="f wide"><label for="kuE_email">E-Mail</label><input class="inp" id="kuE_email" type="email" value="${esc(k.email || '')}"></div>
+      <div class="f"><label for="kuE_kontaktperson">Kontaktperson</label><input class="inp" id="kuE_kontaktperson" value="${esc(k.kontaktperson || '')}"></div>
+      <div class="f"><label for="kuE_email">E-Mail</label><input class="inp" id="kuE_email" type="email" value="${esc(k.email || '')}"></div>
+      <div class="f wide"><label for="kuE_notiz">Notiz</label><textarea class="inp" id="kuE_notiz" rows="3">${esc(k.notiz || '')}</textarea></div>
     </div>
-    <div class="zone danger">
-      <div class="zone-hd">Kunde entfernen</div>
-      <div class="zone-note">Der Kunde verschwindet aus der Auswahlliste der Erfassung. Bereits erfasste Rapporte behalten ihre Kundenangaben und bleiben unverändert.</div>
-      <button class="btn btn-danger btn-sm" onclick="askDeleteKunde()">Entfernen</button>
+    <div class="zone">
+      <div class="zone-hd">${Number(k.aktiv) ? 'Kunde archivieren' : 'Kunde wiederherstellen'}</div>
+      <div class="zone-note">${Number(k.aktiv)
+        ? 'Der Kunde verschwindet aus der aktiven Auswahl, bleibt aber vollständig erhalten. Objekte, Einsätze und Rapporte bleiben unverändert.'
+        : 'Der Kunde erscheint wieder in der aktiven Auswahl.'}</div>
+      <button class="btn btn-plain btn-sm" onclick="toggleArchivKunde(${Number(k.id)}, ${Number(k.aktiv) ? 0 : 1})">${Number(k.aktiv) ? 'Archivieren' : 'Wiederherstellen'}</button>
     </div>`;
   $('drFoot').innerHTML =
     `<button class="btn btn-plain" onclick="closeDrawer()">Schliessen</button>
@@ -5635,27 +5874,15 @@ function saveKunde() {
     id: kuTarget,
     name: $('kuE_name').value.trim(), strasse: $('kuE_strasse').value.trim(),
     ort: $('kuE_ort').value.trim(), telefon: $('kuE_telefon').value.trim(),
-    email: $('kuE_email').value.trim()
+    kontaktperson: $('kuE_kontaktperson').value.trim(),
+    email: $('kuE_email').value.trim(), notiz: $('kuE_notiz').value.trim()
   };
   if (!body.name || !body.strasse || !body.ort || !body.telefon) { toast('Name, Strasse, Ort und Telefon sind Pflicht.'); return; }
   api('kunden_update.php', { method: 'POST', body }).then(({ ok, data }) => {
     if (!ok || data.status !== 'ok') { toast(data.message || 'Speichern fehlgeschlagen.'); return; }
     closeDrawer();
-    loadKunden().then(() => toast('Kunde gespeichert.'));
+    loadKunden().then(() => { toast('Kunde gespeichert.'); if (kuTab === 'detail') renderKundeDetail(); });
   });
-}
-
-function askDeleteKunde() {
-  const id = kuTarget;
-  if (!id) return;
-  askConfirm('Kunde entfernen?',
-    'Der Kunde verschwindet aus der Auswahlliste. Bereits erfasste Rapporte bleiben unverändert.',
-    'Entfernen',
-    () => api('kunden_delete.php', { method: 'POST', body: { id } }).then(({ ok, data }) => {
-      if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
-      closeDrawer();
-      Promise.all([loadKunden(), loadStats()]).then(() => toast('Kunde entfernt.'));
-    }));
 }
 
 // ══════════════════════════════════════════ DIKTAT
@@ -5765,9 +5992,19 @@ function printReport() {
 // ══════════════════════════════════════════ START
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+  if ($('rowmenuPop').classList.contains('on')) { kuMenuSchliessen(); return; }
   const dlg = document.querySelector('.dlg-scrim.on');   // oberster Dialog zuerst
   if (dlg) { dlg.classList.remove('on'); return; }
   closeDrawer();
+});
+// Zeilen-Aktionsmenü schliesst bei jedem Klick ausserhalb (ENT-040) -- der
+// öffnende Knopf selbst ist ausgenommen, sonst würde derselbe Klick es
+// sofort wieder zu- und aufklappen.
+document.addEventListener('click', e => {
+  const pop = $('rowmenuPop');
+  if (pop.classList.contains('on') && !pop.contains(e.target) && !e.target.closest('.rowmenu-btn')) {
+    kuMenuSchliessen();
+  }
 });
 document.querySelectorAll('.dlg-scrim').forEach(s => {
   s.addEventListener('click', e => { if (e.target === s) s.classList.remove('on'); });

@@ -16,13 +16,19 @@ $name = trim((string)($input['name'] ?? ''));
 $strasse = trim((string)($input['strasse'] ?? ''));
 $ort = trim((string)($input['ort'] ?? ''));
 $telefon = trim((string)($input['telefon'] ?? ''));
+$kontaktperson = trim((string)($input['kontaktperson'] ?? '')) ?: null;
 $email = trim((string)($input['email'] ?? '')) ?: null;
+$notiz = trim((string)($input['notiz'] ?? '')) ?: null;
 
 if ($id <= 0 || $name === '' || $strasse === '' || $ort === '' || $telefon === '') {
     json_response(['status' => 'error', 'message' => 'Name, Strasse, Ort und Telefon erforderlich'], 400);
 }
 
-$stmt = db()->prepare('UPDATE kunden SET name = ?, strasse = ?, ort = ?, telefon = ?, email = ? WHERE id = ?');
-$stmt->execute([$name, $strasse, $ort, $telefon, $email, $id]);
+// Die Kundennummer ist bewusst nicht Teil dieses Aufrufs -- sie wird einmalig
+// bei Anlage vergeben und bleibt danach unveraendert (ENT-040).
+$stmt = db()->prepare(
+    'UPDATE kunden SET name = ?, strasse = ?, ort = ?, telefon = ?, kontaktperson = ?, email = ?, notiz = ? WHERE id = ?'
+);
+$stmt->execute([$name, $strasse, $ort, $telefon, $kontaktperson, $email, $notiz, $id]);
 
 json_response(['status' => 'ok']);

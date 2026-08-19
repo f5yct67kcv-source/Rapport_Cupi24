@@ -14,6 +14,7 @@
 // entsteht dadurch kein zweiter Mechanismus: dieselbe Liste, derselbe Knopf.
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require __DIR__ . '/../kunden.php';
 
 $user = require_session();
 if (!$user['ist_admin']) {
@@ -214,6 +215,13 @@ $spalten = [
     ['objekte',         'sparte', "ALTER TABLE objekte ADD COLUMN sparte VARCHAR(20) NOT NULL DEFAULT 'sicherheit' AFTER einsatzart"],
     ['masterschichten', 'sparte', "ALTER TABLE masterschichten ADD COLUMN sparte VARCHAR(20) NOT NULL DEFAULT 'sicherheit' AFTER art"],
     ['einsaetze',       'sparte', "ALTER TABLE einsaetze ADD COLUMN sparte VARCHAR(20) NOT NULL DEFAULT 'sicherheit' AFTER einsatzart"],
+    // Kundenuebersicht (ENT-040): eigene Nummer, Ansprechperson und Notiz als
+    // durchsuchbare Zusatzfelder, sowie Archivierung statt endgueltigem
+    // Loeschen -- gleiches Vorgehen wie objekte.aktiv.
+    ['kunden', 'kundennummer',  'ALTER TABLE kunden ADD COLUMN kundennummer VARCHAR(10) NULL AFTER id, ADD UNIQUE KEY uniq_kundennummer (kundennummer)'],
+    ['kunden', 'kontaktperson', 'ALTER TABLE kunden ADD COLUMN kontaktperson VARCHAR(200) NULL AFTER telefon'],
+    ['kunden', 'notiz',         'ALTER TABLE kunden ADD COLUMN notiz TEXT NULL AFTER email'],
+    ['kunden', 'aktiv',         'ALTER TABLE kunden ADD COLUMN aktiv TINYINT(1) NOT NULL DEFAULT 1 AFTER notiz'],
 ];
 foreach ($spalten as [$tabelle, $spalte, $sql]) {
     if (!hat_tabelle($pdo, $tabelle) || hat_spalte($pdo, $tabelle, $spalte)) {
@@ -222,6 +230,26 @@ foreach ($spalten as [$tabelle, $spalte, $sql]) {
     if ($nurPruefen) { $getan[] = "Spalte $tabelle.$spalte fehlt noch"; continue; }
     $pdo->exec($sql);
     $getan[] = "Spalte $tabelle.$spalte ergaenzt";
+}
+
+// ── 2b. Kundennummern nachtragen, wenn Kunden ohne eigene Nummer bestehen --
+// entweder aus der Zeit vor ENT-040 oder weil die Spalte gerade erst oben
+// dazukam. Reihenfolge nach id, damit die Vergabe nachvollziehbar bleibt.
+if (hat_spalte($pdo, 'kunden', 'kundennummer')) {
+    $ohneNummer = $pdo->query(
+        'SELECT id FROM kunden WHERE kundennummer IS NULL ORDER BY id'
+    )->fetchAll(PDO::FETCH_COLUMN);
+    if ($ohneNummer) {
+        if ($nurPruefen) {
+            $getan[] = count($ohneNummer) . ' Kunde(n) ohne Kundennummer';
+        } else {
+            foreach ($ohneNummer as $kid) {
+                $nr = naechste_kundennummer($pdo);
+                $pdo->prepare('UPDATE kunden SET kundennummer = ? WHERE id = ?')->execute([$nr, $kid]);
+            }
+            $getan[] = count($ohneNummer) . ' Kundennummer(n) vergeben';
+        }
+    }
 }
 
 // ── 3. Verweise und Index nachtragen, wenn die Spalten neu dazugekommen sind
