@@ -1057,11 +1057,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/><line x1="7.5" y1="14" x2="12" y2="14"/><line x1="7.5" y1="17.5" x2="15" y2="17.5"/></svg>
         <span class="lbl">Planung</span>
       </button>
-      <button class="nav-item" id="nav-rapporte" title="Rapporte" onclick="go('rapporte')">
-        <svg class="i" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        <span class="lbl">Rapporte</span>
-      </button>
-
       <div class="nav-lbl" style="margin-top:16px">Stammdaten</div>
       <button class="nav-item" id="nav-mitarbeiter" title="Mitarbeitende" onclick="go('mitarbeiter')">
         <svg class="i" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -1076,6 +1071,7 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <div class="nav-kinder">
           <button class="nav-kind" id="nav-kunden-uebersicht" onclick="go('kunden'); kuGoTab('uebersicht')">Adressen</button>
           <button class="nav-kind" id="nav-kunden-objekte" onclick="go('kunden'); kuGoTab('objekte')">Objekte</button>
+          <button class="nav-kind" id="nav-kunden-rapporte" onclick="go('kunden'); kuGoTab('rapporte')">Rapporte</button>
         </div>
       </div>
     </nav>
@@ -1297,7 +1293,7 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
               <div class="card-hd">
                 <h2>Letzte Rapporte</h2>
                 <div class="sp"></div>
-                <button class="btn btn-quiet btn-sm" onclick="go('rapporte')">Alle ansehen →</button>
+                <button class="btn btn-quiet btn-sm" onclick="go('kunden'); kuGoTab('rapporte')">Alle ansehen →</button>
               </div>
               <div class="card-bd flush"><div id="letzte"></div></div>
             </div>
@@ -1530,24 +1526,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         </div>
       </section>
 
-      <!-- ─────────── RAPPORTE ─────────── -->
-      <section class="view" id="view-rapporte">
-        <div class="bar-tools">
-          <div class="search">
-            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="inp" type="search" id="rQ" placeholder="Mitarbeitende, Kunde oder Ort …" oninput="renderRapporte()">
-          </div>
-          <input class="inp" type="month" id="rM" style="width:auto" onchange="renderRapporte()">
-          <button class="btn btn-quiet btn-sm" onclick="rClear()">Zurücksetzen</button>
-          <div class="sp" style="flex:1"></div>
-          <button class="btn btn-plain btn-sm" onclick="exportCSV()">
-            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            CSV
-          </button>
-        </div>
-        <div class="card"><div class="card-bd flush"><div class="tw" id="rapporteTable"></div></div></div>
-      </section>
-
       <!-- ─────────── MITARBEITENDE ─────────── -->
       <section class="view" id="view-mitarbeiter">
         <div class="bar-tools">
@@ -1609,6 +1587,24 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
             </button>
           </div>
           <div class="card"><div class="card-bd flush"><div class="tw" id="oTable"></div></div></div>
+        </div>
+
+        <!-- ── Reiter: Rapporte (aus der Seitenleiste hierher verschoben) ── -->
+        <div class="ku-tab" id="kv-rapporte">
+          <div class="bar-tools">
+            <div class="search">
+              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="inp" type="search" id="rQ" placeholder="Mitarbeitende, Kunde oder Ort …" oninput="renderRapporte()">
+            </div>
+            <input class="inp" type="month" id="rM" style="width:auto" onchange="renderRapporte()">
+            <button class="btn btn-quiet btn-sm" onclick="rClear()">Zurücksetzen</button>
+            <div class="sp" style="flex:1"></div>
+            <button class="btn btn-plain btn-sm" onclick="exportCSV()">
+              <svg class="i i-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              CSV
+            </button>
+          </div>
+          <div class="card"><div class="card-bd flush"><div class="tw" id="rapporteTable"></div></div></div>
         </div>
 
         <!-- ── Detailseite eines einzelnen Kunden (ENT-040), nur per Klick auf
@@ -2276,7 +2272,6 @@ function enter() {
 const TITLES = {
   uebersicht:  ['Übersicht', 'Laufender Monat'],
   planung:     ['Planung', 'Geplante Einsätze'],
-  rapporte:    ['Rapporte', 'Alle erfassten Einsätze'],
   mitarbeiter: ['Mitarbeitende', 'Stammdaten'],
   kunden:      ['Kunden', 'Stammdaten']
 };
@@ -2681,7 +2676,6 @@ function go(view) {
   // schon im Begrüssungs-Container, ein zweiter daneben wäre doppelt (ENT-038).
   $('btnSprechen').style.display = view === 'uebersicht' ? 'none' : '';
   if (view !== 'planung') weiteAnsicht(false);
-  if (view === 'rapporte') renderRapporte();
   if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
   // Das Untermenü ist nur aufgeklappt, solange Kunden der aktive Bereich ist
   // -- kein Zustand, der beim Verlassen hängen bleibt (ENT-039).
@@ -2971,7 +2965,7 @@ function rClear() { $('rQ').value = ''; $('rM').value = ''; renderRapporte(); }
 
 function renderRapporte() {
   const d = rFiltered();
-  if ($('view-rapporte').classList.contains('on')) {
+  if ($('kv-rapporte').classList.contains('on')) {
     const h = d.reduce((s, r) => s + Number(r.netto_h), 0);
     $('pgCrumb').textContent = `${nf(d.length)} von ${nf(rapporte.length)} Rapporten · ${nf(h, 2)} h`;
   }
@@ -3599,9 +3593,11 @@ function kuGoTab(t) {
   // Drilldown aus Adressen -- "Adressen" bleibt entsprechend markiert.
   ($('nav-kunden-' + t) || $('nav-kunden-uebersicht')).classList.add('on');
   $('pgCrumb').textContent = t === 'objekte' ? 'Daueraufträge und ihre Masterschichten'
+    : t === 'rapporte' ? 'Alle erfassten Einsätze'
     : t === 'detail' ? 'Kundendetails' : 'Stammdaten';
   if (t === 'uebersicht') { kunden.length ? renderKunden() : loadKunden(); }
   if (t === 'objekte') { objekte.length ? renderObjekte() : loadObjekte(); }
+  if (t === 'rapporte') { rapporte.length ? renderRapporte() : loadRapporte(); }
 }
 
 // ── Kunden-Detailseite (ENT-040) ──────────────────────────────────────────
