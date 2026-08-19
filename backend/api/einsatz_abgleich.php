@@ -7,6 +7,14 @@
 // Zeiten, Bedarf und Zuteilung bleiben stehen, damit sich Soll und Ist
 // spaeter gegenueberstellen lassen.
 //
+// Abgeglichen wird JE PERSON, nicht je Schicht: dieselbe Person kann am
+// selben Tag auf zwei Objekten unterschiedlich lang gearbeitet haben. Eine
+// Schicht, der niemand zugeteilt war, wird als Ganzes abgeglichen -- sonst
+// verschwaende sie stillschweigend aus der Rueckschau.
+//
+// Nimmt eine oder viele Zeilen entgegen; der Sammelabgleich ist derselbe
+// Aufruf mit mehreren Eintraegen, kein zweiter Weg.
+//
 // Bewusst KEINE Berechnung: es werden Zeiten und Anwesenheiten festgehalten,
 // aber keine Stunden, keine Zuschlaege und keine Auslagen daraus abgeleitet.
 // Das waere GAV-Auslegung und ist bis zu den Eintraegen im Auslegungsregister
@@ -22,88 +30,81 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['status' => 'error', 'message' => 'nur POST'], 405);
 }
 
-const IST_STATUS = ['offen', 'bestaetigt', 'abweichend', 'ausgefallen'];
+// offen      = noch nicht geprueft
+// anwesend   = war da, so wie in den Ist-Zeiten festgehalten
+// abwesend   = war nicht da, die Schicht fand aber statt
+// ausgefallen= die Schicht fand gar nicht statt
+const IST_STATUS = ['offen', 'anwesend', 'abwesend', 'ausgefallen'];
 
 $input = json_decode(file_get_contents('php://input'), true) ?? [];
-$id = (int)($input['id'] ?? 0);
-if ($id <= 0) {
-    json_response(['status' => 'error', 'message' => 'Einsatz erforderlich'], 400);
+$zeilen = $input['zeilen'] ?? null;
+if (!is_array($zeilen) || !$zeilen) {
+    json_response(['status' => 'error', 'message' => 'Keine Zeilen uebergeben'], 400);
 }
-
-$status = trim((string)($input['ist_status'] ?? ''));
-if (!in_array($status, IST_STATUS, true)) {
-    json_response(['status' => 'error', 'message' => 'Unbekannter Status'], 400);
-}
-
-$pdo = db();
-$s = $pdo->prepare('SELECT id, von, bis FROM einsaetze WHERE id = ?');
-$s->execute([$id]);
-$einsatz = $s->fetch();
-if (!$einsatz) {
-    json_response(['status' => 'error', 'message' => 'Einsatz nicht gefunden'], 404);
+if (count($zeilen) > 500) {
+    json_response(['status' => 'error', 'message' => 'Zu viele Zeilen auf einmal (hoechstens 500)'], 400);
 }
 
 $zeit = function ($wert): ?string {
     $wert = trim((string)$wert);
     return preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $wert) ? substr($wert, 0, 5) : null;
 };
-$istVon = $zeit($input['ist_von'] ?? '');
-$istBis = $zeit($input['ist_bis'] ?? '');
-$bemerkung = trim((string)($input['ist_bemerkung'] ?? ''));
 
-// Ein Ausfall hat keine Ist-Zeiten und niemanden anwesend -- sonst stuende in
-// der Datenbank, jemand habe an einer Schicht gearbeitet, die es nicht gab.
-if ($status === 'ausgefallen') {
-    $istVon = null;
-    $istBis = null;
-}
-
-// Zurueck auf "offen" heisst: der Abgleich wird zurueckgenommen. Dann darf
-// auch nicht stehen bleiben, wer ihn wann gemacht hat.
-$offen = $status === 'offen';
-
+$pdo = db();
 $pdo->beginTransaction();
 try {
-    $pdo->prepare(
-        'UPDATE einsaetze SET ist_status = ?, ist_von = ?, ist_bis = ?, ist_bemerkung = ?,
-                abgeglichen_von = ?, abgeglichen_am = ?
+    $jetzt = date('Y-m-d H:i:s');
+    $wer = (int)$user['id'];
+
+    $person = $pdo->prepare(
+        'UPDATE einsatz_zuteilung
+         SET ist_status = ?, ist_von = ?, ist_bis = ?, ist_pause_min = ?, ist_bemerkung = ?,
+             abgeglichen_von = ?, abgeglichen_am = ?
+         WHERE einsatz_id = ? AND mitarbeiter_id = ?'
+    );
+    $schicht = $pdo->prepare(
+        'UPDATE einsaetze
+         SET ist_status = ?, ist_von = ?, ist_bis = ?, ist_bemerkung = ?,
+             abgeglichen_von = ?, abgeglichen_am = ?
          WHERE id = ?'
-    )->execute([
-        $status,
-        $offen ? null : $istVon,
-        $offen ? null : $istBis,
-        $bemerkung !== '' ? $bemerkung : null,
-        $offen ? null : (int)$user['id'],
-        $offen ? null : date('Y-m-d H:i:s'),
-        $id,
-    ]);
+    );
 
-    // Anwesenheit je zugeteilter Person. Nur bekannte Zuteilungen werden
-    // beruehrt -- ueber diesen Weg entsteht keine neue Zuteilung, und wer
-    // nicht mitgeschickt wird, bleibt unveraendert.
-    $bekannt = $pdo->prepare('SELECT mitarbeiter_id FROM einsatz_zuteilung WHERE einsatz_id = ?');
-    $bekannt->execute([$id]);
-    $zugeteilt = array_map('intval', $bekannt->fetchAll(PDO::FETCH_COLUMN));
+    $geschrieben = 0;
+    foreach ($zeilen as $z) {
+        if (!is_array($z)) { continue; }
+        $einsatzId = (int)($z['einsatz_id'] ?? 0);
+        if ($einsatzId <= 0) { continue; }
 
-    if ($offen || $status === 'ausgefallen') {
-        // Kein Abgleich, keine Anwesenheitsaussage.
-        $pdo->prepare('UPDATE einsatz_zuteilung SET anwesend = NULL WHERE einsatz_id = ?')->execute([$id]);
-    } else {
-        $setzen = $pdo->prepare('UPDATE einsatz_zuteilung SET anwesend = ? WHERE einsatz_id = ? AND mitarbeiter_id = ?');
-        $gemeldet = [];
-        foreach ((array)($input['anwesend'] ?? []) as $eintrag) {
-            if (!is_array($eintrag)) { continue; }
-            $mid = (int)($eintrag['mitarbeiter_id'] ?? 0);
-            if (!in_array($mid, $zugeteilt, true)) { continue; }
-            $setzen->execute([!empty($eintrag['anwesend']) ? 1 : 0, $id, $mid]);
-            $gemeldet[] = $mid;
+        $status = trim((string)($z['ist_status'] ?? ''));
+        if (!in_array($status, IST_STATUS, true)) { continue; }
+
+        // Zuruecknehmen loescht auch die Spur, wer wann geprueft hat -- ein
+        // offener Abgleich darf nicht so aussehen, als sei er schon einmal
+        // bestaetigt worden.
+        $offen = $status === 'offen';
+        // Wer nicht da war oder wessen Schicht ausfiel, hat keine Ist-Zeiten.
+        $ohneZeit = $offen || $status === 'abwesend' || $status === 'ausgefallen';
+
+        $von = $ohneZeit ? null : $zeit($z['ist_von'] ?? '');
+        $bis = $ohneZeit ? null : $zeit($z['ist_bis'] ?? '');
+        $pause = null;
+        if (!$ohneZeit && isset($z['ist_pause_min']) && $z['ist_pause_min'] !== '') {
+            $pause = max(0, min(1440, (int)$z['ist_pause_min']));
         }
-        // Wer zugeteilt ist, aber nicht gemeldet wurde, gilt als nicht geprueft
-        // und bleibt offen -- lieber eine Luecke als eine erfundene Anwesenheit.
-        foreach (array_diff($zugeteilt, $gemeldet) as $mid) {
-            $pdo->prepare('UPDATE einsatz_zuteilung SET anwesend = NULL WHERE einsatz_id = ? AND mitarbeiter_id = ?')
-                ->execute([$id, $mid]);
+        $bemerkung = trim((string)($z['ist_bemerkung'] ?? ''));
+        $bemerkung = $bemerkung !== '' ? $bemerkung : null;
+
+        $maId = (int)($z['mitarbeiter_id'] ?? 0);
+        if ($maId > 0) {
+            $person->execute([$status, $von, $bis, $pause, $bemerkung,
+                $offen ? null : $wer, $offen ? null : $jetzt, $einsatzId, $maId]);
+            $geschrieben += $person->rowCount() > 0 ? 1 : 0;
+            continue;
         }
+        // Ohne Mitarbeitenden ist die Zeile die unbesetzte Schicht selbst.
+        $schicht->execute([$status, $von, $bis, $bemerkung,
+            $offen ? null : $wer, $offen ? null : $jetzt, $einsatzId]);
+        $geschrieben += $schicht->rowCount() > 0 ? 1 : 0;
     }
     $pdo->commit();
 } catch (Throwable $e) {
@@ -111,4 +112,4 @@ try {
     throw $e;
 }
 
-json_response(['status' => 'ok']);
+json_response(['status' => 'ok', 'geschrieben' => $geschrieben]);

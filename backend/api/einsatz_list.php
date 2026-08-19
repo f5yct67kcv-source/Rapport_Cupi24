@@ -31,7 +31,9 @@ $einsaetze = $stmt->fetchAll();
 
 // Zuteilungen in einem Zug holen und zuordnen -- eine Abfrage je Einsatz waere
 // bei einem Monatsplan schnell dreistellig.
-$zsql = 'SELECT z.einsatz_id, z.mitarbeiter_id, z.zusage, z.anwesend, m.name, m.vorname, m.nachname
+$zsql = 'SELECT z.einsatz_id, z.mitarbeiter_id, z.zusage, m.personalnummer,
+                z.ist_status, z.ist_von, z.ist_bis, z.ist_pause_min, z.ist_bemerkung, z.abgeglichen_am,
+                m.name, m.vorname, m.nachname
          FROM einsatz_zuteilung z
          JOIN mitarbeiter m ON m.id = z.mitarbeiter_id';
 if ($eingegrenzt) {
@@ -49,9 +51,15 @@ foreach ($zstmt->fetchAll() as $z) {
         'vorname' => $z['vorname'],
         'nachname' => $z['nachname'],
         'zusage' => $z['zusage'],
-        // null heisst "noch nicht abgeglichen" und ist bewusst von false
-        // ("war nicht da") unterschieden (ENT-045).
-        'anwesend' => $z['anwesend'] === null ? null : (bool)$z['anwesend'],
+        'personalnummer' => $z['personalnummer'],
+        // Der Abgleich je Person (ENT-045). 'offen' heisst "noch nicht
+        // geprueft" und ist bewusst von 'abwesend' unterschieden.
+        'ist_status' => $z['ist_status'],
+        'ist_von' => $z['ist_von'],
+        'ist_bis' => $z['ist_bis'],
+        'ist_pause_min' => $z['ist_pause_min'] === null ? null : (int)$z['ist_pause_min'],
+        'ist_bemerkung' => $z['ist_bemerkung'],
+        'abgeglichen_am' => $z['abgeglichen_am'],
     ];
 }
 

@@ -177,6 +177,16 @@ CREATE TABLE IF NOT EXISTS einsatz_zuteilung (
   einsatz_id INT NOT NULL,
   mitarbeiter_id INT NOT NULL,
   zusage VARCHAR(20) NOT NULL DEFAULT 'offen',
+  -- Der Abgleich laeuft je Person (ENT-045): eigene Ist-Zeiten und eigener
+  -- Status je zugeteilter Person, weil dieselbe Person am selben Tag auf zwei
+  -- Objekten unterschiedlich lang gearbeitet haben kann.
+  ist_status VARCHAR(20) NOT NULL DEFAULT 'offen',
+  ist_von TIME NULL,
+  ist_bis TIME NULL,
+  ist_pause_min INT NULL,
+  ist_bemerkung TEXT NULL,
+  abgeglichen_von INT NULL,
+  abgeglichen_am DATETIME NULL,
   zugeteilt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (einsatz_id, mitarbeiter_id),
   KEY idx_ma (mitarbeiter_id),
@@ -287,10 +297,19 @@ $spalten = [
     ['einsaetze', 'ist_bemerkung',   'ALTER TABLE einsaetze ADD COLUMN ist_bemerkung TEXT NULL AFTER ist_bis'],
     ['einsaetze', 'abgeglichen_von', 'ALTER TABLE einsaetze ADD COLUMN abgeglichen_von INT NULL AFTER ist_bemerkung'],
     ['einsaetze', 'abgeglichen_am',  'ALTER TABLE einsaetze ADD COLUMN abgeglichen_am DATETIME NULL AFTER abgeglichen_von'],
-    // Anwesenheit je zugeteilter Person -- NULL heisst "noch nicht abgeglichen"
-    // und ist bewusst von 0 ("war nicht da") unterschieden. Gebraucht wird das
-    // fuer alles, was pro Mitarbeitendem anfaellt.
-    ['einsatz_zuteilung', 'anwesend', 'ALTER TABLE einsatz_zuteilung ADD COLUMN anwesend TINYINT(1) NULL AFTER zusage'],
+    // Der Abgleich laeuft je Person, nicht je Schicht: eine Zeile ist eine
+    // zugeteilte Person, mit eigenen Ist-Zeiten und eigenem Status. Dieselbe
+    // Person kann am selben Tag auf zwei Objekten unterschiedlich lang
+    // gearbeitet haben -- eine gemeinsame Zeit an der Schicht kann das nicht
+    // abbilden. Die Felder an einsaetze oben bleiben fuer den Fall, dass gar
+    // niemand zugeteilt war.
+    ['einsatz_zuteilung', 'ist_status',      "ALTER TABLE einsatz_zuteilung ADD COLUMN ist_status VARCHAR(20) NOT NULL DEFAULT 'offen' AFTER zusage"],
+    ['einsatz_zuteilung', 'ist_von',         'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_von TIME NULL AFTER ist_status'],
+    ['einsatz_zuteilung', 'ist_bis',         'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_bis TIME NULL AFTER ist_von'],
+    ['einsatz_zuteilung', 'ist_pause_min',   'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_pause_min INT NULL AFTER ist_bis'],
+    ['einsatz_zuteilung', 'ist_bemerkung',   'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_bemerkung TEXT NULL AFTER ist_pause_min'],
+    ['einsatz_zuteilung', 'abgeglichen_von', 'ALTER TABLE einsatz_zuteilung ADD COLUMN abgeglichen_von INT NULL AFTER ist_bemerkung'],
+    ['einsatz_zuteilung', 'abgeglichen_am',  'ALTER TABLE einsatz_zuteilung ADD COLUMN abgeglichen_am DATETIME NULL AFTER abgeglichen_von'],
 ];
 foreach ($spalten as [$tabelle, $spalte, $sql]) {
     if (!hat_tabelle($pdo, $tabelle) || hat_spalte($pdo, $tabelle, $spalte)) {
