@@ -1074,7 +1074,7 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           <svg class="i chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="nav-kinder">
-          <button class="nav-kind" id="nav-kunden-uebersicht" onclick="go('kunden'); kuGoTab('uebersicht')">Übersicht</button>
+          <button class="nav-kind" id="nav-kunden-uebersicht" onclick="go('kunden'); kuGoTab('uebersicht')">Adressen</button>
           <button class="nav-kind" id="nav-kunden-objekte" onclick="go('kunden'); kuGoTab('objekte')">Objekte</button>
         </div>
       </div>
@@ -1464,10 +1464,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
             <option value="offen">Nur unterbesetzt</option>
             <option value="abgesagt">Nur abgesagt</option>
           </select>
-          <button class="btn btn-plain btn-sm" onclick="openKi('einsatz')" title="Einsatz diktieren statt tippen">
-            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-            Diktat: Einsatz
-          </button>
           <button class="btn btn-primary btn-sm" onclick="openEinsatzNeu()">
             <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Neuer Einsatz
@@ -1560,10 +1556,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
             <input class="inp" type="search" id="mQ" placeholder="Name, Ort oder Personalnummer …" oninput="renderMitarbeiter()">
           </div>
           <div class="sp" style="flex:1"></div>
-          <button class="btn btn-plain btn-sm" onclick="openKi('neu')" title="Angaben diktieren statt tippen">
-            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-            Diktat: anlegen
-          </button>
           <button class="btn btn-plain btn-sm" onclick="openKi('edit')" title="Änderung diktieren">
             <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
             Diktat: ändern
@@ -1577,13 +1569,11 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
       </section>
 
       <!-- ─────────── KUNDEN ─────────── -->
+      <!-- Kein gemeinsamer Reiter oben mehr: Adressen und Objekte sind
+           eigenständige Bereiche, die Seitenleiste allein navigiert
+           zwischen ihnen -- ein zweiter Umschalter wäre doppelt gemoppelt. -->
       <section class="view" id="view-kunden">
-        <div class="tabs" id="kuHauptTabs">
-          <button class="tab on" id="kutab-uebersicht" onclick="kuGoTab('uebersicht')">Übersicht</button>
-          <button class="tab" id="kutab-objekte" onclick="kuGoTab('objekte')">Objekte</button>
-        </div>
-
-        <!-- ── Reiter: Übersicht -- Kundenliste, ueberarbeitet (ENT-040):
+        <!-- ── Adressen (bisher "Übersicht") -- Kundenliste, ueberarbeitet (ENT-040):
              eigener Alle/Archiviert-Umschalter, sortierbare Spalten,
              erweiterte Suche, Zeilen-Aktionsmenü. ── -->
         <div class="ku-tab on" id="kv-uebersicht">
@@ -1601,8 +1591,11 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
               <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
               Diktat: anlegen
             </button>
-            <button class="btn btn-primary btn-sm" onclick="openKundeNeu()">
-              <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <!-- Etwas grösser als die übrigen Kopfzeilen-Knöpfe (kein
+                 btn-sm) -- präsenter auf ausdrücklichen Wunsch, aber bewusst
+                 nicht übertrieben: gleiche Familie, nur die nächste Stufe. -->
+            <button class="btn btn-primary" onclick="openKundeNeu()">
+              <svg class="i" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Neuer Kunde
             </button>
           </div>
@@ -3614,16 +3607,10 @@ function kuNavKlick() {
 function kuGoTab(t) {
   kuTab = t;
   document.querySelectorAll('#view-kunden .ku-tab').forEach(v => v.classList.remove('on'));
-  // Nur die oberste Reiterleiste umschalten -- die Detailseite hat ihre
-  // eigenen, tiefer verschachtelten Reiter (Übersicht/Rapporte/Offerten),
-  // die davon unberührt bleiben muessen (ENT-040).
-  document.querySelectorAll('#kuHauptTabs .tab').forEach(b => b.classList.remove('on'));
   document.querySelectorAll('.nav-kind').forEach(b => b.classList.remove('on'));
   $('kv-' + t).classList.add('on');
-  const kopf = $('kutab-' + t);
-  if (kopf) kopf.classList.add('on');
   // Die Detailseite ist kein eigener Seitenleisten-Ziel, sondern ein
-  // Drilldown aus der Übersicht -- "Übersicht" bleibt entsprechend markiert.
+  // Drilldown aus Adressen -- "Adressen" bleibt entsprechend markiert.
   ($('nav-kunden-' + t) || $('nav-kunden-uebersicht')).classList.add('on');
   $('pgCrumb').textContent = t === 'objekte' ? 'Daueraufträge und ihre Masterschichten'
     : t === 'detail' ? 'Kundendetails' : 'Stammdaten';
