@@ -178,6 +178,17 @@ select.inp { padding-right: 30px; background-image: linear-gradient(45deg, trans
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent-hi); }
 .btn-primary:disabled { opacity: .55; cursor: default; }
+/* Bewusst kein .btn-plain/.btn-quiet: die Spracherkennung ist ein
+   Hauptmerkmal, kein Nebenwerkzeug -- der Knopf hebt sich in Form und Farbe
+   von den übrigen Kopfzeilen-Knöpfen ab (ENT-038). */
+.btn-sprechen {
+  display: inline-flex; align-items: center; gap: 7px; border: none; border-radius: 999px;
+  padding: 8px 16px 8px 14px; font: inherit; font-size: 13px; font-weight: 650; cursor: pointer;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hi)); color: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08); transition: transform .1s, box-shadow .13s;
+}
+.btn-sprechen:hover { box-shadow: 0 2px 8px var(--accent-soft); transform: translateY(-1px); }
+.btn-sprechen svg { stroke: #fff; }
 .btn-plain { background: var(--surface); border-color: var(--line); color: var(--ink); }
 .btn-plain:hover { background: var(--bg); border-color: var(--line-hi); }
 .btn-quiet { background: transparent; color: var(--ink-2); }
@@ -480,6 +491,10 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .tab { border: none; background: transparent; padding: 10px 14px 9px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
 .tab:hover { color: var(--ink); }
 .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-nebenan { display: flex; align-items: center; gap: 6px; border: none; background: transparent; padding: 8px 6px 9px;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; }
+.tab-nebenan:hover { color: var(--ink); }
+.tab-nebenan svg.i { width: 15px; height: 15px; }
 .ptab { display: none; }
 .ptab.on { display: block; }
 
@@ -610,6 +625,10 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 #pv-objektplan .tabs, #view-planung .tabs { margin-bottom: 10px; }
 .opl-leiste { margin-bottom: 9px; }
 .opl-leiste .wo { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+/* Objektplanung bleibt dicht (ENT-024): schmalere Felder als in der freieren
+   Übersichts-Leiste, damit der Zeitraum keine zweite Zeile erzwingt. */
+.opl-leiste .tool-gruppe input[type="date"] { width: 118px !important; }
+.opl-leiste #oplSchnell { width: 128px; }
 .opl-zahlen { display: flex; align-items: baseline; gap: 15px; font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
 .opl-zahlen b { font-size: 14px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; margin-right: 2px; }
 .opl-zahlen .voll b { color: var(--pos); }
@@ -851,10 +870,15 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
      auseinanderzureissen wäre schlechter lesbar als ein enges Paar. */
   .tool-gruppe { flex: 1 1 100%; }
   .tool-gruppe .inp { flex: 1 1 0; width: auto !important; min-width: 0; }
+  /* Höhere Eigenspezifität als ein moeglicher "input[type=date] { min-width: … }"
+     an anderer Stelle -- sonst gewinnt dessen Mindestbreite trotz !important
+     und zwei Datumsfelder nebeneinander sprengen die schmale Leiste. */
+  .tool-gruppe .inp[type="date"] { min-width: 0 !important; }
   .tool-bis { flex: none; }
   /* Auch auf dem Handy gilt: der Kopf darf den Plan nicht verdrängen. Monat und
      Navigation teilen sich eine Zeile, Filter und Schalter ebenso. */
-  .opl-leiste #oplM { flex: 1 1 120px; width: auto !important; min-width: 110px; }
+  .opl-leiste .tool-gruppe { flex: 1 1 200px; }
+  .opl-leiste #oplSchnell { flex: 1 1 120px; width: auto !important; min-width: 110px; }
   .opl-leiste .btn-quiet { flex: 0 0 auto; min-width: 36px; }
   .opl-leiste #oplSuche { flex: 1 1 130px; width: auto !important; max-width: none; }
   .opl-leiste .check { flex: 0 0 auto; }
@@ -883,6 +907,8 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
   /* Kopfzeile: nur noch Symbole, damit nichts aus dem Bild laeuft */
   .topbar .btn .lbl { display: none; }
   .topbar .btn { padding: 8px; }
+  .btn-sprechen .lbl { display: none; }
+  .btn-sprechen { padding: 8px; }
 }
 @media (max-width: 560px) {
   .g-kpi { grid-template-columns: 1fr; }
@@ -1016,6 +1042,14 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <div class="crumb" id="pgCrumb">Laufender Monat</div>
       </div>
       <div class="sp"></div>
+      <!-- Prominent statt ein Standard-Knopf: die Spracherkennung ist ein
+           Hauptmerkmal des Werkzeugs, kein Nebenwerkzeug (ENT-038). Auf der
+           Übersicht versteckt, weil der Router dort schon im Begrüssungs-
+           Container sitzt -- ein zweiter daneben wäre doppelt gemoppelt. -->
+      <button class="btn-sprechen" id="btnSprechen" onclick="gsOeffnen()" title="Diktieren oder tippen" style="display:none">
+        <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        <span class="lbl">Sprechen</span>
+      </button>
       <button class="thema-schalter" id="btnThema" onclick="themaUm()" role="switch" aria-checked="false" title="Hell oder dunkel" aria-label="Zwischen heller und dunkler Darstellung wechseln">
         <span class="knopf">
           <svg class="i-sonne" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="4.2" y1="4.2" x2="5.9" y2="5.9"/><line x1="18.1" y1="18.1" x2="19.8" y2="19.8"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.2" y1="19.8" x2="5.9" y2="18.1"/><line x1="18.1" y1="5.9" x2="19.8" y2="4.2"/></svg>
@@ -1260,6 +1294,13 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           <button class="tab" id="ptab-objektplan" onclick="goTab('objektplan')">Objektplanung</button>
           <button class="tab" id="ptab-objekte" onclick="goTab('objekte')">Objekte</button>
           <button class="tab" id="ptab-tag" onclick="goTab('tag')">Tagesplan</button>
+          <div class="sp" style="flex:1"></div>
+          <!-- Auf der Trennlinie statt in einer eigenen Werkzeugleiste (ENT-038)
+               -- gilt reiterübergreifend, spart aber Platz in jeder Leiste. -->
+          <button class="tab-nebenan" onclick="openFeiertage()" title="Feiertage verwalten">
+            <svg class="i i-sm" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>
+            <span class="lbl">Feiertage</span>
+          </button>
         </div>
 
         <!-- ── Reiter: Monatsübersicht ── -->
@@ -1273,15 +1314,25 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
               <span class="tool-bis">bis</span>
               <input class="inp" type="date" id="mxBis" style="width:auto" onchange="renderMatrix()" aria-label="Zeitraum bis">
             </div>
+            <select class="inp" id="mxSchnell" style="width:auto" onchange="mxSchnellSetzen()" aria-label="Zeitraum schnell wählen">
+              <option value="">Zeitraum</option>
+              <option value="heute">Heute</option>
+              <option value="woche">Diese Woche</option>
+              <option value="monat">Dieser Monat</option>
+            </select>
+            <div class="search">
+              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="inp" type="search" id="mxSuche" placeholder="Objekt, Kunde, Ort oder Mitarbeitende …" oninput="renderMatrix()">
+            </div>
+            <div class="sp" style="flex:1"></div>
             <div class="tool-gruppe">
               <select class="inp" id="mxMon" style="width:auto" aria-label="Monat"></select>
               <select class="inp" id="mxJahr" style="width:auto" aria-label="Jahr"></select>
               <button class="btn btn-quiet btn-sm" onclick="mxMonatZeigen()">Monat anzeigen</button>
             </div>
             <div class="tool-gruppe">
-              <button class="btn btn-quiet btn-sm" onclick="mxSchieben(-1)" title="Ein Monat zurück">‹</button>
-              <button class="btn btn-quiet btn-sm" onclick="mxHeute()">Heute</button>
-              <button class="btn btn-quiet btn-sm" onclick="mxSchieben(1)" title="Ein Monat weiter">›</button>
+              <button class="btn btn-quiet btn-sm" onclick="mxSchieben(-1)" title="Zurück, um die Länge des Zeitraums">‹</button>
+              <button class="btn btn-quiet btn-sm" onclick="mxSchieben(1)" title="Weiter, um die Länge des Zeitraums">›</button>
             </div>
             <select class="inp" id="mxSparte" style="width:auto" onchange="renderMatrix()" aria-label="Nach Sparte filtern">
               <option value="">Beide Sparten</option>
@@ -1297,11 +1348,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
             <select class="inp" id="mxObj" style="width:auto" onchange="renderMatrix()" aria-label="Einzelnes Objekt anzeigen">
               <option value="">Alle Objekte</option>
             </select>
-            <div class="sp" style="flex:1"></div>
-            <button class="btn btn-plain btn-sm" onclick="openFeiertage()">
-              <svg class="i i-sm" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>
-              <span class="lbl">Feiertage</span>
-            </button>
           </div>
           <div class="mx-info" id="mxInfo"></div>
           <div class="card">
@@ -1322,17 +1368,23 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <div class="grid g-kpi" id="plKpi"></div>
 
         <div class="bar-tools">
+          <div class="tool-gruppe">
+            <input class="inp" type="date" id="pVon" style="width:auto" onchange="renderPlanung()" aria-label="Zeitraum von">
+            <span class="tool-bis">bis</span>
+            <input class="inp" type="date" id="pBis" style="width:auto" onchange="renderPlanung()" aria-label="Zeitraum bis">
+          </div>
+          <select class="inp" id="pSchnell" style="width:auto" onchange="pSchnellSetzen()" aria-label="Zeitraum schnell wählen">
+            <option value="">Zeitraum</option>
+            <option value="heute">Heute</option>
+            <option value="woche">Diese Woche</option>
+            <option value="monat">Dieser Monat</option>
+            <option value="alle">Alle, auch vergangene</option>
+          </select>
           <div class="search">
             <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input class="inp" type="search" id="pQ" placeholder="Kunde, Ort, Bezeichnung oder Mitarbeitende …" oninput="renderPlanung()">
           </div>
-          <select class="inp" id="pZeit" style="width:auto" onchange="renderPlanung()">
-            <option value="kommend">Ab heute</option>
-            <option value="woche">Nächste 7 Tage</option>
-            <option value="monat">Bestimmter Monat</option>
-            <option value="alle">Alle, auch vergangene</option>
-          </select>
-          <input class="inp" type="month" id="pM" style="width:auto;display:none" onchange="renderPlanung()">
+          <div class="sp" style="flex:1"></div>
           <select class="inp" id="pStatus" style="width:auto" onchange="renderPlanung()">
             <option value="">Jeder Status</option>
             <option value="geplant">Nur geplant</option>
@@ -1340,7 +1392,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
             <option value="offen">Nur unterbesetzt</option>
             <option value="abgesagt">Nur abgesagt</option>
           </select>
-          <div class="sp" style="flex:1"></div>
           <button class="btn btn-plain btn-sm" onclick="openKi('einsatz')" title="Einsatz diktieren statt tippen">
             <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
             Diktat: Einsatz
@@ -1358,10 +1409,19 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           <div class="bar-tools opl-leiste">
             <select class="inp" id="oplObjekt" style="width:auto;max-width:230px" onchange="renderObjektplan()"></select>
             <span class="wo" id="oplWo"></span>
-            <input class="inp" type="month" id="oplM" style="width:auto" onchange="renderObjektplan()">
-            <button class="btn btn-quiet btn-sm" onclick="oplSchieben(-1)" title="Vormonat" aria-label="Vormonat">‹</button>
-            <button class="btn btn-quiet btn-sm" onclick="oplHeute()">Heute</button>
-            <button class="btn btn-quiet btn-sm" onclick="oplSchieben(1)" title="Folgemonat" aria-label="Folgemonat">›</button>
+            <div class="tool-gruppe">
+              <input class="inp" type="date" id="oplVon" style="width:auto" onchange="renderObjektplan()" aria-label="Zeitraum von">
+              <span class="tool-bis">bis</span>
+              <input class="inp" type="date" id="oplBis" style="width:auto" onchange="renderObjektplan()" aria-label="Zeitraum bis">
+            </div>
+            <select class="inp" id="oplSchnell" style="width:auto" onchange="oplSchnellSetzen()" aria-label="Zeitraum schnell wählen">
+              <option value="">Zeitraum</option>
+              <option value="heute">Heute</option>
+              <option value="woche">Diese Woche</option>
+              <option value="monat">Dieser Monat</option>
+            </select>
+            <button class="btn btn-quiet btn-sm" onclick="oplSchieben(-1)" title="Zurück, um die Länge des Zeitraums" aria-label="Zurück">‹</button>
+            <button class="btn btn-quiet btn-sm" onclick="oplSchieben(1)" title="Weiter, um die Länge des Zeitraums" aria-label="Weiter">›</button>
             <div class="opl-zahlen" id="oplZahlen"></div>
             <div class="sp" style="flex:1"></div>
             <input class="inp search" id="oplSuche" placeholder="Schicht oder Person" oninput="oplFiltern()" style="max-width:190px">
@@ -1719,6 +1779,33 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
     <div class="dlg-ft">
       <button class="btn btn-plain" onclick="closeDlg('dlgMs')">Abbrechen</button>
       <button class="btn btn-primary" id="msBtn" onclick="saveMs()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Globaler Diktat-Router (ENT-038) -- derselbe Router wie im
+     Begrüssungs-Container (ENT-032), nur von jeder Seite aus erreichbar. -->
+<div class="dlg-scrim" id="dlgSprechen">
+  <div class="dlg narrow">
+    <div class="dlg-hd"><h2>Sprechen</h2>
+      <p>Diktiere oder tippe, z. B. „Neuer Einsatz für die Borner AG morgen 7 bis 16 Uhr“. Der richtige Bereich öffnet sich automatisch, vorbefüllt — gespeichert wird erst nach deiner Prüfung.</p>
+    </div>
+    <div class="dlg-bd">
+      <div class="msg-err" id="gsErr" style="display:none"></div>
+      <textarea class="inp" id="gsText" rows="3" placeholder="Sprechen oder tippen …"></textarea>
+      <div class="sprach" id="gsSprach">
+        <button class="sprach-btn" id="gsMik" onclick="sprachUm('gsText','gs')">
+          <span class="pkt"></span>
+          <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          <span class="lb">Sprechen</span>
+        </button>
+        <div class="viz" id="gsViz"></div>
+      </div>
+      <div class="sprach-hint" id="gsSprachHint"></div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgSprechen')">Abbrechen</button>
+      <button class="btn btn-primary" id="gsBtn" onclick="gsErkennen()">Erkennen</button>
     </div>
   </div>
 </div>
@@ -2343,6 +2430,28 @@ function rtDialogOeffnen(bereich, felder, maNamen) {
   });
 }
 
+// ── Globaler Sprechen-Knopf (ENT-038): derselbe Router wie oben, nur von
+// jeder Seite erreichbar statt nur aus dem Begrüssungs-Container.
+function gsOeffnen() {
+  $('gsText').value = '';
+  $('gsErr').style.display = 'none';
+  sprachBereit('gs');
+  openDlg('dlgSprechen');
+  $('gsText').focus();
+}
+function gsErkennen() {
+  const text = $('gsText').value.trim();
+  const err = $('gsErr'); err.style.display = 'none';
+  if (!text) { err.textContent = 'Bitte etwas eingeben oder diktieren.'; err.style.display = ''; return; }
+  const b = $('gsBtn'); b.disabled = true; b.textContent = 'Erkenne …';
+  api('ki_router_parse.php', { method: 'POST', body: { text, heute: isoTag() } }).then(({ ok, data }) => {
+    b.disabled = false; b.textContent = 'Erkennen';
+    if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Erkennung fehlgeschlagen.'; err.style.display = ''; return; }
+    closeDlg('dlgSprechen');
+    rtDialogOeffnen(data.bereich, data.felder, data.mitarbeiter_login_namen);
+  }).catch(() => { b.disabled = false; b.textContent = 'Erkennen'; err.textContent = 'Netzwerkfehler.'; err.style.display = ''; });
+}
+
 function rtZuruecksetzen() {
   $('rtText').value = '';
   rtBildEntfernen();
@@ -2460,6 +2569,9 @@ function go(view) {
   // Das Anpassen ergibt nur auf der Übersicht einen Sinn -- der Knopf
   // verschwindet sonst, statt auf eine unsichtbare Ansicht zu wirken.
   $('btnDashBearbeiten').style.display = view === 'uebersicht' ? '' : 'none';
+  // Umgekehrt der globale Sprechen-Knopf: die Übersicht hat den Diktat-Router
+  // schon im Begrüssungs-Container, ein zweiter daneben wäre doppelt (ENT-038).
+  $('btnSprechen').style.display = view === 'uebersicht' ? 'none' : '';
   if (view !== 'planung') weiteAnsicht(false);
   if (view === 'rapporte') renderRapporte();
   if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
@@ -2472,6 +2584,9 @@ function go(view) {
       $('mxVon').value = mxMonatsErster(m);
       $('mxBis').value = mxMonatsLetzter(m);
     }
+    // Voreinstellung "ab heute, offenes Ende" -- kein Preset der Schnellauswahl,
+    // sondern der bisherige Ausgangspunkt der Liste: was als Nächstes ansteht.
+    if (!$('pVon').value && !$('pBis').value) { $('pVon').value = isoTag(); }
     if (!$('tgD').value) $('tgD').value = isoTag();
     einsaetze.length ? goTab(pTab) : loadEinsaetze().then(() => goTab(pTab));
     if (!objekte.length) loadObjekte();
@@ -2896,17 +3011,29 @@ function konflikte(datum, von, bis, ausserId) {
 
 const fehlend = e => (e.status === 'abgesagt' ? 0 : Math.max(0, Number(e.bedarf) - (e.mitarbeiter || []).length));
 
+// Ein leeres Feld heisst "kein Limit auf dieser Seite" -- damit deckt derselbe
+// Zeitraum sowohl "ab heute" (von gesetzt, bis offen) als auch "wirklich alles"
+// (beide leer) ab, ohne einen eigenen dritten Mechanismus zu brauchen (ENT-038).
+function pZeitraum() {
+  return { von: $('pVon').value || '', bis: $('pBis').value || '' };
+}
+
+function pSchnellSetzen() {
+  const wert = $('pSchnell').value;
+  if (wert === 'alle') { $('pVon').value = ''; $('pBis').value = ''; renderPlanung(); return; }
+  const bereich = zrPreset(wert);
+  if (bereich) { $('pVon').value = bereich[0]; $('pBis').value = bereich[1]; renderPlanung(); }
+}
+
 function pFiltered() {
   const q = ($('pQ').value || '').toLowerCase().trim();
-  const zeit = $('pZeit').value;
+  const { von, bis } = pZeitraum();
   const st = $('pStatus').value;
-  const monat = $('pM').value || '';
-  const heute = isoTag();
+  const unbegrenzt = !von && !bis;
   return einsaetze.filter(e => {
     const d = tagVon(e);
-    if (zeit === 'kommend' && d < heute) return false;
-    if (zeit === 'woche' && (d < heute || d > plusTage(heute, 6))) return false;
-    if (zeit === 'monat' && monat && !d.startsWith(monat)) return false;
+    if (von && d < von) return false;
+    if (bis && d > bis) return false;
     if (st === 'offen') { if (!fehlend(e)) return false; }
     else if (st && e.status !== st) return false;
     if (!q) return true;
@@ -2915,7 +3042,7 @@ function pFiltered() {
       .some(f => String(f || '').toLowerCase().includes(q));
   }).sort((a, b) => {
     const dd = tagVon(a).localeCompare(tagVon(b));
-    if (dd) return zeit === 'alle' ? -dd : dd;   // „Alle“ zeigt das Neueste zuoberst
+    if (dd) return unbegrenzt ? -dd : dd;   // Wirklich "alles" zeigt das Neueste zuoberst
     return String(a.von).localeCompare(String(b.von));
   });
 }
@@ -2947,7 +3074,10 @@ function renderPlKpi() {
 }
 
 function renderPlanung() {
-  $('pM').style.display = $('pZeit').value === 'monat' ? '' : 'none';
+  // Die Schnellauswahl darf nie etwas anderes behaupten als von/bis zeigen --
+  // "Alle" erkennt man daran, dass beide Felder leer sind.
+  const { von, bis } = pZeitraum();
+  $('pSchnell').value = (!von && !bis) ? 'alle' : zrPresetPassend(von, bis);
   renderPlKpi();
 
   const d = pFiltered();
@@ -3240,7 +3370,11 @@ function goTab(t) {
   if (t === 'uebersicht') renderMatrix();
   if (t === 'einsaetze') renderPlanung();
   if (t === 'objektplan') {
-    if (!$('oplM').value) $('oplM').value = ($('mxVon').value || isoTag()).slice(0, 7);
+    if (!$('oplVon').value) {
+      const m = ($('mxVon').value || isoTag()).slice(0, 7);
+      $('oplVon').value = mxMonatsErster(m);
+      $('oplBis').value = mxMonatsLetzter(m);
+    }
     oplAuswahl();
     // Immer nachladen: die Vorlagen können sich seit dem letzten Blick geändert
     // haben, und ohne sie fehlt der ganze Schichtblock.
@@ -3810,16 +3944,46 @@ function planungEinrichten() {
 // ausgerichtet bleiben.
 function zumObjektplan(id) {
   oplId = Number(id);
-  if (!$('oplM').value) $('oplM').value = ($('mxVon').value || isoTag()).slice(0, 7);
+  if (!$('oplVon').value) {
+    const m = ($('mxVon').value || isoTag()).slice(0, 7);
+    $('oplVon').value = mxMonatsErster(m);
+    $('oplBis').value = mxMonatsLetzter(m);
+  }
   goTab('objektplan');
 }
-function oplSchieben(n) {
-  const m = $('oplM').value || isoTag().slice(0, 7);
-  const [j, mo] = m.split('-').map(Number);
-  $('oplM').value = isoTag(new Date(j, mo - 1 + n, 1)).slice(0, 7);
+
+// Der Zeitraum ist wie bei der Übersicht (ENT-034) die einzige Quelle der
+// Wahrheit; die Schnellauswahl setzt ihn nur (ENT-038).
+function oplZeitraum() {
+  const heuteMonat = isoTag().slice(0, 7);
+  let von = $('oplVon').value || mxMonatsErster(heuteMonat);
+  let bis = $('oplBis').value || mxMonatsLetzter(heuteMonat);
+  if (bis < von) { const h = von; von = bis; bis = h; }
+  return { von, bis };
+}
+function oplZeitraumSetzen(von, bis) {
+  $('oplVon').value = von;
+  $('oplBis').value = bis;
   renderObjektplan();
 }
-function oplHeute() { $('oplM').value = isoTag().slice(0, 7); renderObjektplan(); }
+function oplSchnellSetzen() {
+  const bereich = zrPreset($('oplSchnell').value);
+  if (bereich) oplZeitraumSetzen(bereich[0], bereich[1]);
+}
+// Schiebt um die Länge des Zeitraums weiter -- bei einem ganzen Monat also um
+// einen Monat, sonst um die Anzahl gezeigter Tage (wie mxSchieben, ENT-034).
+function oplSchieben(n) {
+  const { von, bis } = oplZeitraum();
+  const ganzerMonat = von === mxMonatsErster(von.slice(0, 7)) && bis === mxMonatsLetzter(von.slice(0, 7));
+  if (ganzerMonat) {
+    const [j, mo] = von.split('-').map(Number);
+    const m = isoTag(new Date(j, mo - 1 + n, 1)).slice(0, 7);
+    oplZeitraumSetzen(mxMonatsErster(m), mxMonatsLetzter(m));
+    return;
+  }
+  const laenge = Math.round((new Date(bis) - new Date(von)) / 864e5) + 1;
+  oplZeitraumSetzen(plusTage(von, n * laenge), plusTage(bis, n * laenge));
+}
 function oplStammdaten() { if (oplId) openObjekt(oplId); }
 function oplErzeugen() { if (oplId) openVorschau(oplId); }
 
@@ -3845,12 +4009,10 @@ function ladeOplMs() {
 // Der Soll kommt bewusst vom Server: die Bedarfsregel steht in planung.php und
 // darf nicht ein zweites Mal im Browser nachgebaut werden.
 function ladeObjektplan(erzwingen) {
-  const m = $('oplM').value || isoTag().slice(0, 7);
   if (!oplId) { oplDaten = null; oplStand = ''; return Promise.resolve(); }
-  const schluessel = oplId + '|' + m;
+  const { von, bis } = oplZeitraum();
+  const schluessel = oplId + '|' + von + '|' + bis;
   if (!erzwingen && schluessel === oplStand) return Promise.resolve();
-  const [j, mo] = m.split('-').map(Number);
-  const von = `${m}-01`, bis = isoTag(new Date(j, mo, 0));
   oplLaeuft = true;
   return api(`objektplan.php?objekt_id=${oplId}&von=${von}&bis=${bis}`).then(({ ok, data }) => {
     oplLaeuft = false;
@@ -3920,7 +4082,8 @@ function oplZellen(d) {
 function renderObjektplan() {
   const gewaehlt = Number($('oplObjekt').value) || null;
   if (gewaehlt && gewaehlt !== oplId) oplId = gewaehlt;
-  const m = $('oplM').value || isoTag().slice(0, 7);
+  const { von, bis } = oplZeitraum();
+  $('oplSchnell').value = zrPresetPassend(von, bis);
 
   if (!oplId) {
     $('oplWo').textContent = '';
@@ -3929,7 +4092,7 @@ function renderObjektplan() {
       'Objekte legst du im Reiter „Objekte“ an. Danach lässt sich hier jedes einzeln planen.') + `</div></div>`;
     return;
   }
-  if (oplStand !== oplId + '|' + m) {
+  if (oplStand !== oplId + '|' + von + '|' + bis) {
     if (!oplLaeuft) ladeObjektplan().then(renderObjektplan);
     $('oplBody').innerHTML = `<div class="card"><div class="card-bd">
       <div class="sk" style="height:13px;width:38%;margin-bottom:10px"></div>
@@ -3945,10 +4108,13 @@ function renderObjektplan() {
   }
 
   const d = oplDaten, o = d.objekt;
-  const [jahr, mon] = m.split('-').map(Number);
   const heute = isoTag();
-  const tage = Array.from({ length: new Date(jahr, mon, 0).getDate() },
-    (_, i) => `${m}-${String(i + 1).padStart(2, '0')}`);
+  const spanne = Math.round((new Date(bis) - new Date(von)) / 864e5) + 1;
+  // Dieselbe Grenze wie in der Übersicht (ENT-034/038) -- darüber ist auch
+  // eine Objekttabelle keine Übersicht mehr, sondern eine Tapete.
+  const anzTage = Math.min(spanne, MX_MAX_TAGE);
+  if (spanne > MX_MAX_TAGE) toast(`Zeitraum auf ${MX_MAX_TAGE} Tage gekürzt — für mehr den Zeitraum enger wählen.`);
+  const tage = Array.from({ length: anzTage }, (_, i) => plusTage(von, i));
   const fei = d.feiertage || {};
   const zellen = oplZellen(d);
 
@@ -4352,7 +4518,9 @@ let awRechnung = null;   // laufende Entprellung
 
 function awAuf(vorbelegt) {
   if (!oplId || !oplDaten) return;
-  const m = $('oplM').value || isoTag().slice(0, 7);
+  // Voreinstellung bleibt der ganze Kalendermonat des angezeigten Zeitraums --
+  // auch wenn die Übersicht gerade auf "Heute" oder "Diese Woche" eingeengt ist.
+  const m = ($('oplVon').value || isoTag()).slice(0, 7);
   const [j, mo] = m.split('-').map(Number);
   $('awVon').value = (vorbelegt && vorbelegt.von) || `${m}-01`;
   $('awBis').value = (vorbelegt && vorbelegt.bis) || isoTag(new Date(j, mo, 0));
@@ -4472,7 +4640,7 @@ let mzRechnung = null;
 
 function mzAuf(vorbelegt) {
   if (!oplId || !oplDaten) return;
-  const m = $('oplM').value || isoTag().slice(0, 7);
+  const m = ($('oplVon').value || isoTag()).slice(0, 7);
   const [j, mo] = m.split('-').map(Number);
   const v = oplDaten.vorlagen || [];
   if (!v.length) { toast('Für dieses Objekt gibt es keine Schichtvorlage.'); return; }
@@ -4588,7 +4756,7 @@ function planDiktat(art) {
   $('pdText').textContent = planDiktatArt === 'zuteilung'
     ? `Zum Beispiel: „Setze Valbon vom 1. bis 15. auf die Schliessrunde.“ Objekt und Monat kommen vom Bildschirm.`
     : `Zum Beispiel: „Setze die Schliessrunde jeden Tag auf den ganzen Monat.“ Objekt und Monat kommen vom Bildschirm.`;
-  $('pdWo').textContent = `${oplDaten ? oplDaten.objekt.name : ''} · ${$('oplM').value}`;
+  $('pdWo').textContent = `${oplDaten ? oplDaten.objekt.name : ''} · ${($('oplVon').value || isoTag()).slice(0, 7)}`;
   $('pdText2').value = '';
   $('pdErr').style.display = 'none';
   sprachBereit('pd');
@@ -4603,7 +4771,7 @@ function planDiktatSenden() {
   const b = $('pdBtn'); b.disabled = true; b.textContent = 'Erkenne …';
   api('ki_planung_parse.php', { method: 'POST', body: {
     text, art: planDiktatArt, objekt_id: oplId,
-    monat: $('oplM').value || isoTag().slice(0, 7), heute: isoTag(),
+    monat: ($('oplVon').value || isoTag()).slice(0, 7), heute: isoTag(),
   } }).then(({ ok, data }) => {
     b.disabled = false; b.textContent = 'Erkennen';
     if (!ok || data.status !== 'ok') {
@@ -4743,6 +4911,32 @@ function mxMonatsLetzter(m) {
   return isoTag(new Date(j, mo, 0));
 }
 
+// ── Zeitraum-Schnellauswahl (ENT-038), gemeinsam für Übersicht, Einsätze und
+// Objektplanung: "Heute"/"Diese Woche"/"Dieser Monat" bedeuten überall
+// dasselbe, unabhängig davon, in welcher Werkzeugleiste sie stehen.
+function zrWoche(tag) {
+  // Montag bis Sonntag der Woche, die "tag" enthält.
+  const wd = (new Date(tag + 'T12:00:00').getDay() + 6) % 7;   // Mo=0 … So=6
+  const montag = plusTage(tag, -wd);
+  return [montag, plusTage(montag, 6)];
+}
+function zrPreset(wert) {
+  const heute = isoTag();
+  if (wert === 'heute') return [heute, heute];
+  if (wert === 'woche') return zrWoche(heute);
+  if (wert === 'monat') { const m = heute.slice(0, 7); return [mxMonatsErster(m), mxMonatsLetzter(m)]; }
+  return null;
+}
+// Welches Preset (falls eines) der angezeigte Zeitraum gerade trifft -- die
+// Auswahl darf nie etwas anderes behaupten als von/bis tatsächlich zeigen.
+function zrPresetPassend(von, bis) {
+  for (const w of ['heute', 'woche', 'monat']) {
+    const p = zrPreset(w);
+    if (p && p[0] === von && p[1] === bis) return w;
+  }
+  return '';
+}
+
 // Der aktuell gezeigte Zeitraum, immer gültig und immer richtig herum.
 function mxZeitraum() {
   const heuteMonat = isoTag().slice(0, 7);
@@ -4758,13 +4952,19 @@ function mxZeitraumSetzen(von, bis) {
   renderMatrix();
 }
 
-// Monat und Jahr auf den Beginn des Zeitraums nachziehen, damit die Felder
-// nicht etwas anderes behaupten als die Tabelle zeigt.
+// Monat, Jahr und Schnellauswahl auf den Zeitraum nachziehen, damit die
+// Felder nie etwas anderes behaupten als die Tabelle zeigt.
 function mxAuswahlAngleichen() {
-  const { von } = mxZeitraum();
+  const { von, bis } = mxZeitraum();
   const [j, mo] = von.split('-');
   if ($('mxJahr').value !== j && [...$('mxJahr').options].some(o => o.value === j)) $('mxJahr').value = j;
   $('mxMon').value = mo;
+  $('mxSchnell').value = zrPresetPassend(von, bis);
+}
+
+function mxSchnellSetzen() {
+  const bereich = zrPreset($('mxSchnell').value);
+  if (bereich) mxZeitraumSetzen(bereich[0], bereich[1]);
 }
 
 function mxMonatZeigen() {
@@ -4785,11 +4985,6 @@ function mxSchieben(n) {
   }
   const laenge = Math.round((new Date(bis) - new Date(von)) / 864e5) + 1;
   mxZeitraumSetzen(plusTage(von, n * laenge), plusTage(bis, n * laenge));
-}
-
-function mxHeute() {
-  const m = isoTag().slice(0, 7);
-  mxZeitraumSetzen(mxMonatsErster(m), mxMonatsLetzter(m));
 }
 
 // Auswahlfelder füllen. Die Jahre kommen aus den vorhandenen Einsätzen,
@@ -4900,12 +5095,26 @@ function renderMatrix() {
     zeilen.push(...zeilenFuer('einzel', null, 'Einzeleinsätze', 'ohne festes Objekt', 'sicherheit'));
   }
 
-  // ── Filter: erst das einzelne Objekt, dann die Belegung
+  // ── Filter: erst das einzelne Objekt, dann die Belegung, zuletzt die Suche
   const alle = zeilen.length;
   const nurObjekt = $('mxObj').value;
   if (nurObjekt) zeilen = zeilen.filter(z => z.basis === nurObjekt);
   const nurBeleg = $('mxBeleg').value;
   if (nurBeleg) zeilen = zeilen.filter(z => zeilenStand(nachObjekt[z.schluessel], tage) === nurBeleg);
+  const suche = ($('mxSuche').value || '').toLowerCase().trim();
+  if (suche) {
+    zeilen = zeilen.filter(z => {
+      if ((z.titel + ' ' + z.unter).toLowerCase().includes(suche)) return true;
+      // Auch über die Mitarbeitenden suchen, die im Zeitraum eingeteilt sind --
+      // "gezielt nach Objekten, Kunden usw. suchen" schliesst das Personal ein.
+      // Beide Formen durchsuchbar (nicht nur die erste, die zutrifft): der
+      // volle Name UND der technische Login-Name, wie schon bei der Suche
+      // in den Einsätzen (pFiltered).
+      const tageMap = nachObjekt[z.schluessel] || {};
+      return Object.values(tageMap).some(liste => liste.some(e =>
+        (e.mitarbeiter || []).some(m => (fullName(m) + ' ' + m.name).toLowerCase().includes(suche))));
+    });
+  }
 
   // Der Hinweis über der Tabelle sagt, was gerade gilt -- sonst sieht eine
   // gefilterte Ansicht aus wie eine leere Planung.
@@ -4913,6 +5122,7 @@ function renderMatrix() {
   // Die Sparte wird eigens genannt: sie blendet ganze Zeilen aus, bevor
   // überhaupt gezählt wird -- ohne den Hinweis wirkte die Ansicht schlicht leer.
   if (nurSparte) teile.push(`nur <b>${esc(SPARTE_NAME[nurSparte])}</b>`);
+  if (suche) teile.push(`Suche „${esc(suche)}“`);
   if (zeilen.length !== alle) teile.push(`${zeilen.length} von ${alle} Zeilen`);
   if (gekappt) teile.push(`gekürzt auf ${MX_MAX_TAGE} Tage — für längere Zeiträume den Zeitraum enger wählen`);
   $('mxInfo').innerHTML = teile.join(' · ');
@@ -4920,7 +5130,7 @@ function renderMatrix() {
   if (!zeilen.length) {
     $('mxTable').innerHTML = alle
       ? EMPTY('Kein Objekt passt zum Filter',
-          'Im gewählten Zeitraum entspricht keine Zeile dieser Auswahl. Setze die Filter auf „Beide Sparten“ und „Jede Belegung“ oder wähle einen anderen Zeitraum.')
+          'Im gewählten Zeitraum entspricht keine Zeile dieser Auswahl. Setze die Filter auf „Beide Sparten“ und „Jede Belegung“, leere die Suche oder wähle einen anderen Zeitraum.')
       : EMPTY('Nichts anzuzeigen',
           'Für diesen Zeitraum gibt es weder Objekte noch Einzeleinsätze. Objekte legst du im Reiter „Objekte“ an.');
     return;
