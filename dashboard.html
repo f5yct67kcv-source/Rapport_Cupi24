@@ -1024,7 +1024,7 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <span class="lbl">Mitarbeitende</span>
       </button>
       <div class="nav-gruppe" id="navg-kunden">
-        <button class="nav-item nav-eltern" id="nav-kunden" title="Kunden" onclick="go('kunden')">
+        <button class="nav-item nav-eltern" id="nav-kunden" title="Kunden" onclick="kuNavKlick()">
           <svg class="i" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
           <span class="lbl">Kunden</span>
           <svg class="i chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
@@ -3432,6 +3432,19 @@ const TAB_CRUMB = {
 // ══════════════════════════════════════════ KUNDEN: REITER (ENT-039)
 // Objekte sind Daueraufträge von Kunden -- sie stehen seither unter Kunden,
 // nicht mehr in der Planung. Gleiches Muster wie goTab() für die Planung.
+
+// Klick auf "Kunden" selbst: von aussen kommend oeffnet er den Bereich wie
+// jeder andere Seitenleisten-Punkt; ist er schon aktiv, klappt der Klick nur
+// noch das Untermenue zu (bzw. wieder auf) -- ohne den view() zu berühren,
+// denn navigieren beim Zuklappen wuerde ihn sofort wieder aufreissen.
+function kuNavKlick() {
+  if ($('view-kunden').classList.contains('on')) {
+    $('navg-kunden').classList.toggle('offen');
+  } else {
+    go('kunden');
+  }
+}
+
 function kuGoTab(t) {
   kuTab = t;
   document.querySelectorAll('#view-kunden .ku-tab').forEach(v => v.classList.remove('on'));
