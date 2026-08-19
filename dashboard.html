@@ -205,6 +205,11 @@ select.inp { padding-right: 30px; background-image: linear-gradient(45deg, trans
 .nav-item.on { background: var(--shell-hi); color: var(--shell-txt-hi); }
 .nav-item.on svg.i { stroke: var(--accent); }
 .nav-item .tag { margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: .4px; color: var(--shell-txt); background: var(--shell-line); border-radius: 20px; padding: 2px 7px; }
+.nav-item .ico-wrap { position: relative; display: inline-flex; flex: none; }
+.nav-item .update-punkt { display: none; position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--shell); }
+.nav-item.hat-update .update-punkt { display: block; }
+.nav-item.hat-update { color: var(--warn); }
+.nav-item.hat-update svg.i { stroke: var(--warn); }
 
 .side-foot { padding: 12px; border-top: 1px solid var(--shell-line); flex: none; }
 .side-user { display: flex; align-items: center; gap: 10px; padding: 7px 8px; }
@@ -310,6 +315,10 @@ td .sec { font-size: 11.5px; color: var(--ink-3); }
 .rank .h { font-size: 14px; font-weight: 680; font-variant-numeric: tabular-nums; }
 .rank-track { height: 3px; background: var(--line-soft); border-radius: 2px; margin-top: 5px; overflow: hidden; }
 .rank-track i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.rank-erledigt { display: inline-flex; align-items: center; justify-content: center; width: 27px; height: 27px; flex: none;
+  border-radius: 50%; border: none; background: none; color: var(--ink-3); cursor: pointer; padding: 0; }
+.rank-erledigt:hover { background: var(--pos-soft); color: var(--pos); }
+.rank-erledigt svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Leerzustaende */
 .empty { text-align: center; padding: 44px 24px; }
@@ -932,8 +941,11 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
 
     <div class="side-foot">
       <button class="nav-item" id="nav-einrichtung" title="Einrichtung" onclick="openDlg('dlgEinrichtung')">
-        <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.5.66.86 1.19.91H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span class="lbl">Einrichtung</span>
+        <span class="ico-wrap">
+          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.5.66.86 1.19.91H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span class="update-punkt" id="updatePunkt"></span>
+        </span>
+        <span class="lbl" id="navEinrichtungLbl">Einrichtung</span>
       </button>
       <div class="side-user">
         <div class="avatar" id="uAvatar">–</div>
@@ -983,14 +995,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           <span class="lbl">Speichern</span>
         </button>
       </div>
-      <a class="btn btn-plain btn-sm" href="index.html" title="Zur Rapporterfassung">
-        <svg class="i i-sm" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2.5"/><line x1="10.5" y1="18" x2="13.5" y2="18"/></svg>
-        <span class="lbl">Erfassung</span>
-      </a>
-      <button class="btn btn-plain btn-sm" onclick="reloadAll()" id="btnReload" title="Daten neu laden">
-        <svg class="i i-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        <span class="lbl">Aktualisieren</span>
-      </button>
     </header>
 
     <div class="content">
@@ -1991,6 +1995,7 @@ function enter() {
   dashInit();
   sprachBereit('rt');
   reloadAll();
+  pruefeUpdate();
 }
 
 // ══════════════════════════════════════════ NAVIGATION
@@ -2394,8 +2399,7 @@ function seiteUm() {
 
 // ══════════════════════════════════════════ LADEN
 function reloadAll() {
-  const b = $('btnReload'); b.disabled = true;
-  Promise.all([loadStats(), loadRapporte(), ladeNaechstes()]).then(() => { b.disabled = false; });
+  Promise.all([loadStats(), loadRapporte(), ladeNaechstes()]);
   if (mitarbeiter.length) loadMitarbeiter();
   if (kunden.length) loadKunden();
   if (einsaetze.length || $('view-planung').classList.contains('on')) loadEinsaetze();
@@ -2589,6 +2593,9 @@ function renderSperrFeed() {
         <span>hat sich ${esc(dmy(x.datum))} gesperrt${x.bemerkung ? ' — ' + esc(x.bemerkung) : ''}</span>
       </div>
       <div style="text-align:right;font-size:12px;color:var(--ink-3);white-space:nowrap">${esc(relZeit(x.erfasst_am))}</div>
+      <button class="rank-erledigt" title="Als erledigt markieren" aria-label="Als erledigt markieren" onclick="event.stopPropagation(); sperrErledigt(${Number(x.id)}, this)">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      </button>
     </div>`).join('');
 }
 
@@ -2597,6 +2604,18 @@ function sperrEreignisAn(datum) {
   pTab = 'tag';
   $('tgD').value = datum;
   go('planung');
+}
+
+// Nimmt einen Eintrag aus dem Ereignis-Feed, ohne die Sperre selbst zu
+// loeschen -- sie bleibt in der Planung sichtbar (ENT-033). Optimistisch:
+// die Zeile verschwindet sofort, ein Fehlschlag holt sie beim naechsten
+// loadStats() zurueck.
+function sperrErledigt(id, knopf) {
+  const zeile = knopf.closest('.rank');
+  if (zeile) zeile.remove();
+  stats.sperr_ereignisse = (stats.sperr_ereignisse || []).filter(x => Number(x.id) !== id);
+  if (!stats.sperr_ereignisse.length) renderSperrFeed();
+  api('sperr_erledigt.php', { method: 'POST', body: { id } }).catch(() => {});
 }
 
 function renderProMa() {
@@ -3636,6 +3655,18 @@ function ladeFeiertagMap() {
 // Dauerhaft ueber "Einrichtung" in der Seitenleiste erreichbar -- nicht nur
 // als Nothilfe, wenn ein Laden bereits fehlgeschlagen ist. Sonst findet ihn
 // niemand, dessen erster Blick auf ein funktionierendes Dashboard faellt.
+// Stiller Hintergrund-Check, ob die Einrichtung etwas nachzutragen hat --
+// derselbe Endpunkt wie planungEinrichten(), nur als GET ohne Ausfuehrung.
+// Kein Toast bei Fehlern: das ist ein Hinweis-Punkt, kein Vorgang.
+function pruefeUpdate() {
+  api('planung_einrichten.php').then(({ ok, data }) => {
+    const hat = ok && Number(data.ausstehend) > 0;
+    $('nav-einrichtung').classList.toggle('hat-update', hat);
+    $('nav-einrichtung').title = hat ? 'Update verfügbar: neue Einrichtung steht aus' : 'Einrichtung';
+    $('navEinrichtungLbl').textContent = hat ? 'Update' : 'Einrichtung';
+  }).catch(() => {});
+}
+
 function eiOeffnen() { openDlg('dlgEinrichtung'); planungEinrichten(); }
 
 function planungEinrichten() {
@@ -3659,6 +3690,7 @@ function planungEinrichten() {
     if (data.status === 'ok') {
       Promise.all([loadEinsaetze(), loadObjekte(), ladeFeiertagMap(), ladeSperren()]);
     }
+    pruefeUpdate();
   }).catch(() => {
     if (b) b.disabled = false;
     $('eiInhalt').innerHTML = '<div class="msg-err">Netzwerkfehler.</div>';

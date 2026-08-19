@@ -7,6 +7,11 @@
 // vollstaendige Neuanlage und Nachtrag zur ersten Fassung.
 //
 // Er legt ausschliesslich an. Es wird nichts geloescht und nichts geleert.
+//
+// GET ist ein reiner Pruefmodus (kein exec) -- das Dashboard nutzt ihn, um
+// den bestehenden Einrichten-Knopf farblich hervorzuheben, wenn seit dem
+// letzten Aufruf neue Tabellen/Spalten hinzugekommen sind (ENT-033). Es
+// entsteht dadurch kein zweiter Mechanismus: dieselbe Liste, derselbe Knopf.
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
 
@@ -14,9 +19,11 @@ $user = require_session();
 if (!$user['ist_admin']) {
     json_response(['status' => 'error', 'message' => 'nur fuer Admin'], 403);
 }
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    json_response(['status' => 'error', 'message' => 'nur POST'], 405);
+$methode = $_SERVER['REQUEST_METHOD'];
+if ($methode !== 'GET' && $methode !== 'POST') {
+    json_response(['status' => 'error', 'message' => 'nur GET oder POST'], 405);
 }
+$nurPruefen = $methode === 'GET';
 
 $pdo = db();
 
@@ -179,6 +186,7 @@ foreach ($tabellen as $name => $sql) {
         $schon[] = "Tabelle $name war bereits vorhanden";
         continue;
     }
+    if ($nurPruefen) { $getan[] = "Tabelle $name fehlt noch"; continue; }
     $pdo->exec($sql);
     $getan[] = "Tabelle $name angelegt";
 }
@@ -189,11 +197,13 @@ $spalten = [
     ['einsaetze', 'masterschicht_id', 'ALTER TABLE einsaetze ADD COLUMN masterschicht_id INT NULL AFTER objekt_id'],
     ['einsatz_zuteilung', 'zusage',   "ALTER TABLE einsatz_zuteilung ADD COLUMN zusage VARCHAR(20) NOT NULL DEFAULT 'offen' AFTER mitarbeiter_id"],
     ['objekte', 'einsatzart',         "ALTER TABLE objekte ADD COLUMN einsatzart VARCHAR(100) NOT NULL DEFAULT 'Revierdienst' AFTER kanton"],
+    ['verfuegbarkeiten', 'gesehen_am', 'ALTER TABLE verfuegbarkeiten ADD COLUMN gesehen_am DATETIME NULL AFTER erfasst_am'],
 ];
 foreach ($spalten as [$tabelle, $spalte, $sql]) {
     if (!hat_tabelle($pdo, $tabelle) || hat_spalte($pdo, $tabelle, $spalte)) {
         continue;
     }
+    if ($nurPruefen) { $getan[] = "Spalte $tabelle.$spalte fehlt noch"; continue; }
     $pdo->exec($sql);
     $getan[] = "Spalte $tabelle.$spalte ergaenzt";
 }
@@ -207,11 +217,14 @@ foreach ($verweise as [$tabelle, $spalte, $sql]) {
     if (!hat_spalte($pdo, $tabelle, $spalte) || hat_fremdschluessel($pdo, $tabelle, $spalte)) {
         continue;
     }
+    if ($nurPruefen) { $getan[] = "Verweis $tabelle.$spalte fehlt noch"; continue; }
     $pdo->exec($sql);
     $getan[] = "Verweis $tabelle.$spalte ergaenzt";
 }
 
 // ── 4. Ergebnis. Fehlt am Schluss etwas, wird das gesagt statt verschwiegen.
+// Im Pruefmodus (GET) heisst "fehlt" nur "noch nicht eingerichtet", kein Fehler --
+// das Dashboard liest dafuer 'ausstehend', nicht 'status'.
 $fehlt = [];
 foreach (array_keys($tabellen) as $name) {
     if (!hat_tabelle($pdo, $name)) {
@@ -220,10 +233,13 @@ foreach (array_keys($tabellen) as $name) {
 }
 
 json_response([
-    'status' => $fehlt ? 'error' : 'ok',
-    'message' => $fehlt
-        ? 'Diese Tabellen fehlen weiterhin: ' . implode(', ', $fehlt)
-        : ($getan ? 'Einrichtung abgeschlossen.' : 'Alles war bereits eingerichtet.'),
+    'status' => (!$nurPruefen && $fehlt) ? 'error' : 'ok',
+    'message' => $nurPruefen
+        ? ($getan ? count($getan) . ' Punkt(e) stehen noch aus.' : 'Alles ist eingerichtet.')
+        : ($fehlt
+            ? 'Diese Tabellen fehlen weiterhin: ' . implode(', ', $fehlt)
+            : ($getan ? 'Einrichtung abgeschlossen.' : 'Alles war bereits eingerichtet.')),
     'getan' => $getan,
     'unveraendert' => $schon,
+    'ausstehend' => count($getan),
 ]);

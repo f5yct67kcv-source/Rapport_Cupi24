@@ -82,10 +82,10 @@ $proMitarbeiter = $stmt->fetchAll();
 $sperrEreignisse = [];
 try {
     $sperrEreignisse = db()->query(
-        "SELECT v.mitarbeiter_id, m.name, m.vorname, m.nachname, v.datum, v.bemerkung, v.erfasst_am
+        "SELECT v.id, v.mitarbeiter_id, m.name, m.vorname, m.nachname, v.datum, v.bemerkung, v.erfasst_am
          FROM verfuegbarkeiten v
          JOIN mitarbeiter m ON m.id = v.mitarbeiter_id
-         WHERE v.datum >= CURDATE()
+         WHERE v.datum >= CURDATE() AND v.gesehen_am IS NULL
          ORDER BY v.erfasst_am DESC
          LIMIT 8"
     )->fetchAll();
