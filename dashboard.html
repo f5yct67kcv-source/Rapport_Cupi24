@@ -333,6 +333,10 @@ td .sec { font-size: 11.5px; color: var(--ink-3); }
 
 /* Werkzeugleiste */
 .bar-tools { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 16px; }
+/* Zusammengehörige Bedienelemente rücken enger zusammen, damit die Leiste
+   trotz vieler Felder in Blöcke zerfällt statt in eine Reihe Einzelteile. */
+.tool-gruppe { display: flex; align-items: center; gap: 5px; }
+.tool-bis { font-size: 12px; color: var(--ink-3); }
 .search { position: relative; flex: 1; min-width: 200px; max-width: 340px; }
 .search svg.i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--ink-3); }
 .search .inp { padding-left: 34px; }
@@ -472,6 +476,8 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ptab.on { display: block; }
 
 /* Monatsmatrix — erste Spalte bleibt stehen, die Tage scrollen in der Karte */
+.mx-info { font-size: 12px; color: var(--ink-3); margin: -6px 0 12px; }
+.mx-info b { color: var(--ink-2); font-weight: 600; }
 .mx { overflow-x: auto; }
 .mx table { border-collapse: separate; border-spacing: 0; }
 .mx th, .mx td { border-bottom: 1px solid var(--line-soft); }
@@ -810,6 +816,11 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
   .bar-tools select.inp, .bar-tools input.inp { flex: 1 1 100%; width: 100% !important; min-width: 0; }
   .bar-tools .btn { flex: 1 1 auto; justify-content: center; }
   .bar-tools .check { flex: 1 1 100%; }
+  /* Eine Gruppe bleibt eine Zeile und teilt sie unter sich auf -- „von bis“
+     auseinanderzureissen wäre schlechter lesbar als ein enges Paar. */
+  .tool-gruppe { flex: 1 1 100%; }
+  .tool-gruppe .inp { flex: 1 1 0; width: auto !important; min-width: 0; }
+  .tool-bis { flex: none; }
   /* Auch auf dem Handy gilt: der Kopf darf den Plan nicht verdrängen. Monat und
      Navigation teilen sich eine Zeile, Filter und Schalter ebenso. */
   .opl-leiste #oplM { flex: 1 1 120px; width: auto !important; min-width: 110px; }
@@ -1222,17 +1233,41 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
 
         <!-- ── Reiter: Monatsübersicht ── -->
         <div class="ptab on" id="pv-uebersicht">
+          <!-- Zwei Wege zum selben Zeitraum: frei mit dem Kalender, oder ein
+               ganzer Monat über die beiden Auswahlfelder. Der Zeitraum ist in
+               beiden Fällen die eine Quelle der Wahrheit (ENT-034). -->
           <div class="bar-tools">
-            <input class="inp" type="month" id="mxM" style="width:auto" onchange="renderMatrix()">
-            <button class="btn btn-quiet btn-sm" onclick="mxSchieben(-1)">‹ Vormonat</button>
-            <button class="btn btn-quiet btn-sm" onclick="mxHeute()">Heute</button>
-            <button class="btn btn-quiet btn-sm" onclick="mxSchieben(1)">Folgemonat ›</button>
+            <div class="tool-gruppe">
+              <input class="inp" type="date" id="mxVon" style="width:auto" onchange="renderMatrix()" aria-label="Zeitraum von">
+              <span class="tool-bis">bis</span>
+              <input class="inp" type="date" id="mxBis" style="width:auto" onchange="renderMatrix()" aria-label="Zeitraum bis">
+            </div>
+            <div class="tool-gruppe">
+              <select class="inp" id="mxMon" style="width:auto" aria-label="Monat"></select>
+              <select class="inp" id="mxJahr" style="width:auto" aria-label="Jahr"></select>
+              <button class="btn btn-quiet btn-sm" onclick="mxMonatZeigen()">Monat anzeigen</button>
+            </div>
+            <div class="tool-gruppe">
+              <button class="btn btn-quiet btn-sm" onclick="mxSchieben(-1)" title="Ein Monat zurück">‹</button>
+              <button class="btn btn-quiet btn-sm" onclick="mxHeute()">Heute</button>
+              <button class="btn btn-quiet btn-sm" onclick="mxSchieben(1)" title="Ein Monat weiter">›</button>
+            </div>
+            <select class="inp" id="mxBeleg" style="width:auto" onchange="renderMatrix()" aria-label="Nach Belegung filtern">
+              <option value="">Jede Belegung</option>
+              <option value="luecke">Nur mit Lücken</option>
+              <option value="voll">Nur vollständig besetzte</option>
+              <option value="ohne">Nur ohne Einsätze</option>
+            </select>
+            <select class="inp" id="mxObj" style="width:auto" onchange="renderMatrix()" aria-label="Einzelnes Objekt anzeigen">
+              <option value="">Alle Objekte</option>
+            </select>
             <div class="sp" style="flex:1"></div>
             <button class="btn btn-plain btn-sm" onclick="openFeiertage()">
               <svg class="i i-sm" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg>
               <span class="lbl">Feiertage</span>
             </button>
           </div>
+          <div class="mx-info" id="mxInfo"></div>
           <div class="card">
             <div class="card-bd flush"><div class="mx" id="mxTable"></div></div>
             <div class="legende">
@@ -2376,7 +2411,11 @@ function go(view) {
   if (view === 'planung') {
     // Die Planung braucht ausser den Einsätzen auch Objekte, Feiertage,
     // Personal (Zuteilung) und Kunden (Eingabehilfe im Formular).
-    if (!$('mxM').value) $('mxM').value = isoTag().slice(0, 7);
+    if (!$('mxVon').value) {
+      const m = isoTag().slice(0, 7);
+      $('mxVon').value = mxMonatsErster(m);
+      $('mxBis').value = mxMonatsLetzter(m);
+    }
     if (!$('tgD').value) $('tgD').value = isoTag();
     einsaetze.length ? goTab(pTab) : loadEinsaetze().then(() => goTab(pTab));
     if (!objekte.length) loadObjekte();
@@ -3138,7 +3177,7 @@ function goTab(t) {
   if (t === 'uebersicht') renderMatrix();
   if (t === 'einsaetze') renderPlanung();
   if (t === 'objektplan') {
-    if (!$('oplM').value) $('oplM').value = $('mxM').value || isoTag().slice(0, 7);
+    if (!$('oplM').value) $('oplM').value = ($('mxVon').value || isoTag()).slice(0, 7);
     oplAuswahl();
     // Immer nachladen: die Vorlagen können sich seit dem letzten Blick geändert
     // haben, und ohne sie fehlt der ganze Schichtblock.
@@ -3703,7 +3742,7 @@ function planungEinrichten() {
 // ausgerichtet bleiben.
 function zumObjektplan(id) {
   oplId = Number(id);
-  if (!$('oplM').value) $('oplM').value = $('mxM').value || isoTag().slice(0, 7);
+  if (!$('oplM').value) $('oplM').value = ($('mxVon').value || isoTag()).slice(0, 7);
   goTab('objektplan');
 }
 function oplSchieben(n) {
@@ -4617,15 +4656,102 @@ function oplZuSpeichern() {
 }
 
 
-// ══════════════════════════════════════════ MONATSÜBERSICHT
-function mxSchieben(n) {
-  const m = $('mxM').value || isoTag().slice(0, 7);
+// ══════════════════════════════════════════ ÜBERSICHT ÜBER EINEN ZEITRAUM
+//
+// Der Zeitraum (mxVon/mxBis) ist die einzige Quelle der Wahrheit. Die
+// Auswahlfelder für Monat und Jahr sind nur ein zweiter, bequemer Weg,
+// ihn zu setzen -- sie führen keinen eigenen Zustand mit (ENT-034).
+
+// Mehr als ein halbes Jahr nebeneinander ist keine Übersicht mehr, sondern
+// eine Tapete: über 180 Spalten wird die Tabelle unlesbar und langsam.
+const MX_MAX_TAGE = 186;
+
+const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+
+function mxMonatsErster(m) { return m + '-01'; }
+function mxMonatsLetzter(m) {
   const [j, mo] = m.split('-').map(Number);
-  const d = new Date(j, mo - 1 + n, 1);
-  $('mxM').value = isoTag(d).slice(0, 7);
+  return isoTag(new Date(j, mo, 0));
+}
+
+// Der aktuell gezeigte Zeitraum, immer gültig und immer richtig herum.
+function mxZeitraum() {
+  const heuteMonat = isoTag().slice(0, 7);
+  let von = $('mxVon').value || mxMonatsErster(heuteMonat);
+  let bis = $('mxBis').value || mxMonatsLetzter(heuteMonat);
+  if (bis < von) { const h = von; von = bis; bis = h; }
+  return { von, bis };
+}
+
+function mxZeitraumSetzen(von, bis) {
+  $('mxVon').value = von;
+  $('mxBis').value = bis;
   renderMatrix();
 }
-function mxHeute() { $('mxM').value = isoTag().slice(0, 7); renderMatrix(); }
+
+// Monat und Jahr auf den Beginn des Zeitraums nachziehen, damit die Felder
+// nicht etwas anderes behaupten als die Tabelle zeigt.
+function mxAuswahlAngleichen() {
+  const { von } = mxZeitraum();
+  const [j, mo] = von.split('-');
+  if ($('mxJahr').value !== j && [...$('mxJahr').options].some(o => o.value === j)) $('mxJahr').value = j;
+  $('mxMon').value = mo;
+}
+
+function mxMonatZeigen() {
+  const m = `${$('mxJahr').value}-${$('mxMon').value}`;
+  mxZeitraumSetzen(mxMonatsErster(m), mxMonatsLetzter(m));
+}
+
+// Schiebt um einen Monat weiter. Bei einem freien Zeitraum, der kein ganzer
+// Monat ist, wird der Zeitraum als Ganzes verschoben statt umgedeutet.
+function mxSchieben(n) {
+  const { von, bis } = mxZeitraum();
+  const ganzerMonat = von === mxMonatsErster(von.slice(0, 7)) && bis === mxMonatsLetzter(von.slice(0, 7));
+  if (ganzerMonat) {
+    const [j, mo] = von.split('-').map(Number);
+    const m = isoTag(new Date(j, mo - 1 + n, 1)).slice(0, 7);
+    mxZeitraumSetzen(mxMonatsErster(m), mxMonatsLetzter(m));
+    return;
+  }
+  const laenge = Math.round((new Date(bis) - new Date(von)) / 864e5) + 1;
+  mxZeitraumSetzen(plusTage(von, n * laenge), plusTage(bis, n * laenge));
+}
+
+function mxHeute() {
+  const m = isoTag().slice(0, 7);
+  mxZeitraumSetzen(mxMonatsErster(m), mxMonatsLetzter(m));
+}
+
+// Auswahlfelder füllen. Die Jahre kommen aus den vorhandenen Einsätzen,
+// erweitert um das laufende Jahr -- damit steht nie ein leeres Jahr zur
+// Auswahl und nie fehlt eines, in dem etwas geplant ist.
+function mxFelderFuellen() {
+  if (!$('mxMon').options.length) {
+    $('mxMon').innerHTML = MONATE.map((n, i) =>
+      `<option value="${String(i + 1).padStart(2, '0')}">${n}</option>`).join('');
+  }
+  const jetzt = Number(isoTag().slice(0, 4));
+  const jahre = new Set([jetzt, jetzt - 1, jetzt + 1]);
+  einsaetze.forEach(e => { const j = Number(tagVon(e).slice(0, 4)); if (j) jahre.add(j); });
+  const liste = [...jahre].sort((a, b) => a - b);
+  const alt = $('mxJahr').value;
+  $('mxJahr').innerHTML = liste.map(j => `<option value="${j}">${j}</option>`).join('');
+  $('mxJahr').value = alt && liste.includes(Number(alt)) ? alt : String(jetzt);
+
+  // Objektauswahl: nur was es wirklich gibt, damit die Liste nicht behauptet,
+  // es gäbe ein Objekt, das gar nicht mehr aktiv ist.
+  const gewaehlt = $('mxObj').value;
+  $('mxObj').innerHTML = '<option value="">Alle Objekte</option>'
+    + objekte.map(o => `<option value="o${Number(o.id)}">${esc(o.name)}</option>`).join('')
+    + '<option value="einzel">Einzeleinsätze</option>';
+  if (gewaehlt) $('mxObj').value = gewaehlt;
+
+  // Zum Schluss, weil erst jetzt die Jahre zur Wahl stehen: die Felder
+  // dürfen nie etwas anderes behaupten als der Zeitraum sagt.
+  mxAuswahlAngleichen();
+}
 
 // Zustand einer Zelle aus den Einsätzen eines Tages. Provisorische zählen
 // bewusst nicht als Lücke (ENT-021).
@@ -4639,33 +4765,70 @@ function zellenStand(liste) {
   return { klasse: zug > 0 ? 'z-teil' : 'z-leer', text: String(zug) };
 }
 
-function renderMatrix() {
-  const m = $('mxM').value || isoTag().slice(0, 7);
-  const [jahr, mon] = m.split('-').map(Number);
-  if (!jahr || !mon) return;
-  const anzTage = new Date(jahr, mon, 0).getDate();
-  const heute = isoTag();
-  const tage = Array.from({ length: anzTage }, (_, i) => `${m}-${String(i + 1).padStart(2, '0')}`);
+// Wie eine Zeile über den ganzen Zeitraum dasteht -- Grundlage des
+// Belegungsfilters. Ein Tag ohne Einsätze ist keine Lücke: geplant ist dort
+// nichts, also fehlt auch niemand (ENT-034).
+function zeilenStand(tageMap, tage) {
+  let mitEinsatz = 0, luecken = 0;
+  tage.forEach(d => {
+    const liste = (tageMap || {})[d] || [];
+    if (!liste.length) return;
+    mitEinsatz++;
+    const st = zellenStand(liste);
+    if (st.klasse === 'z-teil' || st.klasse === 'z-leer') luecken++;
+  });
+  if (!mitEinsatz) return 'ohne';
+  return luecken ? 'luecke' : 'voll';
+}
 
-  // Einsätze des Monats nach Objekt und Tag ordnen
+function renderMatrix() {
+  mxFelderFuellen();
+  const { von, bis } = mxZeitraum();
+  const heute = isoTag();
+
+  const spanne = Math.round((new Date(bis) - new Date(von)) / 864e5) + 1;
+  if (spanne < 1) return;
+  const gekappt = spanne > MX_MAX_TAGE;
+  const anzTage = gekappt ? MX_MAX_TAGE : spanne;
+  const tage = Array.from({ length: anzTage }, (_, i) => plusTage(von, i));
+  const letzterTag = tage[tage.length - 1];
+
+  // Einsätze des Zeitraums nach Objekt und Tag ordnen
   const nachObjekt = {};
   einsaetze.forEach(e => {
     const d = tagVon(e);
-    if (!d.startsWith(m)) return;
+    if (d < von || d > letzterTag) return;
     const schluessel = e.objekt_id ? 'o' + e.objekt_id : 'einzel';
     (nachObjekt[schluessel] = nachObjekt[schluessel] || {});
     (nachObjekt[schluessel][d] = nachObjekt[schluessel][d] || []).push(e);
   });
 
-  const zeilen = objekte.filter(o => o.aktiv || nachObjekt['o' + o.id])
+  let zeilen = objekte.filter(o => o.aktiv || nachObjekt['o' + o.id])
     .map(o => ({ schluessel: 'o' + o.id, id: Number(o.id), titel: o.name, unter: o.kunde_name + ' · ' + o.ort }));
   if (nachObjekt['einzel']) {
     zeilen.push({ schluessel: 'einzel', id: null, titel: 'Einzeleinsätze', unter: 'ohne festes Objekt' });
   }
 
+  // ── Filter: erst das einzelne Objekt, dann die Belegung
+  const alle = zeilen.length;
+  const nurObjekt = $('mxObj').value;
+  if (nurObjekt) zeilen = zeilen.filter(z => z.schluessel === nurObjekt);
+  const nurBeleg = $('mxBeleg').value;
+  if (nurBeleg) zeilen = zeilen.filter(z => zeilenStand(nachObjekt[z.schluessel], tage) === nurBeleg);
+
+  // Der Hinweis über der Tabelle sagt, was gerade gilt -- sonst sieht eine
+  // gefilterte Ansicht aus wie eine leere Planung.
+  const teile = [`<b>${esc(dmy(von))}</b> bis <b>${esc(dmy(letzterTag))}</b> (${anzTage} Tage)`];
+  if (zeilen.length !== alle) teile.push(`${zeilen.length} von ${alle} Zeilen`);
+  if (gekappt) teile.push(`gekürzt auf ${MX_MAX_TAGE} Tage — für längere Zeiträume den Zeitraum enger wählen`);
+  $('mxInfo').innerHTML = teile.join(' · ');
+
   if (!zeilen.length) {
-    $('mxTable').innerHTML = EMPTY('Nichts anzuzeigen',
-      'Für diesen Monat gibt es weder Objekte noch Einzeleinsätze. Objekte legst du im Reiter „Objekte“ an.');
+    $('mxTable').innerHTML = alle
+      ? EMPTY('Kein Objekt passt zum Filter',
+          'Im gewählten Zeitraum entspricht keine Zeile dieser Auswahl. Setze den Filter auf „Jede Belegung“ oder wähle einen anderen Zeitraum.')
+      : EMPTY('Nichts anzuzeigen',
+          'Für diesen Zeitraum gibt es weder Objekte noch Einzeleinsätze. Objekte legst du im Reiter „Objekte“ an.');
     return;
   }
 
