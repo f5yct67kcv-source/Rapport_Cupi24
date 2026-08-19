@@ -567,10 +567,12 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .kdlg-tab.on { display: block; }
 
 /* Schichtabgleich (ENT-045) */
-.nav-zahl { margin-left: auto; font-size: 11px; font-weight: 700; background: var(--warn); color: #fff;
-  border-radius: 999px; padding: 1px 7px; min-width: 20px; text-align: center; }
-.nav-zahl:empty { display: none; }
-.shell.schmal .nav-zahl { display: none; }
+/* Zahl offener Abgleiche am Reiter. Sie sitzt dort, wo gehandelt wird —
+   ohne sie müsste man den Reiter öffnen, um zu sehen, dass etwas aussteht. */
+.tab-zahl { display: inline-block; margin-left: 7px; font-size: 10.5px; font-weight: 700;
+  background: var(--warn); color: #fff; border-radius: 999px; padding: 1px 6px; min-width: 18px;
+  text-align: center; vertical-align: 1px; }
+.tab-zahl:empty { display: none; }
 /* Eigene Schrift statt der Feldbeschriftung: eine Zeile im Formular ist eine
    Person, keine Überschrift — .f label würde sie in Grossbuchstaben setzen. */
 .ag-person { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--line-soft);
@@ -1093,16 +1095,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/><line x1="7.5" y1="14" x2="12" y2="14"/><line x1="7.5" y1="17.5" x2="15" y2="17.5"/></svg>
         <span class="lbl">Planung</span>
       </button>
-      <!-- Rückschau statt Vorausplanung (ENT-045): hier wird festgehalten, was
-           tatsächlich stattgefunden hat. Eigener Bereich, weil es ein eigener
-           Arbeitsschritt ist -- die Planung schaut nach vorn, der Abgleich
-           zurück. Die Zahl zeigt, wieviel noch aussteht. -->
-      <button class="nav-item" id="nav-abgleich" title="Schichten abgleichen" onclick="go('abgleich')">
-        <svg class="i" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        <span class="lbl">Abgleich</span>
-        <span class="nav-zahl" id="abgleichZahl"></span>
-      </button>
-
       <div class="nav-lbl" style="margin-top:16px">Stammdaten</div>
       <button class="nav-item" id="nav-mitarbeiter" title="Mitarbeitende" onclick="go('mitarbeiter')">
         <svg class="i" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -1408,6 +1400,9 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           <button class="tab" id="ptab-einsaetze" onclick="goTab('einsaetze')">Einsätze</button>
           <button class="tab" id="ptab-objektplan" onclick="goTab('objektplan')">Objektplanung</button>
           <button class="tab" id="ptab-tag" onclick="goTab('tag')">Tagesplan</button>
+          <!-- Rückschau statt Vorausplanung (ENT-045): dieselben Schichten,
+               anderer Arbeitsschritt. Die Zahl zeigt, wieviel noch aussteht. -->
+          <button class="tab" id="ptab-abgleich" onclick="goTab('abgleich')">Abgleich<span class="tab-zahl" id="abgleichZahl"></span></button>
           <div class="sp" style="flex:1"></div>
           <!-- Auf der Trennlinie statt in einer eigenen Werkzeugleiste (ENT-038)
                -- gilt reiterübergreifend, spart aber Platz in jeder Leiste. -->
@@ -1570,29 +1565,29 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           </div>
           <div id="tgBody"></div>
         </div>
-      </section>
 
-      <!-- ─────────── SCHICHTEN ABGLEICHEN (ENT-045) ───────────
-           Chronologische Rückschau: was war geplant, was hat stattgefunden.
-           Zeigt ausschliesslich vergangene Schichten — was noch nicht war,
-           lässt sich nicht abgleichen. Abgesagte Schichten fehlen bewusst:
-           die Absage ist bereits die Feststellung. -->
-      <section class="view" id="view-abgleich">
-        <div class="bar-tools">
-          <div class="tool-gruppe">
-            <input class="inp" type="date" id="agVon" style="width:auto" onchange="renderAbgleich()" aria-label="Zeitraum von">
-            <span class="tool-bis">bis</span>
-            <input class="inp" type="date" id="agBis" style="width:auto" onchange="renderAbgleich()" aria-label="Zeitraum bis">
+        <!-- ── Reiter: Abgleich (ENT-045) ──
+             Chronologische Rückschau: was war geplant, was hat stattgefunden.
+             Zeigt ausschliesslich vergangene Schichten — was noch nicht war,
+             lässt sich nicht abgleichen. Abgesagte fehlen bewusst: die Absage
+             ist bereits die Feststellung. -->
+        <div class="ptab" id="pv-abgleich">
+          <div class="bar-tools">
+            <div class="tool-gruppe">
+              <input class="inp" type="date" id="agVon" style="width:auto" onchange="renderAbgleich()" aria-label="Zeitraum von">
+              <span class="tool-bis">bis</span>
+              <input class="inp" type="date" id="agBis" style="width:auto" onchange="renderAbgleich()" aria-label="Zeitraum bis">
+            </div>
+            <div class="search">
+              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="inp" type="search" id="agQ" placeholder="Kunde, Ort, Bezeichnung oder Mitarbeitende …" oninput="renderAbgleich()">
+            </div>
+            <div class="sp" style="flex:1"></div>
+            <label class="check" style="font-size:12.5px"><input type="checkbox" id="agNurOffen" checked onchange="renderAbgleich()"> nur offene</label>
           </div>
-          <div class="search">
-            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="inp" type="search" id="agQ" placeholder="Kunde, Ort, Bezeichnung oder Mitarbeitende …" oninput="renderAbgleich()">
-          </div>
-          <div class="sp" style="flex:1"></div>
-          <label class="check" style="font-size:12.5px"><input type="checkbox" id="agNurOffen" checked onchange="renderAbgleich()"> nur offene</label>
+          <div class="mx-info" id="agInfo"></div>
+          <div class="card"><div class="card-bd flush"><div class="tw" id="agTable"></div></div></div>
         </div>
-        <div class="mx-info" id="agInfo"></div>
-        <div class="card"><div class="card-bd flush"><div class="tw" id="agTable"></div></div></div>
       </section>
 
       <!-- ─────────── MITARBEITENDE ─────────── -->
@@ -2406,7 +2401,6 @@ function enter() {
 const TITLES = {
   uebersicht:  ['Übersicht', 'Laufender Monat'],
   planung:     ['Planung', 'Geplante Einsätze'],
-  abgleich:    ['Schichten abgleichen', 'Was tatsächlich stattgefunden hat'],
   mitarbeiter: ['Mitarbeitende', 'Stammdaten'],
   kunden:      ['Kunden', 'Stammdaten']
 };
@@ -2812,19 +2806,6 @@ function go(view) {
   $('btnSprechen').style.display = view === 'uebersicht' ? 'none' : '';
   if (view !== 'planung') weiteAnsicht(false);
   if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
-  if (view === 'abgleich') {
-    // Vorgabe: der zurückliegende Monat bis heute. Wer weiter zurück will,
-    // stellt den Zeitraum um -- was nicht geladen ist, wird auch nicht gezeigt.
-    if (!$('agVon').value) {
-      const h = new Date();
-      $('agVon').value = isoTag(new Date(h.getFullYear(), h.getMonth() - 1, h.getDate()));
-      $('agBis').value = isoTag();
-    }
-    (einsaetze.length ? Promise.resolve() : loadEinsaetze()).then(() => {
-      if (!mitarbeiter.length) loadMitarbeiter();
-      renderAbgleich();
-    });
-  }
   // Das Untermenü ist nur aufgeklappt, solange Kunden der aktive Bereich ist
   // -- kein Zustand, der beim Verlassen hängen bleibt (ENT-039).
   $('navg-kunden').classList.toggle('offen', view === 'kunden');
@@ -3727,12 +3708,25 @@ function goTab(t) {
     ladeObjektplan(true).then(renderObjektplan);
   }
   if (t === 'tag') renderTagesplan();
+  if (t === 'abgleich') {
+    // Vorgabe: der zurückliegende Monat bis heute. Wer weiter zurück will,
+    // stellt den Zeitraum um.
+    if (!$('agVon').value) {
+      const h = new Date();
+      $('agVon').value = isoTag(new Date(h.getFullYear(), h.getMonth() - 1, h.getDate()));
+      $('agBis').value = isoTag();
+    }
+    // Die Namen der Eingeteilten stehen schon in der Einsatzliste; die
+    // Personalliste braucht es hier nicht zusätzlich.
+    renderAbgleich();
+  }
 }
 const TAB_CRUMB = {
   uebersicht: 'Besetzung im Monat',
   objektplan: 'Ein Objekt im Detail planen',
   einsaetze:  'Alle geplanten Einsätze',
-  tag:        'Der Tag im Detail'
+  tag:        'Der Tag im Detail',
+  abgleich:   'Was tatsächlich stattgefunden hat'
 };
 
 // ══════════════════════════════════════════ KUNDEN: REITER (ENT-039)
