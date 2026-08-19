@@ -1,9 +1,12 @@
 <?php
-// Ordnet einen diktierten oder getippten Text einem Bereich zu (ENT-032):
-// neuer Mitarbeiter, neuer Kunde oder neuer Einsatz. Schreibt nichts -- das
-// Ergebnis oeffnet nur den passenden bestehenden Dialog, vorbefuellt wie bei
-// den einzelnen Diktaten. Deckt bewusst nur die NEUANLAGE ab, keine Aenderung
-// bestehender Datensaetze (siehe ENT-032).
+// Ordnet einen diktierten oder getippten Text einem Bereich zu (ENT-032).
+// Schreibt nichts -- das Ergebnis oeffnet nur den passenden bestehenden
+// Dialog bzw. die Bearbeiten-Schublade, vorbefuellt wie zuvor bei den
+// seitengebundenen Einzel-Diktaten.
+//
+// Deckt die Neuanlage aller drei Bereiche ab, und seit ENT-042 zusaetzlich
+// die AENDERUNG eines bestehenden Mitarbeitenden -- fuer Kunde/Einsatz gibt
+// es das bewusst weiterhin nicht (siehe ai.php).
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
 require __DIR__ . '/../ai.php';
@@ -44,15 +47,40 @@ if (!in_array($bereich, ['mitarbeiter', 'kunde', 'einsatz'], true)) {
     ], 422);
 }
 
-if ($bereich === 'mitarbeiter') {
-    json_response(['status' => 'ok', 'bereich' => $bereich, 'felder' => (array)($e['mitarbeiter'] ?? [])]);
-}
-if ($bereich === 'kunde') {
-    json_response(['status' => 'ok', 'bereich' => $bereich, 'felder' => (array)($e['kunde'] ?? [])]);
+// "aendern" gibt es nur bei Mitarbeitenden -- fuer Kunde und Einsatz bleibt
+// es bei der Neuanlage, dafuer gab es auch vorher keinen eigenen Diktat-Weg.
+$aktion = ($bereich === 'mitarbeiter' && ($e['aktion'] ?? 'neu') === 'aendern') ? 'aendern' : 'neu';
+
+if ($aktion === 'aendern') {
+    $aenderung = (array)($e['mitarbeiter_aenderung'] ?? []);
+    $loginName = trim((string)($aenderung['mitarbeiter_login_name'] ?? ''));
+    // Erkannten Login-Namen gegen die tatsaechliche Liste verifizieren -- die
+    // KI soll nur zuordnen, nie einen neuen/falschen Namen erfinden.
+    $bekannt = array_column($mitarbeiter, 'name');
+    if ($loginName === '' || !in_array($loginName, $bekannt, true)) {
+        json_response([
+            'status' => 'error',
+            'message' => 'Die gemeinte Person liess sich nicht eindeutig zuordnen -- bitte im Mitarbeitenden-Bereich direkt diktieren.',
+        ], 422);
+    }
+    json_response([
+        'status' => 'ok',
+        'bereich' => $bereich,
+        'aktion' => 'aendern',
+        'mitarbeiter_login_name' => $loginName,
+        'aenderungen' => (array)($aenderung['aenderungen'] ?? []),
+    ]);
 }
 
-// bereich === 'einsatz': dieselbe Filterung wie ki_einsatz_parse.php -- nur
-// bekannte Login-Namen duerfen als Zuteilung in die Oberflaeche gelangen.
+if ($bereich === 'mitarbeiter') {
+    json_response(['status' => 'ok', 'bereich' => $bereich, 'aktion' => 'neu', 'felder' => (array)($e['mitarbeiter'] ?? [])]);
+}
+if ($bereich === 'kunde') {
+    json_response(['status' => 'ok', 'bereich' => $bereich, 'aktion' => 'neu', 'felder' => (array)($e['kunde'] ?? [])]);
+}
+
+// bereich === 'einsatz': dieselbe Filterung wie frueher in ki_einsatz_parse.php --
+// nur bekannte Login-Namen duerfen als Zuteilung in die Oberflaeche gelangen.
 $roh = (array)($e['einsatz'] ?? []);
 $felder = [];
 foreach (['kunde_name', 'titel', 'strasse', 'ort', 'datum', 'von', 'bis', 'einsatzart', 'bemerkung'] as $f) {
@@ -73,6 +101,7 @@ $maNamen = array_values(array_intersect(
 json_response([
     'status' => 'ok',
     'bereich' => $bereich,
+    'aktion' => 'neu',
     'felder' => $felder,
     'mitarbeiter_login_namen' => $maNamen,
 ]);

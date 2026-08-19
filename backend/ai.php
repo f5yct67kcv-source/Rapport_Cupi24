@@ -52,165 +52,6 @@ function anthropic_tool_call(array $tool, string $userContent): ?array {
     return null;
 }
 
-function anthropic_extract_mitarbeiter(string $text): ?array {
-    $tool = [
-        'name' => 'extract_mitarbeiter',
-        'description' => 'Extrahiert Mitarbeiter-Personaldaten aus einem deutschen Satz.',
-        'input_schema' => [
-            'type' => 'object',
-            'properties' => [
-                'vorname' => ['type' => 'string'],
-                'nachname' => ['type' => 'string'],
-                'personalnummer' => ['type' => 'string'],
-                'anrede' => ['type' => 'string', 'enum' => ['Herr', 'Frau', 'Divers']],
-                'geburtsdatum' => ['type' => 'string', 'description' => 'Format JJJJ-MM-TT'],
-                'strasse' => ['type' => 'string'],
-                'ort' => ['type' => 'string', 'description' => 'PLZ und Ort zusammen, z.B. "3011 Bern"'],
-                'telefon' => ['type' => 'string'],
-                'mobil' => ['type' => 'string'],
-                'email' => ['type' => 'string'],
-            ],
-        ],
-    ];
-    return anthropic_tool_call($tool, $text);
-}
-
-// Identifiziert den gemeinten (bestehenden) Mitarbeiter aus einer Liste
-// (auch bei Tippfehlern/Umschreibungen) und die zu aendernden Felder.
-function anthropic_extract_mitarbeiter_edit(string $text, array $mitarbeiterListe): ?array {
-    $tool = [
-        'name' => 'extract_mitarbeiter_edit',
-        'description' => 'Identifiziert den gemeinten Mitarbeiter aus der gegebenen Liste und die zu aendernden Felder samt neuen Werten.',
-        'input_schema' => [
-            'type' => 'object',
-            'properties' => [
-                'mitarbeiter_login_name' => [
-                    'type' => 'string',
-                    'description' => 'Der Login-Name des gemeinten Mitarbeiters -- exakt wie in der Liste angegeben, auch wenn der Befehl einen Tippfehler oder eine Umschreibung enthaelt.',
-                ],
-                'aenderungen' => [
-                    'type' => 'object',
-                    'description' => 'Nur die tatsaechlich im Befehl genannten Felder eintragen, alle anderen weglassen.',
-                    'properties' => [
-                        'personalnummer' => ['type' => 'string'],
-                        'anrede' => ['type' => 'string', 'enum' => ['Herr', 'Frau', 'Divers']],
-                        'vorname' => ['type' => 'string'],
-                        'nachname' => ['type' => 'string'],
-                        'geburtsdatum' => ['type' => 'string', 'description' => 'Format JJJJ-MM-TT'],
-                        'strasse' => ['type' => 'string'],
-                        'ort' => ['type' => 'string', 'description' => 'PLZ und Ort zusammen'],
-                        'telefon' => ['type' => 'string'],
-                        'mobil' => ['type' => 'string'],
-                        'email' => ['type' => 'string'],
-                    ],
-                ],
-            ],
-            'required' => ['mitarbeiter_login_name', 'aenderungen'],
-        ],
-    ];
-
-    $listeText = implode("\n", array_map(
-        fn($m) => "- {$m['name']}: " . trim(($m['vorname'] ?? '') . ' ' . ($m['nachname'] ?? '')),
-        $mitarbeiterListe
-    ));
-    $userContent = "Bestehende Mitarbeiter (Login-Name: Vorname Nachname):\n{$listeText}\n\nBefehl: {$text}";
-
-    return anthropic_tool_call($tool, $userContent);
-}
-
-// Ausweitung des Piloten auf das Kundenformular (ENT-018). Gleiche Regel wie
-// oben: nur Extraktion, gespeichert wird erst nach Pruefung durch den Admin.
-function anthropic_extract_kunde(string $text): ?array
-{
-    $tool = [
-        'name' => 'extract_kunde',
-        'description' => 'Extrahiert Kunden-Stammdaten aus einem deutschen Satz.',
-        'input_schema' => [
-            'type' => 'object',
-            'properties' => [
-                'name' => ['type' => 'string', 'description' => 'Firmen- oder Kundenname, inkl. Rechtsform wie GmbH oder AG'],
-                'strasse' => ['type' => 'string', 'description' => 'Strasse mit Hausnummer, ohne Ort'],
-                'ort' => ['type' => 'string', 'description' => 'Postleitzahl und Ort zusammen, z.B. "4632 Trimbach"'],
-                'telefon' => ['type' => 'string', 'description' => 'Telefonnummer in der genannten Schreibweise'],
-                'email' => ['type' => 'string', 'description' => 'E-Mail-Adresse'],
-            ],
-        ],
-    ];
-
-    return anthropic_tool_call($tool, $text);
-}
-
-// Einsatzplanung per Diktat (ENT-020). Wieder reine Extraktion: das Modell
-// ordnet zu, gespeichert wird erst nach Pruefung im Formular.
-//
-// Bewusst OHNE Internetrecherche. Kunde und Mitarbeitende stehen bereits in
-// der eigenen Datei -- was fehlt, wird nicht erraten, sondern leer gelassen.
-function anthropic_extract_einsatz(string $text, array $kunden, array $mitarbeiter, string $heute): ?array
-{
-    $tool = [
-        'name' => 'extract_einsatz',
-        'description' => 'Extrahiert einen geplanten Einsatz aus einem deutschen Satz.',
-        'input_schema' => [
-            'type' => 'object',
-            'properties' => [
-                'kunde_name' => [
-                    'type' => 'string',
-                    'description' => 'Der Kunde. Steht er in der Kundenliste, exakt so schreiben wie dort -- '
-                        . 'auch bei Tippfehlern oder Abkuerzungen im Befehl. Sonst so, wie genannt.',
-                ],
-                'titel' => [
-                    'type' => 'string',
-                    'description' => 'Kurze Bezeichnung des Einsatzes, z.B. "Fasnachtsumzug" oder '
-                        . '"Baustelle Kreisel". Nur eintragen, wenn im Befehl genannt.',
-                ],
-                'strasse' => [
-                    'type' => 'string',
-                    'description' => 'Strasse und Hausnummer des ARBEITSORTES, ohne Ort. Nicht der Firmensitz des Kunden.',
-                ],
-                'ort' => [
-                    'type' => 'string',
-                    'description' => 'PLZ und Ort des ARBEITSORTES, z.B. "4632 Trimbach". Nicht der Firmensitz des Kunden.',
-                ],
-                'datum' => ['type' => 'string', 'description' => 'Format JJJJ-MM-TT'],
-                'von'   => ['type' => 'string', 'description' => 'Startzeit im Format HH:MM'],
-                'bis'   => ['type' => 'string', 'description' => 'Endzeit im Format HH:MM'],
-                'bedarf' => [
-                    'type' => 'integer',
-                    'description' => 'Wie viele Mitarbeitende der Einsatz braucht. Werden Personen namentlich '
-                        . 'genannt, ohne dass eine Anzahl gesagt wurde, ist das deren Anzahl.',
-                ],
-                'einsatzart' => ['type' => 'string', 'description' => 'z.B. Verkehrsdienst. Nur wenn genannt.'],
-                'mitarbeiter_login_namen' => [
-                    'type' => 'array',
-                    'items' => ['type' => 'string'],
-                    'description' => 'Login-Namen der namentlich genannten Mitarbeitenden -- exakt wie in der '
-                        . 'Personalliste. Wird niemand namentlich genannt, leer lassen.',
-                ],
-                'bemerkung' => ['type' => 'string', 'description' => 'Zusatzangaben, die in kein anderes Feld passen.'],
-            ],
-        ],
-    ];
-
-    $kundenText = $kunden
-        ? implode("\n", array_map(fn($k) => '- ' . $k, $kunden))
-        : '(keine Kunden erfasst)';
-    $maText = $mitarbeiter
-        ? implode("\n", array_map(
-            fn($m) => "- {$m['name']}: " . trim(($m['vorname'] ?? '') . ' ' . ($m['nachname'] ?? '')),
-            $mitarbeiter))
-        : '(keine Mitarbeitenden erfasst)';
-
-    $userContent =
-        "Heutiges Datum: {$heute}. Relative Angaben wie \"morgen\" oder \"naechsten Freitag\" darauf beziehen.\n\n"
-        . "Bekannte Kunden:\n{$kundenText}\n\n"
-        . "Bekannte Mitarbeitende (Login-Name: Vorname Nachname):\n{$maText}\n\n"
-        . "Regeln: Erfinde nichts. Ein Feld, das im Befehl nicht vorkommt, laesst du weg. "
-        . "Der Ort ist der Arbeitsort des Einsatzes, nicht die Rechnungsadresse des Kunden.\n\n"
-        . "Befehl: {$text}";
-
-    return anthropic_tool_call($tool, $userContent);
-}
-
 // Kunden-Recherche (ENT-019). Anders als die Funktionen oben: hier darf das
 // Modell zuerst im Internet suchen und uebergibt erst danach die Felder.
 // Deshalb kein erzwungenes tool_choice (das wuerde die Suche blockieren) und
@@ -444,10 +285,12 @@ function anthropic_extract_zuteilung(string $text, array $vorlagen, array $mitar
 
 // Ordnet ein Diktat einem Bereich zu und extrahiert im selben Zug dessen
 // Felder (ENT-032) -- ein Aufruf statt zwei, damit der Router nicht spuerbar
-// langsamer ist als die bestehenden Einzel-Diktate. Deckt nur die NEUANLAGE
-// ab (Mitarbeiter, Kunde, Einsatz), keine Aenderung bestehender Datensaetze --
-// ein falsch getroffener Datensatz waere bei einer Aenderung riskanter als
-// bei einer Neuanlage, wo noch nichts ueberschrieben werden kann.
+// langsamer ist als die frueheren Einzel-Diktate. Deckt die Neuanlage aller
+// drei Bereiche ab, und seit ENT-042 zusaetzlich die AENDERUNG eines
+// bestehenden Mitarbeitenden -- fuer Kunde/Einsatz gibt es das bewusst
+// weiterhin nicht (dafuer gab es auch vorher keinen eigenen Diktat-Weg, das
+// Risiko eines falsch getroffenen Datensatzes bei einer Aenderung waere ohne
+// jede Erfahrung damit unnoetig).
 function anthropic_route_diktat(string $text, array $kunden, array $mitarbeiter, string $heute): ?array
 {
     $tool = [
@@ -459,12 +302,21 @@ function anthropic_route_diktat(string $text, array $kunden, array $mitarbeiter,
                 'bereich' => [
                     'type' => 'string',
                     'enum' => ['mitarbeiter', 'kunde', 'einsatz'],
-                    'description' => 'mitarbeiter: eine neue Person fuers Personal. kunde: eine neue Firma fuer '
-                        . 'die Kundendatei. einsatz: ein geplanter Auftrag oder Termin mit Datum und Zeit.',
+                    'description' => 'mitarbeiter: eine neue oder zu aendernde Person des Personals. kunde: eine neue '
+                        . 'Firma fuer die Kundendatei. einsatz: ein geplanter Auftrag oder Termin mit Datum und Zeit.',
+                ],
+                'aktion' => [
+                    'type' => 'string',
+                    'enum' => ['neu', 'aendern'],
+                    'description' => 'neu: eine neue Person/Firma/ein neuer Einsatz (Standardfall). aendern: nur '
+                        . 'moeglich, wenn bereich = mitarbeiter -- der Text beschreibt eine Aenderung an einer '
+                        . 'bereits bekannten Person aus der Liste (z.B. "Aendere die Adresse von ...", "... hat '
+                        . 'eine neue Telefonnummer"). Ist unklar, ob Neuanlage oder Aenderung gemeint ist, oder '
+                        . 'passt keine bekannte Person eindeutig, waehle neu.',
                 ],
                 'mitarbeiter' => [
                     'type' => 'object',
-                    'description' => 'Nur ausfuellen, wenn bereich = mitarbeiter.',
+                    'description' => 'Nur ausfuellen, wenn bereich = mitarbeiter und aktion = neu.',
                     'properties' => [
                         'vorname' => ['type' => 'string'], 'nachname' => ['type' => 'string'],
                         'personalnummer' => ['type' => 'string'],
@@ -473,6 +325,30 @@ function anthropic_route_diktat(string $text, array $kunden, array $mitarbeiter,
                         'strasse' => ['type' => 'string'], 'ort' => ['type' => 'string'],
                         'telefon' => ['type' => 'string'], 'mobil' => ['type' => 'string'],
                         'email' => ['type' => 'string'],
+                    ],
+                ],
+                'mitarbeiter_aenderung' => [
+                    'type' => 'object',
+                    'description' => 'Nur ausfuellen, wenn bereich = mitarbeiter und aktion = aendern.',
+                    'properties' => [
+                        'mitarbeiter_login_name' => [
+                            'type' => 'string',
+                            'description' => 'Login-Name der gemeinten Person, exakt wie in der Liste angegeben, '
+                                . 'auch wenn der Text einen Tippfehler oder eine Umschreibung enthaelt.',
+                        ],
+                        'aenderungen' => [
+                            'type' => 'object',
+                            'description' => 'Nur die tatsaechlich im Text genannten Felder eintragen, alle anderen weglassen.',
+                            'properties' => [
+                                'personalnummer' => ['type' => 'string'],
+                                'anrede' => ['type' => 'string', 'enum' => ['Herr', 'Frau', 'Divers']],
+                                'vorname' => ['type' => 'string'], 'nachname' => ['type' => 'string'],
+                                'geburtsdatum' => ['type' => 'string', 'description' => 'Format JJJJ-MM-TT'],
+                                'strasse' => ['type' => 'string'], 'ort' => ['type' => 'string'],
+                                'telefon' => ['type' => 'string'], 'mobil' => ['type' => 'string'],
+                                'email' => ['type' => 'string'],
+                            ],
+                        ],
                     ],
                 ],
                 'kunde' => [
@@ -515,7 +391,9 @@ function anthropic_route_diktat(string $text, array $kunden, array $mitarbeiter,
         . "Bekannte Kunden:\n{$kundenText}\n\n"
         . "Bekannte Mitarbeitende (Login-Name: Vorname Nachname):\n{$maText}\n\n"
         . "Erkenne, ob der Text eine neue Person, eine neue Firma oder einen geplanten Einsatz beschreibt, "
-        . "und fuelle nur das passende der drei Felder. Erfinde nichts -- ein Feld, das im Text nicht "
+        . "und fuelle nur das passende der drei Felder. Beschreibt der Text stattdessen eine AENDERUNG an "
+        . "einer bereits bekannten Person aus der Liste, setze bereich auf mitarbeiter, aktion auf aendern "
+        . "und fuelle mitarbeiter_aenderung statt mitarbeiter. Erfinde nichts -- ein Feld, das im Text nicht "
         . "vorkommt, laesst du weg.\n\n"
         . "Text:\n{$text}";
 

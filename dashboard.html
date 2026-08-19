@@ -1556,10 +1556,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
             <input class="inp" type="search" id="mQ" placeholder="Name, Ort oder Personalnummer …" oninput="renderMitarbeiter()">
           </div>
           <div class="sp" style="flex:1"></div>
-          <button class="btn btn-plain btn-sm" onclick="openKi('edit')" title="Änderung diktieren">
-            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-            Diktat: ändern
-          </button>
           <button class="btn btn-primary btn-sm" onclick="openMaNeu()">
             <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Neuer Mitarbeitender
@@ -1587,10 +1583,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
               <input class="inp" type="search" id="kQ" placeholder="Kunde, Nummer, Kontaktperson, Notiz …" oninput="renderKunden()">
             </div>
             <div class="sp" style="flex:1"></div>
-            <button class="btn btn-plain btn-sm" onclick="openKi('kunde')" title="Kundenangaben diktieren statt tippen">
-              <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-              Diktat: anlegen
-            </button>
             <!-- Etwas grösser als die übrigen Kopfzeilen-Knöpfe (kein
                  btn-sm) -- präsenter auf ausdrücklichen Wunsch, aber bewusst
                  nicht übertrieben: gleiche Familie, nur die nächste Stufe. -->
@@ -1727,6 +1719,17 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
       <div class="msg-err" id="kuNeuErr" style="display:none"></div>
       <div class="form-grid">
         <div class="f wide"><label for="kuNeuName">Name *</label><input class="inp" id="kuNeuName"></div>
+        <div class="f wide" style="margin-top:-8px">
+          <!-- Ersetzt seit ENT-042 das fruehere Recherche-Häkchen im
+               Diktat-Dialog: funktioniert so unabhängig davon, ob der
+               Dialog per Hand, per Diktat oder über den globalen
+               Sprechen-Knopf geöffnet wurde. Ergänzt nur leere Felder,
+               bereits eingetragene bleiben unangetastet. -->
+          <button class="btn btn-plain btn-sm" type="button" id="kuNeuRechercheBtn" onclick="kuNeuRecherche()" title="Fehlende Angaben im Handelsregister und im Netz suchen">
+            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Im Web nachschlagen
+          </button>
+        </div>
         <div class="f wide"><label for="kuNeuStrasse">Strasse *</label><input class="inp" id="kuNeuStrasse"></div>
         <div class="f"><label for="kuNeuOrt">PLZ / Ort *</label><input class="inp" id="kuNeuOrt"></div>
         <div class="f"><label for="kuNeuTelefon">Telefon *</label><input class="inp" id="kuNeuTelefon"></div>
@@ -2078,34 +2081,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
 <!-- Kundennamen für die Eingabehilfe in der Planung -->
 <datalist id="dlKunden"></datalist>
 
-<!-- Diktat: anlegen oder ändern -->
-<div class="dlg-scrim" id="dlgKi">
-  <div class="dlg narrow">
-    <div class="dlg-hd"><h2 id="kiTitel">Per Diktat</h2><p id="kiText"></p></div>
-    <div class="dlg-bd">
-      <div class="msg-err" id="kiErr" style="display:none"></div>
-      <textarea class="inp" id="kiText2" rows="4" placeholder="Sprechen oder tippen …"></textarea>
-      <div class="sprach" id="kiSprach">
-        <button class="sprach-btn" id="kiMik" onclick="sprachUm('kiText2','ki')">
-          <span class="pkt"></span>
-          <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-          <span class="lb">Sprechen</span>
-        </button>
-        <div class="viz" id="kiViz"></div>
-      </div>
-      <div class="sprach-hint" id="kiSprachHint"></div>
-      <label class="check" id="kiWebWrap" style="margin-top:14px;display:none">
-        <input type="checkbox" id="kiWeb">
-        <span>Fehlende Angaben im Handelsregister und im Netz suchen <span style="color:var(--ink-3)">— dauert länger, Ergebnis wird mit Quelle angezeigt</span></span>
-      </label>
-    </div>
-    <div class="dlg-ft">
-      <button class="btn btn-plain" onclick="closeDlg('dlgKi')">Abbrechen</button>
-      <button class="btn btn-primary" id="kiBtn" onclick="submitKi()">Erkennen</button>
-    </div>
-  </div>
-</div>
-
 <!-- Einrichtung: Tabellen der Planung und Verfügbarkeit anlegen -->
 <div class="dlg-scrim" id="dlgEinrichtung">
   <div class="dlg">
@@ -2184,7 +2159,6 @@ let kuSortFeld = 'kundennummer';
 let kuSortRichtung = 'auf'; // 'auf' oder 'ab'
 let kdId = null;            // id des Kunden auf der Detailseite
 let kdTab = 'uebersicht';   // Detailseite: Übersicht, Rapporte oder Offerten
-let kiMode = 'neu';
 const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email'];
 const MA_LABEL = { personalnummer:'Personalnummer', anrede:'Anrede', vorname:'Vorname', nachname:'Nachname',
   geburtsdatum:'Geburtsdatum', strasse:'Strasse', ort:'PLZ / Ort', telefon:'Telefon', mobil:'Mobil', email:'E-Mail' };
@@ -2531,7 +2505,7 @@ function rtErkennen() {
   api('ki_router_parse.php', { method: 'POST', body: { text, heute: isoTag() } }).then(({ ok, data }) => {
     b.disabled = false; b.textContent = 'Erkennen';
     if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Erkennung fehlgeschlagen.'; err.style.display = ''; return; }
-    rtDialogOeffnen(data.bereich, data.felder, data.mitarbeiter_login_namen);
+    rtDialogOeffnen(data);
     rtZuruecksetzen();
   }).catch(() => { b.disabled = false; b.textContent = 'Erkennen'; err.textContent = 'Netzwerkfehler.'; err.style.display = ''; });
 }
@@ -2540,15 +2514,27 @@ function rtErkennen() {
 // Kundenliste je geladen wurden -- ohne sie zeigt der Dialog faelschlich
 // "keine vorhanden" an. Darum hier, wie schon beim Wechsel in die
 // jeweilige Ansicht, gezielt nachladen.
-function rtDialogOeffnen(bereich, felder, maNamen) {
+//
+// Seit ENT-042 deckt der Router bei Mitarbeitenden auch "aendern" ab (nicht
+// nur Neuanlage) -- dafuer oeffnet sich die bestehende Bearbeiten-Schublade
+// statt eines "Neu"-Dialogs.
+function rtDialogOeffnen(data) {
+  const bereich = data.bereich;
+  const aktion = data.aktion || 'neu';
   const bereit = bereich === 'einsatz'
     ? Promise.all([mitarbeiter.length ? null : loadMitarbeiter(), kunden.length ? null : loadKunden()])
     : bereich === 'kunde' ? (kunden.length ? Promise.resolve() : loadKunden())
     : (mitarbeiter.length ? Promise.resolve() : loadMitarbeiter());
   Promise.resolve(bereit).then(() => {
-    if (bereich === 'mitarbeiter') { openMaNeu(felder || {}); return; }
-    if (bereich === 'kunde') { openKundeNeu(felder || {}, {}); return; }
-    openEinsatzNeu(felder || {}, maNamen || []);
+    if (bereich === 'mitarbeiter' && aktion === 'aendern') {
+      const idx = mitarbeiter.findIndex(m => m.name === data.mitarbeiter_login_name);
+      if (idx === -1) { toast('Die erkannte Person steht nicht in der Liste.'); return; }
+      openMa(idx, data.aenderungen || {});
+      return;
+    }
+    if (bereich === 'mitarbeiter') { openMaNeu(data.felder || {}); return; }
+    if (bereich === 'kunde') { openKundeNeu(data.felder || {}, {}); return; }
+    openEinsatzNeu(data.felder || {}, data.mitarbeiter_login_namen || []);
   });
 }
 
@@ -2570,7 +2556,7 @@ function gsErkennen() {
     b.disabled = false; b.textContent = 'Erkennen';
     if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Erkennung fehlgeschlagen.'; err.style.display = ''; return; }
     closeDlg('dlgSprechen');
-    rtDialogOeffnen(data.bereich, data.felder, data.mitarbeiter_login_namen);
+    rtDialogOeffnen(data);
   }).catch(() => { b.disabled = false; b.textContent = 'Erkennen'; err.textContent = 'Netzwerkfehler.'; err.style.display = ''; });
 }
 
@@ -5588,7 +5574,7 @@ function askDeleteRapport(id) {
 function openDlg(id) { $(id).classList.add('on'); }
 function closeDlg(id) {
   // Ein geschlossener Dialog darf nicht weiterhoeren.
-  if (sprach && (id === 'dlgKi' || id === 'dlgPlanDiktat')) sprachStop();
+  if (sprach && id === 'dlgPlanDiktat') sprachStop();
   $(id).classList.remove('on');
 }
 
@@ -5802,6 +5788,43 @@ function openKundeNeu(felder, meta) {
   $('kuNeuName').focus();
 }
 
+// Recherche im Anlegen-Dialog (ENT-042): ersetzt das frühere Recherche-
+// Häkchen im separaten Diktat-Dialog. Ergänzt nur leere Felder -- was schon
+// eingetragen ist (von Hand, per Diktat oder aus einem früheren Aufruf
+// dieses Knopfs), bleibt unangetastet.
+function kuNeuRecherche() {
+  const name = $('kuNeuName').value.trim();
+  if (!name) { toast('Bitte zuerst einen Namen eingeben.'); return; }
+  const ort = $('kuNeuOrt').value.trim();
+  const text = ort ? `${name}, ${ort}` : name;
+  const btn = $('kuNeuRechercheBtn');
+  const alt = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Suche … (bis zu 1 Min.)';
+  api('ki_kunden_recherche.php', { method: 'POST', body: { text } }).then(({ ok, data }) => {
+    btn.disabled = false; btn.innerHTML = alt;
+    if (!ok || data.status !== 'ok') { toast(data.message || 'Recherche fehlgeschlagen.'); return; }
+    const gefuellt = [];
+    KU_FELDER.forEach(f => {
+      const wert = (data.felder || {})[f];
+      if (!wert) return;
+      const el = $(kuNeuId(f));
+      if (el.value.trim()) return; // Vorhandenes bleibt unangetastet.
+      el.value = wert;
+      el.classList.add('web');
+      gefuellt.push(f);
+    });
+    if (!gefuellt.length) { toast('Keine zusätzlichen Angaben gefunden.'); return; }
+    const hint = $('kuNeuKiHint');
+    hint.classList.add('on', 'web');
+    let t = `<b>Gelb: aus dem Netz ergänzt — ${esc(gefuellt.map(f => KU_LABEL[f]).join(', '))}. Diese Angaben hat niemand bestätigt, bitte prüfen.</b>`;
+    if (data.quellen && data.quellen.length) {
+      t += data.quellen.map(q => `<span class="src">Quelle: <a href="${esc(q)}" target="_blank" rel="noopener noreferrer">${esc(q)}</a></span>`).join('');
+    }
+    $('kuNeuKiText').innerHTML = t;
+  }).catch(() => { btn.disabled = false; btn.innerHTML = alt; toast('Netzwerkfehler.'); });
+}
+
 function createKunde() {
   const err = $('kuNeuErr'); err.style.display = 'none';
   const body = {
@@ -5873,67 +5896,10 @@ function saveKunde() {
 }
 
 // ══════════════════════════════════════════ DIKTAT
-const KI_TEXTE = {
-  neu: ['Mitarbeitenden diktieren',
-    'Tippen — oder das Mikrofon der Tastatur benutzen. Zum Beispiel: „Neuer Mitarbeiter Hans Meier, Personalnummer 2530, geboren 3. Mai 1990, Musterweg 1, 3000 Bern, Mobil 079 123 45 67.“'],
-  edit: ['Änderung diktieren',
-    'Sagen, wen du meinst und was sich ändert. Zum Beispiel: „Ändere die Adresse von Daniele Ciardo zu Musterstrasse 1, 3000 Bern.“ Tippfehler beim Namen sind kein Problem.'],
-  kunde: ['Kunden diktieren',
-    'Tippen — oder das Mikrofon der Tastatur benutzen. Vollständig: „Neuer Kunde Studer Immobilien AG, Gerolagstrasse 12, 4632 Trimbach, Telefon 062 111 22 33.“ Mit Recherche genügt: „Leg mir die Borner AG mit Sitz in Winznau an.“'],
-  einsatz: ['Einsatz diktieren',
-    'Tippen — oder das Mikrofon der Tastatur benutzen. Zum Beispiel: „Neuer Einsatz für die Borner AG am nächsten Freitag von 7 bis 17 Uhr, Baustelle Hauptstrasse 4 in 4632 Trimbach, zwei Mitarbeitende, Hans Meier und Peter Muster.“ Der Ort ist der Arbeitsort, nicht der Firmensitz.']
-};
-
-function openKi(mode) {
-  kiMode = mode;
-  $('kiTitel').textContent = KI_TEXTE[mode][0];
-  $('kiText').textContent = KI_TEXTE[mode][1];
-  $('kiText2').value = '';
-  $('kiErr').style.display = 'none';
-  // Recherche gibt es nur beim Kunden — beim Personal wird nichts nachgeschlagen.
-  $('kiWebWrap').style.display = mode === 'kunde' ? '' : 'none';
-  $('kiWeb').checked = false;
-  sprachBereit('ki');
-  openDlg('dlgKi');
-  $('kiText2').focus();
-}
-
-function submitKi() {
-  const text = $('kiText2').value.trim();
-  const err = $('kiErr'); err.style.display = 'none';
-  if (!text) { err.textContent = 'Bitte etwas eingeben oder diktieren.'; err.style.display = ''; return; }
-  const mitRecherche = kiMode === 'kunde' && $('kiWeb').checked;
-  const b = $('kiBtn'); b.disabled = true;
-  b.textContent = mitRecherche ? 'Suche … (bis zu 1 Min.)' : 'Erkenne …';
-  const reset = () => { b.disabled = false; b.textContent = 'Erkennen'; };
-  const endpoint = mitRecherche ? 'ki_kunden_recherche.php'
-    : { neu: 'ki_mitarbeiter_parse.php', edit: 'ki_mitarbeiter_edit_parse.php',
-        kunde: 'ki_kunden_parse.php', einsatz: 'ki_einsatz_parse.php' }[kiMode];
-
-  const body = { text };
-  // „morgen“ richtet sich nach der Uhr des Admins, nicht nach der des Servers.
-  if (kiMode === 'einsatz') body.heute = isoTag();
-
-  api(endpoint, { method: 'POST', body }).then(({ ok, data }) => {
-    reset();
-    if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Erkennung fehlgeschlagen.'; err.style.display = ''; return; }
-    if (kiMode === 'neu') { closeDlg('dlgKi'); openMaNeu(data.felder || {}); return; }
-    if (kiMode === 'einsatz') {
-      closeDlg('dlgKi');
-      openEinsatzNeu(data.felder || {}, data.mitarbeiter_login_namen || []);
-      return;
-    }
-    if (kiMode === 'kunde') {
-      closeDlg('dlgKi');
-      openKundeNeu(data.felder || {}, { recherchiert: data.recherchiert, quellen: data.quellen });
-      return;
-    }
-    const idx = mitarbeiter.findIndex(m => m.name === data.mitarbeiter_login_name);
-    if (idx === -1) { err.textContent = 'Die erkannte Person steht nicht in der Liste.'; err.style.display = ''; return; }
-    closeDlg('dlgKi');
-    openMa(idx, data.aenderungen || {});
-  }).catch(() => { reset(); err.textContent = 'Netzwerkfehler.'; err.style.display = ''; });
-}
+// Die seitengebundenen Einzel-Diktate (openKi/dlgKi) sind seit ENT-042 im
+// globalen Sprechen-Router aufgegangen -- siehe rtDialogOeffnen() weiter
+// oben. Die Recherche fuer Kunden lebt jetzt in kuNeuRecherche(), direkt im
+// Anlegen-Dialog.
 
 function printReport() {
   const r = rapporte.find(x => Number(x.id) === drawerId);
