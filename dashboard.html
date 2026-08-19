@@ -561,6 +561,28 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .kd-tab { display: none; }
 .kd-tab.on { display: block; }
 
+/* Kundendialog (ENT-044): ein Formular fuer Anlegen und Bearbeiten, mit
+   wiederholbaren Kommunikationszeilen und Ansprechpersonen. */
+.kdlg-tab { display: none; }
+.kdlg-tab.on { display: block; }
+.inp[readonly] { background: var(--surface-2); color: var(--ink-3); cursor: default; }
+.wahl-reihe { display: flex; gap: 18px; align-items: center; min-height: 38px; }
+.wahl-reihe label { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13.5px; font-weight: 500; }
+.wahl-reihe input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+.kw-reihe { display: grid; grid-template-columns: 170px 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.kw-weg { border: none; background: transparent; color: var(--ink-3); cursor: pointer; padding: 7px; border-radius: var(--r-xs); display: inline-flex; }
+.kw-weg:hover { background: var(--neg-soft); color: var(--neg); }
+.ku-person { border: 1px solid var(--line-soft); border-radius: var(--r-sm); padding: 13px 14px 4px; margin-bottom: 11px; }
+.ku-person .form-grid { grid-template-columns: 120px 1fr 1fr; }
+.ku-person-ft { display: flex; gap: 9px; justify-content: space-between; margin: 2px 0 10px; }
+.abschnitt { font-size: 11.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-3); margin: 20px 0 10px; }
+.abschnitt:first-child { margin-top: 0; }
+@media (max-width: 620px) {
+  .kw-reihe { grid-template-columns: 1fr auto; }
+  .kw-reihe select.inp { grid-column: 1 / -1; }
+  .ku-person .form-grid { grid-template-columns: 1fr; }
+}
+
 /* Monatsmatrix — erste Spalte bleibt stehen, die Tage scrollen in der Karte */
 .mx-info { font-size: 12px; color: var(--ink-3); margin: -6px 0 12px; }
 .mx-info b { color: var(--ink-2); font-weight: 600; }
@@ -1700,43 +1722,104 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
   </div>
 </div>
 
-<!-- Neuer Kunde -->
-<div class="dlg-scrim" id="dlgKuNeu">
-  <div class="dlg">
+<!-- Kunde anlegen und bearbeiten (ENT-044). Ein einziges Formular für beide
+     Fälle: die frühere Bearbeiten-Schublade führte dieselben Felder ein
+     zweites Mal und wäre mit dem grösseren Umfang zur doppelten Pflege
+     geworden. Auch Ziel des Diktat-Routers, der nur vorbefüllt — gespeichert
+     wird ausschliesslich durch den Knopf unten (ENT-015). -->
+<div class="dlg-scrim" id="dlgKunde">
+  <div class="dlg breit">
     <div class="dlg-hd">
-      <h2 id="kuNeuTitel">Neuer Kunde</h2>
-      <p id="kuNeuText">Name, Strasse, Ort und Telefon sind Pflicht.</p>
+      <h2 id="kuTitel">Neuer Kunde</h2>
+      <p id="kuText">Name, PLZ und Ort sind Pflicht.</p>
     </div>
     <div class="dlg-bd">
-      <div class="ki-hint" id="kuNeuKiHint">
+      <div class="ki-hint" id="kuKiHint">
         <svg class="i i-sm" viewBox="0 0 24 24" style="margin-top:1px;flex:none"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-        <span id="kuNeuKiText"></span>
+        <span id="kuKiText"></span>
       </div>
-      <div class="msg-err" id="kuNeuErr" style="display:none"></div>
+      <div class="msg-err" id="kuErr" style="display:none"></div>
+
       <div class="form-grid">
-        <div class="f wide"><label for="kuNeuName">Name *</label><input class="inp" id="kuNeuName"></div>
+        <!-- Die Nummer vergibt das System (ENT-040). Beim Anlegen steht hier
+             die Vorschau der nächsten freien, ausgegraut; beim Bearbeiten die
+             bereits vergebene. Beides ist nicht änderbar. -->
+        <div class="f"><label for="ku_kundennummer">Kundennummer</label>
+          <input class="inp" id="ku_kundennummer" readonly tabindex="-1"></div>
+        <div class="f"><label>Art</label>
+          <div class="wahl-reihe">
+            <label><input type="radio" name="kuArt" id="kuArtUnternehmen" value="unternehmen" onchange="kuArtUm()">Unternehmen</label>
+            <label><input type="radio" name="kuArt" id="kuArtPrivat" value="privat" onchange="kuArtUm()">Privatperson</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid" id="kuFirmaFelder">
+        <div class="f wide"><label for="ku_name">Unternehmensname *</label><input class="inp" id="ku_name"></div>
         <div class="f wide" style="margin-top:-8px">
-          <!-- Ersetzt seit ENT-042 das fruehere Recherche-Häkchen im
+          <!-- Ersetzt seit ENT-042 das frühere Recherche-Häkchen im
                Diktat-Dialog: funktioniert so unabhängig davon, ob der
                Dialog per Hand, per Diktat oder über den globalen
                Sprechen-Knopf geöffnet wurde. Ergänzt nur leere Felder,
                bereits eingetragene bleiben unangetastet. -->
-          <button class="btn btn-plain btn-sm" type="button" id="kuNeuRechercheBtn" onclick="kuNeuRecherche()" title="Fehlende Angaben im Handelsregister und im Netz suchen">
+          <button class="btn btn-plain btn-sm" type="button" id="kuRechercheBtn" onclick="kuRecherche()" title="Fehlende Angaben im Handelsregister und im Netz suchen">
             <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             Im Web nachschlagen
           </button>
         </div>
-        <div class="f wide"><label for="kuNeuStrasse">Strasse *</label><input class="inp" id="kuNeuStrasse"></div>
-        <div class="f"><label for="kuNeuOrt">PLZ / Ort *</label><input class="inp" id="kuNeuOrt"></div>
-        <div class="f"><label for="kuNeuTelefon">Telefon *</label><input class="inp" id="kuNeuTelefon"></div>
-        <div class="f"><label for="kuNeuKontaktperson">Kontaktperson</label><input class="inp" id="kuNeuKontaktperson"></div>
-        <div class="f"><label for="kuNeuEmail">E-Mail</label><input class="inp" id="kuNeuEmail" type="email"></div>
-        <div class="f wide"><label for="kuNeuNotiz">Notiz</label><textarea class="inp" id="kuNeuNotiz" rows="2" style="min-height:56px"></textarea></div>
+      </div>
+
+      <div class="form-grid" id="kuPrivatFelder" style="display:none">
+        <div class="f"><label for="ku_anrede">Anrede</label>
+          <select class="inp" id="ku_anrede">
+            <option value=""></option><option>Herr</option><option>Frau</option>
+          </select></div>
+        <div class="f"><label for="ku_vorname">Vorname *</label><input class="inp" id="ku_vorname"></div>
+        <div class="f wide"><label for="ku_nachname">Nachname *</label><input class="inp" id="ku_nachname"></div>
+      </div>
+
+      <div class="form-grid">
+        <div class="f wide"><label for="ku_zusatzfeld">Zusatzfeld</label><input class="inp" id="ku_zusatzfeld"></div>
+        <div class="f"><label for="ku_strasse">Strasse</label><input class="inp" id="ku_strasse"></div>
+        <div class="f"><label for="ku_hausnummer">Nr.</label><input class="inp" id="ku_hausnummer"></div>
+        <div class="f wide"><label for="ku_adresszusatz">Adresszusatz</label><input class="inp" id="ku_adresszusatz"></div>
+        <div class="f"><label for="ku_plz">PLZ *</label><input class="inp" id="ku_plz"></div>
+        <div class="f"><label for="ku_ort">Ort *</label><input class="inp" id="ku_ort"></div>
+      </div>
+
+      <div class="form-grid" id="kuUidFelder">
+        <div class="f"><label for="ku_uid">CHE- Unternehmens-Id</label><input class="inp" id="ku_uid" placeholder="CHE-123.456.789"></div>
+        <div class="f"><label for="ku_mwst_nr">CHE- MWST-Nr.</label><input class="inp" id="ku_mwst_nr"></div>
+      </div>
+
+      <div class="tabs" id="kuDlgTabs" style="margin-top:22px">
+        <button class="tab on" type="button" id="kudtab-kommunikation" onclick="kuDlgTab('kommunikation')">Kommunikation</button>
+        <button class="tab" type="button" id="kudtab-personen" onclick="kuDlgTab('personen')">Kontaktpersonen</button>
+      </div>
+
+      <div class="kdlg-tab on" id="kudlg-kommunikation">
+        <div id="kuWegeListe"></div>
+        <button class="btn btn-quiet btn-sm" type="button" onclick="kuWegHinzu()">Weitere Kontaktmöglichkeit hinzufügen</button>
+      </div>
+
+      <div class="kdlg-tab" id="kudlg-personen">
+        <div id="kuPersonenListe"></div>
+        <button class="btn btn-quiet btn-sm" type="button" onclick="kuPersonHinzu()">Weitere Kontaktperson hinzufügen</button>
+      </div>
+
+      <div class="form-grid" style="margin-top:22px">
+        <div class="f wide"><label for="ku_notiz">Notiz</label><textarea class="inp" id="ku_notiz" rows="2" style="min-height:56px"></textarea></div>
+      </div>
+
+      <div class="zone" id="kuArchivZone" style="display:none">
+        <div class="zone-hd" id="kuArchivHd"></div>
+        <div class="zone-note" id="kuArchivNote"></div>
+        <button class="btn btn-plain btn-sm" type="button" id="kuArchivBtn2"></button>
       </div>
     </div>
     <div class="dlg-ft">
-      <button class="btn btn-plain" onclick="closeDlg('dlgKuNeu')">Abbrechen</button>
-      <button class="btn btn-primary" id="kuNeuBtn" onclick="createKunde()">Kunden anlegen</button>
+      <button class="btn btn-plain" onclick="closeDlg('dlgKunde')">Abbrechen</button>
+      <button class="btn btn-primary" id="kuBtn" onclick="kuSpeichern()">Kunden anlegen</button>
     </div>
   </div>
 </div>
@@ -2131,7 +2214,6 @@ let masterschichten = [];   // die des offenen Objekts
 let feiertage = {};         // Datum -> Feiertag, für Matrix und Tagesplan
 let drawerId = null;   // offener Rapport in der Schublade
 let maTarget = null;   // offener Mitarbeitender (Login-Name)
-let kuTarget = null;   // offener Kunde (id)
 let enTarget = null;   // offener Einsatz (id)
 let obTarget = null;   // offenes Objekt (id)
 let msTarget = null;   // offene Masterschicht (id)
@@ -2153,6 +2235,11 @@ let kuTab = 'uebersicht';   // Kunden: Übersicht, Objekte oder Detail (ENT-039/
 let kuArchivTab = 'alle';   // Kundenliste: aktive oder archivierte Kunden (ENT-040)
 let kuSortFeld = 'kundennummer';
 let kuSortRichtung = 'auf'; // 'auf' oder 'ab'
+let kuNaechsteNummer = '';  // Vorschau der nächsten freien Kundennummer (ENT-044)
+let kuDlgId = null;         // im Kundendialog bearbeiteter Kunde, null = anlegen
+let kuDlgTabAktiv = 'kommunikation';
+let kuWege = [];            // Kommunikationszeilen der Firma im offenen Dialog
+let kuPersonen = [];        // Ansprechpersonen im offenen Dialog
 let kdId = null;            // id des Kunden auf der Detailseite
 let kdTab = 'uebersicht';   // Detailseite: Übersicht, Rapporte oder Offerten
 const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email'];
@@ -2752,6 +2839,9 @@ function loadKunden() {
   return api('kunden_list.php').then(({ ok, data }) => {
     if (!ok || data.status !== 'ok') return;
     kunden = data.kunden || [];
+    // Vorschau der nächsten freien Nummer für den Anlegen-Dialog (ENT-044).
+    // Vergeben wird sie weiterhin erst beim Speichern durch den Server.
+    kuNaechsteNummer = data.naechste_kundennummer || '';
     renderKunden();
     // Eingabehilfe der Planung mitführen -- archivierte Kunden schlagen sich
     // hier nicht mehr vor, ein neuer Einsatz soll nicht versehentlich an
@@ -3056,12 +3146,24 @@ function kuArchivGo(t) {
   $('kuatab-' + t).classList.add('on');
   renderKunden();
 }
+// Adresse zum Anzeigen wieder zusammensetzen. Gespeichert wird sie seit
+// ENT-044 in Einzelteilen -- gelesen wird sie fast immer am Stück.
+function kuStrasse(k) { return [k.strasse, k.hausnummer].filter(Boolean).join(' ').trim(); }
+function kuPlzOrt(k) { return [k.plz, k.ort].filter(Boolean).join(' ').trim(); }
+
 function renderKunden() {
   const q = ($('kQ').value || '').toLowerCase().trim();
   const wollAktiv = kuArchivTab === 'alle' ? 1 : 0;
   const d = kunden.filter(k => Number(k.aktiv ?? 1) === wollAktiv && (!q ||
-    [k.kundennummer, k.name, k.ort, k.strasse, k.telefon, k.kontaktperson, k.email, k.notiz]
-      .some(f => String(f || '').toLowerCase().includes(q))));
+    [k.kundennummer, k.name, k.zusatzfeld, k.plz, k.ort, k.strasse, k.hausnummer, k.adresszusatz,
+     k.telefon, k.kontaktperson, k.email, k.uid, k.notiz]
+      .some(f => String(f || '').toLowerCase().includes(q))
+    // Auch über Ansprechpersonen und Kommunikationswege suchbar (ENT-044) --
+    // eine Nummer wiederzufinden, ohne den Kunden zu kennen, ist der
+    // häufigere Fall als umgekehrt.
+    || (k.kontaktwege || []).some(w => String(w.wert || '').toLowerCase().includes(q))
+    || (k.personen || []).some(p => [p.vorname, p.nachname].some(f => String(f || '').toLowerCase().includes(q))
+      || (p.kontaktwege || []).some(w => String(w.wert || '').toLowerCase().includes(q)))));
   d.sort((a, b) => {
     const c = String(a[kuSortFeld] || '').localeCompare(String(b[kuSortFeld] || ''), 'de', { numeric: true, sensitivity: 'base' });
     return kuSortRichtung === 'auf' ? c : -c;
@@ -3069,7 +3171,7 @@ function renderKunden() {
   if (!d.length) {
     $('kuTable').innerHTML = kunden.length
       ? EMPTY('Keine Treffer', kuArchivTab === 'alle' ? 'Für diese Suche gibt es keine Kunden.' : 'Für diese Suche gibt es keine archivierten Kunden.')
-      : EMPTY('Noch keine Kunden', 'Kunden werden im Admin-Bereich der Erfassung angelegt.');
+      : EMPTY('Noch keine Kunden', 'Über „Neuer Kunde“ oben rechts anlegen.');
     return;
   }
   const zaehl = {};
@@ -3079,9 +3181,9 @@ function renderKunden() {
     </tr></thead><tbody>` + d.map(k => `
       <tr class="click" onclick="openKundeDetail(${Number(k.id)})">
         <td class="nowrap">${dash(k.kundennummer)}</td>
-        <td class="strong">${esc(k.name)}</td>
-        <td>${dash(k.strasse)}</td>
-        <td class="nowrap">${dash(k.ort)}</td>
+        <td class="strong">${esc(k.name)}${k.art === 'privat' ? '<div class="sec">Privatperson</div>' : ''}</td>
+        <td>${dash(kuStrasse(k))}</td>
+        <td class="nowrap">${dash(kuPlzOrt(k))}</td>
         <td class="nowrap num">${dash(k.telefon)}</td>
         <td>${dash(k.email)}</td>
         <td class="num">${zaehl[k.name] ? nf(zaehl[k.name]) : '<span style="color:var(--ink-3)">–</span>'}</td>
@@ -3122,7 +3224,9 @@ function kuMenuSchliessen() {
 function toggleArchivKunde(id, aktiv) {
   api('kunden_archivieren.php', { method: 'POST', body: { id, aktiv } }).then(({ ok, data }) => {
     if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
-    closeDrawer();
+    // Erreichbar aus dem Zeilenmenü und aus dem offenen Kundendialog --
+    // beide Wege schliessen sauber (ENT-044).
+    closeDlg('dlgKunde');
     Promise.all([loadKunden(), loadStats()]).then(() => {
       toast(aktiv ? 'Kunde wiederhergestellt.' : 'Kunde archiviert.');
       // Auf der Detailseite bleibt man -- Status und Knopf zeigen den neuen
@@ -3455,7 +3559,7 @@ function createEinsatz() {
 function openEinsatz(id) {
   const e = einsaetze.find(x => Number(x.id) === Number(id));
   if (!e) { toast('Einsatz nicht gefunden — bitte aktualisieren.'); return; }
-  drawerId = null; maTarget = null; kuTarget = null;
+  drawerId = null; maTarget = null;
   enTarget = Number(id);
 
   const opt = Object.keys(EN_STATUS)
@@ -3621,13 +3725,31 @@ function renderKundeDetail() {
   $('kdSub').textContent = (k.kundennummer || '–') + (Number(k.aktiv) ? '' : ' · archiviert');
   $('kdArchivBtn').textContent = Number(k.aktiv) ? 'Archivieren' : 'Wiederherstellen';
   if (kdTab === 'uebersicht') {
+    const leer = '<span style="color:var(--ink-3)">–</span>';
+    const adresse = [
+      k.zusatzfeld, kuStrasse(k), k.adresszusatz, kuPlzOrt(k),
+    ].filter(Boolean).map(esc).join('<br>') || leer;
+    const wege = (k.kontaktwege || []).length
+      ? k.kontaktwege.map(w => `<div>${esc(KU_LABEL[w.art] || w.art)}: <b>${esc(w.wert)}</b></div>`).join('')
+      : leer;
+    const personen = (k.personen || []).length
+      ? k.personen.map(p => {
+          const name = esc([p.anrede, p.vorname, p.nachname].filter(Boolean).join(' ')) || '–';
+          const pw = (p.kontaktwege || []).map(w =>
+            `<div class="sec">${esc(KU_LABEL[w.art] || w.art)}: ${esc(w.wert)}</div>`).join('');
+          return `<div style="margin-bottom:8px"><b>${name}</b>${pw}</div>`;
+        }).join('')
+      : leer;
     $('kdInfo').innerHTML = `
       <dl class="ku-detail-info">
-        <dt>Adresse</dt><dd>${esc(k.strasse || '–')}<br>${esc(k.ort || '–')}</dd>
-        <dt>Telefon</dt><dd>${dash(k.telefon)}</dd>
-        <dt>Kontaktperson</dt><dd>${dash(k.kontaktperson)}</dd>
-        <dt>E-Mail</dt><dd>${dash(k.email)}</dd>
-        <dt>Notiz</dt><dd>${k.notiz ? esc(k.notiz).replace(/\n/g, '<br>') : '<span style="color:var(--ink-3)">–</span>'}</dd>
+        <dt>Art</dt><dd>${k.art === 'privat' ? 'Privatperson' : 'Unternehmen'}</dd>
+        <dt>Adresse</dt><dd>${adresse}</dd>
+        <dt>Kommunikation</dt><dd>${wege}</dd>
+        <dt>Kontaktpersonen</dt><dd>${personen}</dd>
+        ${k.art === 'privat' ? '' :
+          `<dt>Unternehmens-Id</dt><dd>${dash(k.uid)}</dd>
+           <dt>MWST-Nr.</dt><dd>${dash(k.mwst_nr)}</dd>`}
+        <dt>Notiz</dt><dd>${k.notiz ? esc(k.notiz).replace(/\n/g, '<br>') : leer}</dd>
       </dl>`;
   }
   if (kdTab === 'rapporte') {
@@ -3743,7 +3865,7 @@ function saveObjekt() {
 function openObjekt(id) {
   const o = objekte.find(x => Number(x.id) === Number(id));
   if (!o) { toast('Objekt nicht gefunden — bitte aktualisieren.'); return; }
-  drawerId = null; maTarget = null; kuTarget = null; enTarget = null;
+  drawerId = null; maTarget = null; enTarget = null;
   obTarget = Number(id);
 
   $('drTitle').textContent = o.name;
@@ -5552,7 +5674,7 @@ function closeDrawer() {
   $('scrim').classList.remove('on');
   $('drawer').classList.remove('on');
   $('drawer').setAttribute('aria-hidden', 'true');
-  drawerId = null; maTarget = null; kuTarget = null; enTarget = null;
+  drawerId = null; maTarget = null; enTarget = null;
 }
 
 function askDeleteRapport(id) {
@@ -5644,7 +5766,7 @@ function createMa() {
 function openMa(i, aenderungen) {
   const m = mitarbeiter[i];
   if (!m) return;
-  drawerId = null; kuTarget = null;
+  drawerId = null;
   maTarget = m.name;
 
   const a = aenderungen || {};
@@ -5734,167 +5856,352 @@ function askRemoveMa() {
 }
 
 // ══════════════════════════════════════════ KUNDEN PFLEGEN
-// Kontaktperson und Notiz (ENT-040) sind bewusst Teil von KU_FELDER: sie
-// fliessen durchs selbe Diktat-Hervorhebungsmuster wie alle anderen Felder,
-// auch wenn der Diktat-Router sie heute noch nicht befuellt.
-const KU_FELDER = ['name', 'strasse', 'ort', 'telefon', 'kontaktperson', 'email', 'notiz'];
-const KU_LABEL = { name: 'Name', strasse: 'Strasse', ort: 'PLZ / Ort', telefon: 'Telefon',
-  kontaktperson: 'Kontaktperson', email: 'E-Mail', notiz: 'Notiz' };
-const kuNeuId = f => 'kuNeu' + f[0].toUpperCase() + f.slice(1);
+// Ein Dialog für Anlegen und Bearbeiten (ENT-044). Vorher gab es dafür zwei
+// getrennte Formulare -- den Anlegen-Dialog und die Bearbeiten-Schublade --,
+// die dieselben Felder doppelt führten. Mit dem grösseren Umfang wäre daraus
+// doppelte Pflege geworden: ein Feld, das man an zwei Stellen nachziehen muss,
+// wird irgendwann an einer davon vergessen.
 
-function openKundeNeu(felder, meta) {
+// Die einfachen Textfelder. Genau diese kann der Diktat-Router bzw. die
+// Web-Recherche vorbefüllen. Kommunikationswege und Ansprechpersonen laufen
+// getrennt, weil sie Listen sind und keine Felder.
+const KU_FELDER = ['name', 'anrede', 'vorname', 'nachname', 'zusatzfeld', 'strasse',
+  'hausnummer', 'adresszusatz', 'plz', 'ort', 'uid', 'mwst_nr', 'notiz'];
+const KU_LABEL = { name: 'Name', anrede: 'Anrede', vorname: 'Vorname', nachname: 'Nachname',
+  zusatzfeld: 'Zusatzfeld', strasse: 'Strasse', hausnummer: 'Nr.', adresszusatz: 'Adresszusatz',
+  plz: 'PLZ', ort: 'Ort', uid: 'Unternehmens-Id', mwst_nr: 'MWST-Nr.', notiz: 'Notiz',
+  email: 'E-Mail', telefon: 'Telefon', mobil: 'Mobiltelefon', webseite: 'Webseite', fax: 'Fax' };
+// Feste Arten statt Freitext -- sonst stehen „Mobil", „mobile" und „Natel"
+// nebeneinander und nichts lässt sich mehr auswerten. Gleiche Liste wie
+// KONTAKT_ARTEN in backend/kunden.php.
+const KU_WEG_ARTEN = ['email', 'telefon', 'mobil', 'webseite', 'fax'];
+// Womit ein leeres Formular startet: sichtbare leere Zeilen, damit man nicht
+// erst „hinzufügen" klicken muss. Leere Zeilen verwirft der Server wieder.
+const KU_WEGE_VORGABE = ['email', 'telefon', 'webseite'];
+const KU_PERSON_WEGE_VORGABE = ['email', 'mobil'];
+const KU_PAPIERKORB = '<svg class="i i-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+const kuId = f => 'ku_' + f;
+
+// Zwei Einstiege, ein Formular. openKundeNeu ist zugleich das Ziel des
+// Diktat-Routers (ENT-032/042) und behält darum seine Signatur.
+function openKundeNeu(felder, meta) { kuDlgOeffnen(null, felder, meta); }
+function openKundeBearbeiten(id) { kuDlgOeffnen(id); }
+
+function kuDlgOeffnen(id, felder, meta) {
   felder = felder || {};
   meta = meta || {};
-  const ausDiktat = Object.keys(felder).length > 0;
-  const web = (meta.recherchiert || []).filter(f => KU_FELDER.includes(f) && felder[f]);
-  const gesagt = KU_FELDER.filter(f => felder[f] && !web.includes(f));
-  const quellen = meta.quellen || [];
-  const lbl = fs => fs.map(f => KU_LABEL[f]).join(', ');
+  const k = id ? kunden.find(x => Number(x.id) === Number(id)) : null;
+  if (id && !k) return;
+  kuDlgId = k ? Number(k.id) : null;
 
-  $('kuNeuTitel').textContent = ausDiktat ? 'Erkannt — bitte prüfen' : 'Neuer Kunde';
-  $('kuNeuText').textContent = ausDiktat
-    ? 'Es ist noch nichts gespeichert.'
-    : 'Name, Strasse, Ort und Telefon sind Pflicht.';
+  const art = k ? (k.art || 'unternehmen') : 'unternehmen';
+  $('kuArtUnternehmen').checked = art !== 'privat';
+  $('kuArtPrivat').checked = art === 'privat';
 
   KU_FELDER.forEach(f => {
-    const el = $(kuNeuId(f));
-    el.value = felder[f] || '';
-    el.classList.toggle('ki', !!felder[f] && !web.includes(f));
-    el.classList.toggle('web', web.includes(f));
+    const el = $(kuId(f));
+    el.value = k ? (k[f] || '') : '';
+    el.classList.remove('ki', 'web');
   });
+  // Beim Anlegen die Vorschau der nächsten freien Nummer, beim Bearbeiten die
+  // bereits vergebene -- beides nur zum Lesen (ENT-040).
+  $('ku_kundennummer').value = k
+    ? (k.kundennummer || '–')
+    : (kuNaechsteNummer || 'wird beim Speichern vergeben');
 
-  const hint = $('kuNeuKiHint');
+  kuWege = k ? (k.kontaktwege || []).map(w => ({ art: w.art, wert: w.wert })) : [];
+  kuPersonen = k ? (k.personen || []).map(p => ({
+    anrede: p.anrede || '', vorname: p.vorname || '', nachname: p.nachname || '',
+    kontaktwege: (p.kontaktwege || []).map(w => ({ art: w.art, wert: w.wert })),
+  })) : [];
+  if (!kuWege.length) kuWege = KU_WEGE_VORGABE.map(a => ({ art: a, wert: '' }));
+  if (!kuPersonen.length) kuPersonen = [kuPersonLeer()];
+
+  // Diktat und Recherche füllen dasselbe Formular vor, das auch von Hand
+  // benutzt wird. Gespeichert wird ausschliesslich durch den Knopf (ENT-015).
+  const ausDiktat = Object.keys(felder).length > 0;
+  const web = (meta.recherchiert || []).filter(f => felder[f]);
+  const gesagt = ausDiktat ? kuFelderEinsetzen(felder, web).filter(f => !web.includes(f)) : [];
+
+  kuWegeRender();
+  kuPersonenRender();
+  kuArtUm();
+  kuDlgTab('kommunikation');
+
+  $('kuTitel').textContent = ausDiktat ? 'Erkannt — bitte prüfen' : (k ? 'Kunde bearbeiten' : 'Neuer Kunde');
+  $('kuText').textContent = ausDiktat ? 'Es ist noch nichts gespeichert.' : 'Name, PLZ und Ort sind Pflicht.';
+  $('kuBtn').textContent = k ? 'Speichern' : 'Kunden anlegen';
+
+  const hint = $('kuKiHint');
   hint.classList.toggle('on', ausDiktat);
   hint.classList.toggle('web', web.length > 0);
   if (ausDiktat) {
-    const fehlt = ['name', 'strasse', 'ort', 'telefon'].filter(f => !felder[f]).map(f => KU_LABEL[f]);
-    let t = gesagt.length ? `Blau: von dir gesagt — ${esc(lbl(gesagt))}.` : '';
+    const lbl = fs => esc(fs.map(f => KU_LABEL[f] || f).join(', '));
+    let t = gesagt.length ? `Blau: von dir gesagt — ${lbl(gesagt)}.` : '';
     if (web.length) {
-      t += `${t ? ' ' : ''}<b>Gelb: aus dem Netz ergänzt — ${esc(lbl(web))}. Diese Angaben hat niemand bestätigt, bitte prüfen.</b>`;
+      t += `${t ? ' ' : ''}<b>Gelb: aus dem Netz ergänzt — ${lbl(web)}. Diese Angaben hat niemand bestätigt, bitte prüfen.</b>`;
     }
     if (!gesagt.length && !web.length) t = 'Es liess sich kein Feld zuordnen.';
+    const fehlt = kuFehlendePflicht();
     if (fehlt.length) t += ` Noch offen als Pflichtfeld: ${esc(fehlt.join(', '))}.`;
-    if (quellen.length) {
-      t += quellen.map(q => `<span class="src">Quelle: <a href="${esc(q)}" target="_blank" rel="noopener noreferrer">${esc(q)}</a></span>`).join('');
-    }
-    $('kuNeuKiText').innerHTML = t;
+    if ((meta.quellen || []).length) t += kuQuellenZeilen(meta.quellen);
+    $('kuKiText').innerHTML = t;
   }
-  $('kuNeuErr').style.display = 'none';
-  openDlg('dlgKuNeu');
-  $('kuNeuName').focus();
+
+  // Archivieren steht nur beim Bearbeiten zur Verfügung -- einen Kunden, den
+  // es noch nicht gibt, kann man nicht archivieren.
+  const zone = $('kuArchivZone');
+  zone.style.display = k ? '' : 'none';
+  if (k) {
+    const aktiv = Number(k.aktiv);
+    $('kuArchivHd').textContent = aktiv ? 'Kunde archivieren' : 'Kunde wiederherstellen';
+    $('kuArchivNote').textContent = aktiv
+      ? 'Der Kunde verschwindet aus der aktiven Auswahl, bleibt aber vollständig erhalten. Objekte, Einsätze und Rapporte bleiben unverändert.'
+      : 'Der Kunde erscheint wieder in der aktiven Auswahl.';
+    const btn = $('kuArchivBtn2');
+    btn.textContent = aktiv ? 'Archivieren' : 'Wiederherstellen';
+    btn.onclick = () => toggleArchivKunde(Number(k.id), aktiv ? 0 : 1);
+  }
+
+  $('kuErr').style.display = 'none';
+  openDlg('dlgKunde');
+  (art === 'privat' ? $('ku_vorname') : $('ku_name')).focus();
 }
 
-// Recherche im Anlegen-Dialog (ENT-042): ersetzt das frühere Recherche-
-// Häkchen im separaten Diktat-Dialog. Ergänzt nur leere Felder -- was schon
-// eingetragen ist (von Hand, per Diktat oder aus einem früheren Aufruf
-// dieses Knopfs), bleibt unangetastet.
-function kuNeuRecherche() {
-  const name = $('kuNeuName').value.trim();
+function kuQuellenZeilen(quellen) {
+  return quellen.map(q => `<span class="src">Quelle: <a href="${esc(q)}" target="_blank" rel="noopener noreferrer">${esc(q)}</a></span>`).join('');
+}
+
+// Unternehmen und Privatperson zeigen unterschiedliche Namensfelder. UID und
+// MWST-Nummer gibt es nur bei Unternehmen -- eine Privatperson hat keine, und
+// ein Feld, das nie etwas enthalten kann, gehört nicht in die Maske.
+function kuArtUm() {
+  const privat = $('kuArtPrivat').checked;
+  $('kuFirmaFelder').style.display = privat ? 'none' : '';
+  $('kuPrivatFelder').style.display = privat ? '' : 'none';
+  $('kuUidFelder').style.display = privat ? 'none' : '';
+}
+
+function kuDlgTab(t) {
+  kuDlgTabAktiv = t;
+  document.querySelectorAll('#kuDlgTabs .tab').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('#dlgKunde .kdlg-tab').forEach(v => v.classList.remove('on'));
+  $('kudtab-' + t).classList.add('on');
+  $('kudlg-' + t).classList.add('on');
+  // Die Reiterleiste sitzt unterhalb der Adressfelder. Wer sie anklickt, will
+  // den Inhalt sehen -- ohne das hier bleibt der Blick auf der Adresse stehen.
+  // Beim Öffnen des Dialogs greift das nicht: da ist er noch nicht sichtbar.
+  if ($('dlgKunde').classList.contains('on')) {
+    $('kuDlgTabs').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+}
+
+function kuFehlendePflicht() {
+  const fehlt = [];
+  if ($('kuArtPrivat').checked) {
+    if (!$('ku_vorname').value.trim()) fehlt.push('Vorname');
+    if (!$('ku_nachname').value.trim()) fehlt.push('Nachname');
+  } else if (!$('ku_name').value.trim()) {
+    fehlt.push('Name');
+  }
+  if (!$('ku_plz').value.trim()) fehlt.push('PLZ');
+  if (!$('ku_ort').value.trim()) fehlt.push('Ort');
+  return fehlt;
+}
+
+// Setzt vorbefüllte Werte ein und kennzeichnet sie: blau = gesagt, gelb = aus
+// dem Netz. Bereits Eingetragenes bleibt unangetastet. Telefon, E-Mail und
+// Webseite sind seit ENT-044 keine eigenen Felder mehr, sondern
+// Kommunikationszeilen -- sie landen in der ersten passenden leeren Zeile.
+function kuFelderEinsetzen(felder, web) {
+  const gefuellt = [];
+  // Notnagel gegen ein "4632 Trimbach" im reinen Ortsfeld: Diktat und
+  // Recherche liefern beides getrennt, aber ein Sprachmodell hält sich nicht
+  // mit Sicherheit daran. Derselbe Griff steht serverseitig in kunden.php.
+  if (felder.ort && !felder.plz) {
+    const t = String(felder.ort).trim().match(/^(\d{4})\s+(.+)$/);
+    if (t) {
+      felder = Object.assign({}, felder, { plz: t[1], ort: t[2].trim() });
+      // Die PLZ stammt dann aus derselben Quelle wie der Ort.
+      if (web.includes('ort')) web = web.concat('plz');
+    }
+  }
+  KU_FELDER.forEach(f => {
+    const wert = felder[f];
+    if (!wert) return;
+    const el = $(kuId(f));
+    if (el.value.trim()) return;
+    el.value = wert;
+    el.classList.add(web.includes(f) ? 'web' : 'ki');
+    gefuellt.push(f);
+  });
+  KU_WEG_ARTEN.forEach(a => {
+    const wert = felder[a];
+    if (!wert) return;
+    const quelle = web.includes(a) ? 'web' : 'ki';
+    const frei = kuWege.find(w => w.art === a && !String(w.wert || '').trim());
+    if (frei) { frei.wert = wert; frei.quelle = quelle; }
+    else kuWege.push({ art: a, wert, quelle });
+    gefuellt.push(a);
+  });
+  return gefuellt;
+}
+
+// ── Kommunikationszeilen der Firma ────────────────────────────────────────
+function kuWegOptionen(gewaehlt) {
+  return KU_WEG_ARTEN.map(a =>
+    `<option value="${a}"${a === gewaehlt ? ' selected' : ''}>${esc(KU_LABEL[a])}</option>`).join('');
+}
+function kuWegeRender() {
+  $('kuWegeListe').innerHTML = kuWege.map((w, i) => `
+    <div class="kw-reihe">
+      <select class="inp" data-kw="art" data-i="${i}" aria-label="Kontaktmöglichkeit">${kuWegOptionen(w.art)}</select>
+      <input class="inp${w.quelle ? ' ' + w.quelle : ''}" data-kw="wert" data-i="${i}" value="${esc(w.wert || '')}" aria-label="${esc(KU_LABEL[w.art] || 'Wert')}">
+      <button class="kw-weg" type="button" onclick="kuWegWeg(${i})" title="Zeile entfernen" aria-label="Zeile entfernen">${KU_PAPIERKORB}</button>
+    </div>`).join('');
+}
+// Vor jedem Neuzeichnen den Stand aus der Maske übernehmen -- sonst geht
+// verloren, was seit dem letzten Zeichnen getippt wurde.
+function kuWegeLesen() {
+  document.querySelectorAll('#kuWegeListe [data-kw]').forEach(el => {
+    const w = kuWege[Number(el.dataset.i)];
+    if (w) w[el.dataset.kw === 'art' ? 'art' : 'wert'] = el.value;
+  });
+}
+function kuWegHinzu() { kuWegeLesen(); kuWege.push({ art: 'telefon', wert: '' }); kuWegeRender(); }
+function kuWegWeg(i) { kuWegeLesen(); kuWege.splice(i, 1); kuWegeRender(); }
+
+// ── Ansprechpersonen ──────────────────────────────────────────────────────
+function kuPersonLeer() {
+  return { anrede: '', vorname: '', nachname: '',
+    kontaktwege: KU_PERSON_WEGE_VORGABE.map(a => ({ art: a, wert: '' })) };
+}
+function kuPersonenRender() {
+  $('kuPersonenListe').innerHTML = kuPersonen.map((p, pi) => `
+    <div class="ku-person">
+      <div class="form-grid">
+        <div class="f"><label for="kup_anrede_${pi}">Anrede</label>
+          <select class="inp" id="kup_anrede_${pi}" data-kp="anrede" data-pi="${pi}">
+            <option value=""></option>
+            <option${p.anrede === 'Herr' ? ' selected' : ''}>Herr</option>
+            <option${p.anrede === 'Frau' ? ' selected' : ''}>Frau</option>
+          </select></div>
+        <div class="f"><label for="kup_vorname_${pi}">Vorname</label>
+          <input class="inp" id="kup_vorname_${pi}" data-kp="vorname" data-pi="${pi}" value="${esc(p.vorname)}"></div>
+        <div class="f"><label for="kup_nachname_${pi}">Nachname</label>
+          <input class="inp" id="kup_nachname_${pi}" data-kp="nachname" data-pi="${pi}" value="${esc(p.nachname)}"></div>
+      </div>
+      ${p.kontaktwege.map((w, wi) => `
+        <div class="kw-reihe">
+          <select class="inp" data-kpw="art" data-pi="${pi}" data-wi="${wi}" aria-label="Kontaktmöglichkeit">${kuWegOptionen(w.art)}</select>
+          <input class="inp" data-kpw="wert" data-pi="${pi}" data-wi="${wi}" value="${esc(w.wert || '')}" aria-label="${esc(KU_LABEL[w.art] || 'Wert')}">
+          <button class="kw-weg" type="button" onclick="kuPersonWegWeg(${pi}, ${wi})" title="Zeile entfernen" aria-label="Zeile entfernen">${KU_PAPIERKORB}</button>
+        </div>`).join('')}
+      <div class="ku-person-ft">
+        <button class="btn btn-quiet btn-sm" type="button" onclick="kuPersonWegHinzu(${pi})">Weitere Kontaktmöglichkeit hinzufügen</button>
+        <button class="btn btn-quiet btn-sm" type="button" onclick="kuPersonWeg(${pi})">Kontaktperson löschen</button>
+      </div>
+    </div>`).join('');
+}
+function kuPersonenLesen() {
+  document.querySelectorAll('#kuPersonenListe [data-kp]').forEach(el => {
+    const p = kuPersonen[Number(el.dataset.pi)];
+    if (p) p[el.dataset.kp] = el.value;
+  });
+  document.querySelectorAll('#kuPersonenListe [data-kpw]').forEach(el => {
+    const p = kuPersonen[Number(el.dataset.pi)];
+    const w = p && p.kontaktwege[Number(el.dataset.wi)];
+    if (w) w[el.dataset.kpw === 'art' ? 'art' : 'wert'] = el.value;
+  });
+}
+function kuPersonHinzu() { kuPersonenLesen(); kuPersonen.push(kuPersonLeer()); kuPersonenRender(); }
+function kuPersonWeg(pi) {
+  kuPersonenLesen();
+  kuPersonen.splice(pi, 1);
+  if (!kuPersonen.length) kuPersonen = [kuPersonLeer()];
+  kuPersonenRender();
+}
+function kuPersonWegHinzu(pi) { kuPersonenLesen(); kuPersonen[pi].kontaktwege.push({ art: 'telefon', wert: '' }); kuPersonenRender(); }
+function kuPersonWegWeg(pi, wi) { kuPersonenLesen(); kuPersonen[pi].kontaktwege.splice(wi, 1); kuPersonenRender(); }
+
+// ── Recherche im Handelsregister und im Netz (ENT-019, seit ENT-042 hier) ──
+function kuRecherche() {
+  const name = $('ku_name').value.trim();
   if (!name) { toast('Bitte zuerst einen Namen eingeben.'); return; }
-  const ort = $('kuNeuOrt').value.trim();
-  const text = ort ? `${name}, ${ort}` : name;
-  const btn = $('kuNeuRechercheBtn');
+  const ort = $('ku_ort').value.trim();
+  const btn = $('kuRechercheBtn');
   const alt = btn.innerHTML;
   btn.disabled = true;
   btn.textContent = 'Suche … (bis zu 1 Min.)';
-  api('ki_kunden_recherche.php', { method: 'POST', body: { text } }).then(({ ok, data }) => {
-    btn.disabled = false; btn.innerHTML = alt;
-    if (!ok || data.status !== 'ok') { toast(data.message || 'Recherche fehlgeschlagen.'); return; }
-    const gefuellt = [];
-    KU_FELDER.forEach(f => {
-      const wert = (data.felder || {})[f];
-      if (!wert) return;
-      const el = $(kuNeuId(f));
-      if (el.value.trim()) return; // Vorhandenes bleibt unangetastet.
-      el.value = wert;
-      el.classList.add('web');
-      gefuellt.push(f);
-    });
-    if (!gefuellt.length) { toast('Keine zusätzlichen Angaben gefunden.'); return; }
-    const hint = $('kuNeuKiHint');
-    hint.classList.add('on', 'web');
-    let t = `<b>Gelb: aus dem Netz ergänzt — ${esc(gefuellt.map(f => KU_LABEL[f]).join(', '))}. Diese Angaben hat niemand bestätigt, bitte prüfen.</b>`;
-    if (data.quellen && data.quellen.length) {
-      t += data.quellen.map(q => `<span class="src">Quelle: <a href="${esc(q)}" target="_blank" rel="noopener noreferrer">${esc(q)}</a></span>`).join('');
-    }
-    $('kuNeuKiText').innerHTML = t;
-  }).catch(() => { btn.disabled = false; btn.innerHTML = alt; toast('Netzwerkfehler.'); });
+  kuWegeLesen();
+  api('ki_kunden_recherche.php', { method: 'POST', body: { text: ort ? `${name}, ${ort}` : name } })
+    .then(({ ok, data }) => {
+      btn.disabled = false; btn.innerHTML = alt;
+      if (!ok || data.status !== 'ok') { toast(data.message || 'Recherche fehlgeschlagen.'); return; }
+      const gefuellt = kuFelderEinsetzen(data.felder || {}, data.recherchiert || []);
+      kuWegeRender();
+      if (!gefuellt.length) { toast('Keine zusätzlichen Angaben gefunden.'); return; }
+      const hint = $('kuKiHint');
+      hint.classList.add('on', 'web');
+      let t = `<b>Gelb: aus dem Netz ergänzt — ${esc(gefuellt.map(f => KU_LABEL[f] || f).join(', '))}. Diese Angaben hat niemand bestätigt, bitte prüfen.</b>`;
+      if ((data.quellen || []).length) t += kuQuellenZeilen(data.quellen);
+      $('kuKiText').innerHTML = t;
+    })
+    .catch(() => { btn.disabled = false; btn.innerHTML = alt; toast('Netzwerkfehler.'); });
 }
 
-function createKunde() {
-  const err = $('kuNeuErr'); err.style.display = 'none';
-  const body = {
-    name: $('kuNeuName').value.trim(), strasse: $('kuNeuStrasse').value.trim(),
-    ort: $('kuNeuOrt').value.trim(), telefon: $('kuNeuTelefon').value.trim(),
-    kontaktperson: $('kuNeuKontaktperson').value.trim(),
-    email: $('kuNeuEmail').value.trim(), notiz: $('kuNeuNotiz').value.trim()
-  };
-  if (!body.name || !body.strasse || !body.ort || !body.telefon) {
-    err.textContent = 'Name, Strasse, Ort und Telefon sind Pflicht.'; err.style.display = ''; return;
+// ── Speichern ─────────────────────────────────────────────────────────────
+// Derselbe Knopf für beide Fälle: ohne kuDlgId wird angelegt, mit ihr
+// geändert. Leere Kommunikationszeilen fallen hier schon weg, damit gar nicht
+// erst Leerwerte über die Leitung gehen -- der Server prüft es trotzdem.
+function kuSpeichern() {
+  const err = $('kuErr');
+  err.style.display = 'none';
+  kuWegeLesen();
+  kuPersonenLesen();
+
+  const fehlt = kuFehlendePflicht();
+  if (fehlt.length) {
+    err.textContent = `Noch offen: ${fehlt.join(', ')}.`;
+    err.style.display = '';
+    return;
   }
-  const b = $('kuNeuBtn'); b.disabled = true;
-  api('kunden_create.php', { method: 'POST', body }).then(({ ok, data }) => {
+
+  const sauber = ws => ws.filter(w => String(w.wert || '').trim())
+    .map(w => ({ art: w.art, wert: String(w.wert).trim() }));
+  const body = { art: $('kuArtPrivat').checked ? 'privat' : 'unternehmen' };
+  KU_FELDER.forEach(f => { body[f] = $(kuId(f)).value.trim(); });
+  body.kontaktwege = sauber(kuWege);
+  // Die leere Vorgabe-Person, die jedes Formular anzeigt, geht gar nicht erst
+  // mit -- der Server verwirft sie zwar ohnehin, aber sie zu schicken wäre
+  // Rauschen auf der Leitung und im Netzwerkprotokoll.
+  body.personen = kuPersonen
+    .map(p => ({ anrede: p.anrede, vorname: p.vorname, nachname: p.nachname, kontaktwege: sauber(p.kontaktwege) }))
+    .filter(p => p.vorname.trim() || p.nachname.trim() || p.kontaktwege.length);
+
+  const neu = kuDlgId === null;
+  if (!neu) body.id = kuDlgId;
+  const b = $('kuBtn');
+  b.disabled = true;
+  api(neu ? 'kunden_create.php' : 'kunden_update.php', { method: 'POST', body }).then(({ ok, data }) => {
     b.disabled = false;
-    if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Anlegen fehlgeschlagen.'; err.style.display = ''; return; }
-    closeDlg('dlgKuNeu');
-    Promise.all([loadKunden(), loadStats()]).then(() => toast('Kunde angelegt.'));
-  });
-}
-
-// Bearbeiten-Schublade: erreichbar über das Zeilenmenü und über den
-// "Bearbeiten"-Knopf der Detailseite (ENT-040) -- ein einziges Formular,
-// zwei Einstiege. Archivieren ersetzt das frühere endgültige Löschen.
-function openKundeBearbeiten(id) {
-  const k = kunden.find(x => Number(x.id) === Number(id));
-  if (!k) return;
-  drawerId = null; maTarget = null;
-  kuTarget = k.id;
-  $('drTitle').textContent = k.name;
-  $('drBody').innerHTML = `
-    <div class="form-grid">
-      <div class="f wide"><label for="kuE_name">Name *</label><input class="inp" id="kuE_name" value="${esc(k.name)}"></div>
-      <div class="f wide"><label for="kuE_strasse">Strasse *</label><input class="inp" id="kuE_strasse" value="${esc(k.strasse || '')}"></div>
-      <div class="f"><label for="kuE_ort">PLZ / Ort *</label><input class="inp" id="kuE_ort" value="${esc(k.ort || '')}"></div>
-      <div class="f"><label for="kuE_telefon">Telefon *</label><input class="inp" id="kuE_telefon" value="${esc(k.telefon || '')}"></div>
-      <div class="f"><label for="kuE_kontaktperson">Kontaktperson</label><input class="inp" id="kuE_kontaktperson" value="${esc(k.kontaktperson || '')}"></div>
-      <div class="f"><label for="kuE_email">E-Mail</label><input class="inp" id="kuE_email" type="email" value="${esc(k.email || '')}"></div>
-      <div class="f wide"><label for="kuE_notiz">Notiz</label><textarea class="inp" id="kuE_notiz" rows="3">${esc(k.notiz || '')}</textarea></div>
-    </div>
-    <div class="zone">
-      <div class="zone-hd">${Number(k.aktiv) ? 'Kunde archivieren' : 'Kunde wiederherstellen'}</div>
-      <div class="zone-note">${Number(k.aktiv)
-        ? 'Der Kunde verschwindet aus der aktiven Auswahl, bleibt aber vollständig erhalten. Objekte, Einsätze und Rapporte bleiben unverändert.'
-        : 'Der Kunde erscheint wieder in der aktiven Auswahl.'}</div>
-      <button class="btn btn-plain btn-sm" onclick="toggleArchivKunde(${Number(k.id)}, ${Number(k.aktiv) ? 0 : 1})">${Number(k.aktiv) ? 'Archivieren' : 'Wiederherstellen'}</button>
-    </div>`;
-  $('drFoot').innerHTML =
-    `<button class="btn btn-plain" onclick="closeDrawer()">Schliessen</button>
-     <div style="flex:1"></div>
-     <button class="btn btn-primary" onclick="saveKunde()">Speichern</button>`;
-  showDrawer();
-}
-
-function saveKunde() {
-  if (!kuTarget) return;
-  const body = {
-    id: kuTarget,
-    name: $('kuE_name').value.trim(), strasse: $('kuE_strasse').value.trim(),
-    ort: $('kuE_ort').value.trim(), telefon: $('kuE_telefon').value.trim(),
-    kontaktperson: $('kuE_kontaktperson').value.trim(),
-    email: $('kuE_email').value.trim(), notiz: $('kuE_notiz').value.trim()
-  };
-  if (!body.name || !body.strasse || !body.ort || !body.telefon) { toast('Name, Strasse, Ort und Telefon sind Pflicht.'); return; }
-  api('kunden_update.php', { method: 'POST', body }).then(({ ok, data }) => {
-    if (!ok || data.status !== 'ok') { toast(data.message || 'Speichern fehlgeschlagen.'); return; }
-    closeDrawer();
-    loadKunden().then(() => { toast('Kunde gespeichert.'); if (kuTab === 'detail') renderKundeDetail(); });
+    if (!ok || data.status !== 'ok') {
+      err.textContent = data.message || 'Speichern fehlgeschlagen.';
+      err.style.display = '';
+      return;
+    }
+    closeDlg('dlgKunde');
+    Promise.all([loadKunden(), loadStats()]).then(() => {
+      toast(neu ? 'Kunde angelegt.' : 'Kunde gespeichert.');
+      if (kuTab === 'detail') renderKundeDetail();
+    });
   });
 }
 
 // ══════════════════════════════════════════ DIKTAT
 // Die seitengebundenen Einzel-Diktate (openKi/dlgKi) sind seit ENT-042 im
 // globalen Sprechen-Router aufgegangen -- siehe rtDialogOeffnen() weiter
-// oben. Die Recherche fuer Kunden lebt jetzt in kuNeuRecherche(), direkt im
+// oben. Die Recherche fuer Kunden lebt jetzt in kuRecherche(), direkt im
 // Anlegen-Dialog.
 
 function printReport() {

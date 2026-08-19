@@ -67,7 +67,11 @@ function anthropic_recherche_kunde(string $text): ?array
         return null;
     }
 
-    $felder = ['name', 'strasse', 'ort', 'telefon', 'email'];
+    // Seit ENT-044 fuehrt der Kundenstamm PLZ, Ort und Hausnummer getrennt und
+    // kennt UID und Webseite. Genau diese Angaben stehen im Handelsregister --
+    // die Recherche liefert sie darum gleich mit, statt dass sie hinterher von
+    // Hand nachgetragen werden (KI-Effizienz nach ENT-012).
+    $felder = ['name', 'strasse', 'hausnummer', 'plz', 'ort', 'telefon', 'email', 'webseite', 'uid'];
 
     $uebernehmen = [
         'name' => 'kunde_uebernehmen',
@@ -76,10 +80,14 @@ function anthropic_recherche_kunde(string $text): ?array
             'type' => 'object',
             'properties' => [
                 'name'     => ['type' => 'string', 'description' => 'Offizieller Firmenname inkl. Rechtsform, z.B. "Borner AG"'],
-                'strasse'  => ['type' => 'string', 'description' => 'Strasse und Hausnummer des Firmensitzes, ohne Ort'],
-                'ort'      => ['type' => 'string', 'description' => 'Postleitzahl und Ort zusammen, z.B. "4652 Winznau"'],
+                'strasse'  => ['type' => 'string', 'description' => 'Nur der Strassenname des Firmensitzes, OHNE Hausnummer und ohne Ort'],
+                'hausnummer' => ['type' => 'string', 'description' => 'Nur die Hausnummer, z.B. "4" oder "12a"'],
+                'plz'      => ['type' => 'string', 'description' => 'Nur die vierstellige Postleitzahl, z.B. "4652"'],
+                'ort'      => ['type' => 'string', 'description' => 'Nur der Ortsname ohne Postleitzahl, z.B. "Winznau"'],
                 'telefon'  => ['type' => 'string', 'description' => 'Allgemeine Telefonnummer der Firma'],
                 'email'    => ['type' => 'string', 'description' => 'Allgemeine E-Mail-Adresse der Firma'],
+                'webseite' => ['type' => 'string', 'description' => 'Adresse der Firmenwebseite, z.B. "https://www.borner.ch"'],
+                'uid'      => ['type' => 'string', 'description' => 'Schweizer Unternehmens-Identifikationsnummer in der Form CHE-123.456.789. Nur uebernehmen, wenn sie belegt im Handelsregister steht.'],
                 'recherchiert' => [
                     'type' => 'array',
                     'items' => ['type' => 'string', 'enum' => $felder],
@@ -354,10 +362,15 @@ function anthropic_route_diktat(string $text, array $kunden, array $mitarbeiter,
                 'kunde' => [
                     'type' => 'object',
                     'description' => 'Nur ausfuellen, wenn bereich = kunde.',
+                    // PLZ und Ort getrennt seit ENT-044 -- der Kundenstamm
+                    // fuehrt sie in zwei Feldern, und Zusammensetzen ist
+                    // einfacher als spaeteres Auseinandernehmen.
                     'properties' => [
                         'name' => ['type' => 'string'], 'strasse' => ['type' => 'string'],
-                        'ort' => ['type' => 'string'], 'telefon' => ['type' => 'string'],
-                        'email' => ['type' => 'string'],
+                        'hausnummer' => ['type' => 'string'],
+                        'plz' => ['type' => 'string', 'description' => 'Nur die vierstellige Postleitzahl.'],
+                        'ort' => ['type' => 'string', 'description' => 'Nur der Ortsname, ohne Postleitzahl.'],
+                        'telefon' => ['type' => 'string'], 'email' => ['type' => 'string'],
                     ],
                 ],
                 'einsatz' => [

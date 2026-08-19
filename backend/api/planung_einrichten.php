@@ -190,6 +190,39 @@ CREATE TABLE IF NOT EXISTS verfuegbarkeiten (
   FOREIGN KEY (mitarbeiter_id) REFERENCES mitarbeiter(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+// Ansprechpersonen eines Kunden (ENT-044). Eigene Tabelle statt eines
+// Textfelds, weil ein Kunde mehrere haben kann -- das bisherige Feld
+// kunden.kontaktperson bleibt als Kurzfassung der ersten Person bestehen,
+// damit Liste, Suche und CSV unveraendert weiterlaufen.
+'kunden_person' => "
+CREATE TABLE IF NOT EXISTS kunden_person (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  kunde_id INT NOT NULL,
+  anrede VARCHAR(20) NULL,
+  vorname VARCHAR(100) NULL,
+  nachname VARCHAR(100) NULL,
+  sortierung INT NOT NULL DEFAULT 0,
+  KEY idx_kunde (kunde_id, sortierung),
+  FOREIGN KEY (kunde_id) REFERENCES kunden(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Kommunikationswege -- wahlweise der Firma selbst (person_id NULL) oder
+// einer ihrer Ansprechpersonen. Eine Tabelle fuer beides, weil Aufbau und
+// Bedienung identisch sind; zwei fast gleiche Tabellen waeren doppelte Logik.
+'kunden_kontaktweg' => "
+CREATE TABLE IF NOT EXISTS kunden_kontaktweg (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  kunde_id INT NOT NULL,
+  person_id INT NULL,
+  art VARCHAR(20) NOT NULL,
+  wert VARCHAR(255) NOT NULL,
+  sortierung INT NOT NULL DEFAULT 0,
+  KEY idx_kunde (kunde_id, sortierung),
+  KEY idx_person (person_id),
+  FOREIGN KEY (kunde_id) REFERENCES kunden(id) ON DELETE CASCADE,
+  FOREIGN KEY (person_id) REFERENCES kunden_person(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 ];
 
 foreach ($tabellen as $name => $sql) {
@@ -222,6 +255,19 @@ $spalten = [
     ['kunden', 'kontaktperson', 'ALTER TABLE kunden ADD COLUMN kontaktperson VARCHAR(200) NULL AFTER telefon'],
     ['kunden', 'notiz',         'ALTER TABLE kunden ADD COLUMN notiz TEXT NULL AFTER email'],
     ['kunden', 'aktiv',         'ALTER TABLE kunden ADD COLUMN aktiv TINYINT(1) NOT NULL DEFAULT 1 AFTER notiz'],
+    // Ausbau des Kundenstamms (ENT-044). Der Bestand ist ausnahmslos
+    // Unternehmen -- die Vorgabe traegt die Altdaten damit richtig, ohne dass
+    // etwas von Hand nachzutragen waere. Alle uebrigen Felder sind freiwillig.
+    ['kunden', 'art',         "ALTER TABLE kunden ADD COLUMN art VARCHAR(20) NOT NULL DEFAULT 'unternehmen' AFTER kundennummer"],
+    ['kunden', 'anrede',      'ALTER TABLE kunden ADD COLUMN anrede VARCHAR(20) NULL AFTER art'],
+    ['kunden', 'vorname',     'ALTER TABLE kunden ADD COLUMN vorname VARCHAR(100) NULL AFTER anrede'],
+    ['kunden', 'nachname',    'ALTER TABLE kunden ADD COLUMN nachname VARCHAR(100) NULL AFTER vorname'],
+    ['kunden', 'zusatzfeld',  'ALTER TABLE kunden ADD COLUMN zusatzfeld VARCHAR(200) NULL AFTER name'],
+    ['kunden', 'hausnummer',  'ALTER TABLE kunden ADD COLUMN hausnummer VARCHAR(20) NULL AFTER strasse'],
+    ['kunden', 'adresszusatz','ALTER TABLE kunden ADD COLUMN adresszusatz VARCHAR(200) NULL AFTER hausnummer'],
+    ['kunden', 'plz',         'ALTER TABLE kunden ADD COLUMN plz VARCHAR(10) NULL AFTER adresszusatz'],
+    ['kunden', 'uid',         'ALTER TABLE kunden ADD COLUMN uid VARCHAR(20) NULL AFTER ort'],
+    ['kunden', 'mwst_nr',     'ALTER TABLE kunden ADD COLUMN mwst_nr VARCHAR(20) NULL AFTER uid'],
 ];
 foreach ($spalten as [$tabelle, $spalte, $sql]) {
     if (!hat_tabelle($pdo, $tabelle) || hat_spalte($pdo, $tabelle, $spalte)) {
@@ -248,6 +294,31 @@ if (hat_spalte($pdo, 'kunden', 'kundennummer')) {
                 $pdo->prepare('UPDATE kunden SET kundennummer = ? WHERE id = ?')->execute([$nr, $kid]);
             }
             $getan[] = count($ohneNummer) . ' Kundennummer(n) vergeben';
+        }
+    }
+}
+
+// ── 2c. PLZ aus dem bisherigen Ort-Feld herausloesen (ENT-044). Bis hierher
+// stand beides zusammen in einer Spalte ("4632 Trimbach"). Getrennt wird nur,
+// wo das Muster eindeutig ist: vier Ziffern, Leerzeichen, Rest. Passt es
+// nicht, bleibt der Wert unveraendert stehen -- lieber ungetrennt als falsch
+// zerlegt. Laeuft nur ueber Kunden, deren plz noch leer ist, und ist damit
+// beliebig oft wiederholbar.
+if (hat_spalte($pdo, 'kunden', 'plz')) {
+    $ungetrennt = $pdo->query(
+        "SELECT id, ort FROM kunden
+         WHERE (plz IS NULL OR plz = '') AND ort REGEXP '^[0-9]{4}[[:space:]]' ORDER BY id"
+    )->fetchAll();
+    if ($ungetrennt) {
+        if ($nurPruefen) {
+            $getan[] = count($ungetrennt) . ' Kunde(n) mit PLZ und Ort in einem Feld';
+        } else {
+            $s = $pdo->prepare('UPDATE kunden SET plz = ?, ort = ? WHERE id = ?');
+            foreach ($ungetrennt as $k) {
+                [$plz, $ort] = plz_ort_trennen((string)$k['ort']);
+                $s->execute([$plz, $ort, (int)$k['id']]);
+            }
+            $getan[] = count($ungetrennt) . ' Adresse(n) in PLZ und Ort getrennt';
         }
     }
 }

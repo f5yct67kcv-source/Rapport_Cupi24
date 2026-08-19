@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require __DIR__ . '/../kunden.php';
 
 $user = require_session();
 if (!$user['ist_admin']) {
@@ -12,23 +13,48 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $input = json_decode(file_get_contents('php://input'), true) ?? [];
 $id = (int)($input['id'] ?? 0);
-$name = trim((string)($input['name'] ?? ''));
-$strasse = trim((string)($input['strasse'] ?? ''));
-$ort = trim((string)($input['ort'] ?? ''));
-$telefon = trim((string)($input['telefon'] ?? ''));
-$kontaktperson = trim((string)($input['kontaktperson'] ?? '')) ?: null;
-$email = trim((string)($input['email'] ?? '')) ?: null;
-$notiz = trim((string)($input['notiz'] ?? '')) ?: null;
+if ($id <= 0) {
+    json_response(['status' => 'error', 'message' => 'Kunde erforderlich'], 400);
+}
 
-if ($id <= 0 || $name === '' || $strasse === '' || $ort === '' || $telefon === '') {
-    json_response(['status' => 'error', 'message' => 'Name, Strasse, Ort und Telefon erforderlich'], 400);
+$pdo = db();
+$s = $pdo->prepare('SELECT * FROM kunden WHERE id = ?');
+$s->execute([$id]);
+$alt = $s->fetch();
+if (!$alt) {
+    json_response(['status' => 'error', 'message' => 'Kunde nicht gefunden'], 404);
+}
+
+// Teiltolerant gegen den bisherigen Bestand: Felder, die die Anfrage nicht
+// mitschickt, behalten ihren Wert. Der Admin-Bereich der Erfassung
+// (index.html) kennt nur Name, Strasse, Ort, Telefon und E-Mail und wuerde
+// die seit ENT-044 dazugekommenen Felder sonst bei jedem Speichern leeren.
+$gelesen = kunden_eingabe_lesen($input, (array)$alt);
+$spalten = $gelesen['spalten'];
+
+if ($spalten['name'] === '') {
+    json_response(['status' => 'error', 'message' => $spalten['art'] === 'privat'
+        ? 'Vor- und Nachname erforderlich' : 'Name erforderlich'], 400);
+}
+if ($spalten['plz'] === '' || $spalten['ort'] === '') {
+    json_response(['status' => 'error', 'message' => 'PLZ und Ort erforderlich'], 400);
 }
 
 // Die Kundennummer ist bewusst nicht Teil dieses Aufrufs -- sie wird einmalig
 // bei Anlage vergeben und bleibt danach unveraendert (ENT-040).
-$stmt = db()->prepare(
-    'UPDATE kunden SET name = ?, strasse = ?, ort = ?, telefon = ?, kontaktperson = ?, email = ?, notiz = ? WHERE id = ?'
-);
-$stmt->execute([$name, $strasse, $ort, $telefon, $kontaktperson, $email, $notiz, $id]);
+$pdo->beginTransaction();
+try {
+    $zuweisung = implode(' = ?, ', array_keys($spalten)) . ' = ?';
+    $pdo->prepare("UPDATE kunden SET $zuweisung WHERE id = ?")
+        ->execute(array_merge(array_values($spalten), [$id]));
+
+    if ($gelesen['kinder'] !== null) {
+        kunden_kinder_speichern($pdo, $id, $gelesen['kinder']['kontaktwege'], $gelesen['kinder']['personen']);
+    }
+    $pdo->commit();
+} catch (Throwable $e) {
+    $pdo->rollBack();
+    throw $e;
+}
 
 json_response(['status' => 'ok']);

@@ -5,6 +5,7 @@
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
 require __DIR__ . '/../ai.php';
+require __DIR__ . '/../kunden.php'; // plz_ort_trennen()
 
 $user = require_session();
 if (!$user['ist_admin']) {
@@ -29,10 +30,25 @@ if ($ergebnis === null) {
 }
 
 $felder = [];
-foreach (['name', 'strasse', 'ort', 'telefon', 'email'] as $f) {
+foreach (['name', 'strasse', 'hausnummer', 'plz', 'ort', 'telefon', 'email', 'webseite', 'uid'] as $f) {
     $wert = trim((string)($ergebnis[$f] ?? ''));
     if ($wert !== '') {
         $felder[$f] = $wert;
+    }
+}
+
+// Notnagel, falls das Modell PLZ und Ort trotz der Feldbeschreibung zusammen
+// liefert -- lieber hier sauber trennen als eine "4652 Winznau"-Zeile im
+// reinen Ortsfeld stehen lassen (ENT-044).
+$recherchiert = array_map('strval', (array)($ergebnis['recherchiert'] ?? []));
+if (isset($felder['ort']) && !isset($felder['plz'])) {
+    [$plz, $ort] = plz_ort_trennen($felder['ort']);
+    if ($plz !== '') {
+        $felder['plz'] = $plz;
+        $felder['ort'] = $ort;
+        // Die PLZ stammt dann aus derselben Quelle wie der Ort und muss
+        // genauso gelb gekennzeichnet werden.
+        if (in_array('ort', $recherchiert, true)) { $recherchiert[] = 'plz'; }
     }
 }
 
@@ -48,9 +64,6 @@ foreach ((array)($ergebnis['quellen'] ?? []) as $q) {
 json_response([
     'status' => 'ok',
     'felder' => $felder,
-    'recherchiert' => array_values(array_intersect(
-        array_map('strval', (array)($ergebnis['recherchiert'] ?? [])),
-        array_keys($felder)
-    )),
+    'recherchiert' => array_values(array_intersect($recherchiert, array_keys($felder))),
     'quellen' => array_slice($quellen, 0, 3),
 ]);
