@@ -78,8 +78,40 @@ if ($gewuenscht) {
 // Niemand darf zur selben Zeit an zwei Orten sein (ENT-022). Die Pruefung
 // gehoert hierher und nicht nur in die Oberflaeche -- ein Aufruf am Browser
 // vorbei wuerde sie sonst umgehen.
+// Umplanung (ENT-060): Wer hier ausdruecklich genannt ist, wird aus den
+// kollidierenden Schichten entfernt statt abgewiesen. Der Aufruf muss die
+// Namen einzeln nennen -- ein pauschales "mach schon" gibt es nicht, damit
+// niemand versehentlich eine ganze Mannschaft umdisponiert.
+$umplanen = array_values(array_unique(array_map('intval', (array)($input['umplanen'] ?? []))));
+
 if ($zuteilung) {
     $doppelt = doppelbelegungen($id, $datum, $von, $bis, $zuteilung);
+    if ($doppelt && $umplanen) {
+        $pdoU = db();
+        $pdoU->beginTransaction();
+        try {
+            $blockiert = umplanen($pdoU, $doppelt, $umplanen);
+            $pdoU->commit();
+        } catch (Throwable $e) {
+            $pdoU->rollBack();
+            throw $e;
+        }
+        if ($blockiert) {
+            $namen = [];
+            foreach ($blockiert as $d) {
+                $namen[$d['name']] = $d['name'] . ': ' . $d['was'] . ' ist bereits abgeglichen';
+            }
+            json_response([
+                'status' => 'error',
+                'gesperrt' => true,
+                'message' => 'Umplanen nicht moeglich — ' . implode(' — ', $namen)
+                    . '. Dort steht bereits geleistete Zeit; zuerst unter Abgleich die Sperre aufheben.',
+                'doppelbelegung' => array_values($blockiert),
+            ], 409);
+        }
+        // Nach dem Umplanen ist der Weg frei.
+        $doppelt = doppelbelegungen($id, $datum, $von, $bis, $zuteilung);
+    }
     if ($doppelt) {
         $namen = [];
         foreach ($doppelt as $d) {

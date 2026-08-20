@@ -848,6 +848,19 @@ tbody tr.zu .i-schloss { color: var(--warn); }
    die wirklich unmoeglich ist. */
 .ma-pick .who .sperrtag { display: block; font-size: 11.5px; font-weight: 620; color: var(--warn); margin-top: 2px; }
 
+/* Verfuegbarkeit auf einen Blick (ENT-060). Gruen heisst: im gewaehlten
+   Zeitraum frei. Warngelb heisst nicht "verboten", sondern "kostet eine
+   Umplanung" -- die Person steht schon woanders. */
+.ma-pick label.frei { border-left: 3px solid var(--pos, #16a34a); }
+.ma-pick label.umzuplanen { border-left: 3px solid var(--warn); }
+.ma-pick .who .frei-marke { display: block; font-size: 11.5px; font-weight: 620; color: var(--pos, #16a34a); margin-top: 2px; }
+.ma-pick .who .clash { display: block; font-size: 11.5px; font-weight: 620; color: var(--warn); margin-top: 2px; }
+
+/* Von und Bis nebeneinander (ENT-060) -- sie werden zusammen gelesen. */
+.zeitpaar .zp { display: flex; align-items: center; gap: 8px; }
+.zeitpaar .zp .inp { flex: 1; min-width: 0; }
+.zeitpaar .zp .tr { color: var(--ink-3); flex: none; }
+
 /* ── Begrüssungs-Container mit Diktat-Router (ENT-032) */
 .begr-karte .card-bd { padding: 22px 24px; }
 .begr-kopf h2 { font-size: 21px; font-weight: 720; letter-spacing: -.3px; margin-bottom: 4px; }
@@ -1159,6 +1172,19 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
   .btn-burger { display: inline-flex; }
   .nur-schublade { display: flex; }
   .ohne-schublade { display: none !important; }
+  /* Schicht bearbeiten heisst auf dem Handy: ganzer Bildschirm (ENT-060).
+     Ein Dialog mit Rand und abgerundeten Ecken verschenkt auf 390 px die
+     Haelfte der Flaeche an Kulisse -- und das Formular hat jetzt mehr Felder,
+     nicht weniger. */
+  /* Die Auswahl nennt die Varianten einzeln: .dlg.wide und .dlg.narrow sind
+     spezifischer als .dlg und wuerden ihre Maximalbreite sonst behalten. */
+  .dlg, .dlg.wide, .dlg.narrow, .dlg.breit, .drawer {
+    position: fixed; inset: 0; width: 100%; max-width: none;
+    height: 100%; max-height: none; border-radius: 0; margin: 0;
+    display: flex; flex-direction: column;
+  }
+  .dlg-bd, .drawer-bd { flex: 1; overflow-y: auto; }
+  .dlg-ft, .drawer-ft { flex: none; }
   /* iOS zoomt beim Antippen in jedes Feld unter 16 px hinein -- und bleibt
      dann dort. 16 px ist keine Geschmacksfrage, sondern die Schwelle. */
   .inp, .search input, input, select, textarea { font-size: 16px; }
@@ -2250,9 +2276,29 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
           <label for="enNKunde_name">Kunde *</label>
           <input class="inp" id="enNKunde_name" list="dlKunden" autocomplete="off" placeholder="Firma aus der Kundendatei oder frei eingeben">
         </div>
-        <div class="f wide">
-          <label for="enNTitel">Bezeichnung</label>
-          <input class="inp" id="enNTitel" placeholder="z. B. Fasnachtsumzug, Baustelle Kreisel">
+        <!-- Die Bezeichnung ist kein Eingabefeld mehr (ENT-060), aber sie darf
+             nicht verlorengehen: Objektschichten tragen hier den Namen ihrer
+             Masterschicht ("Revierdienst Öffnungsrunde"). Als verstecktes Feld
+             laeuft der Wert unveraendert durch Laden und Speichern. -->
+        <input type="hidden" id="enNTitel" value="">
+        <div class="f"><label for="enNEinsatzart">Einsatzart</label>
+          <select class="inp" id="enNEinsatzart">
+            <option>Verkehrsdienst</option>
+            <option>Revierdienst</option>
+            <option>Sicherheitsdienst</option>
+            <option>Reinigung</option>
+          </select>
+        </div>
+        <div class="f"><label for="enNDatum">Datum *</label><input class="inp" id="enNDatum" type="date" onchange="pickRefresh('enN')"></div>
+        <!-- Von und Bis nebeneinander: sie gehoeren zusammen und werden
+             zusammen gelesen. -->
+        <div class="f zeitpaar">
+          <label>Zeit *</label>
+          <div class="zp">
+            <input class="inp" id="enNVon" type="time" aria-label="Von" onchange="pickRefresh('enN')">
+            <span class="tr">–</span>
+            <input class="inp" id="enNBis" type="time" aria-label="Bis" onchange="pickRefresh('enN')">
+          </div>
         </div>
         <div class="f wide">
           <label for="enNStrasse">Arbeitsort — Strasse</label>
@@ -2265,18 +2311,14 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             <option value="reinigung">Reinigung</option>
           </select>
         </div>
-        <div class="f"><label for="enNEinsatzart">Einsatzart</label><input class="inp" id="enNEinsatzart" value="Verkehrsdienst"></div>
-        <div class="f"><label for="enNDatum">Datum *</label><input class="inp" id="enNDatum" type="date" onchange="pickRefresh('enN')"></div>
         <div class="f"><label for="enNBedarf">Benötigte Mitarbeitende</label><input class="inp" id="enNBedarf" type="number" min="0" max="99" value="1" oninput="pickFoot('enN')"></div>
-        <div class="f"><label for="enNVon">Von *</label><input class="inp" id="enNVon" type="time" onchange="pickRefresh('enN')"></div>
-        <div class="f"><label for="enNBis">Bis *</label><input class="inp" id="enNBis" type="time" onchange="pickRefresh('enN')"></div>
+        <div class="f"><label for="enNStatus">Status</label><select class="inp" id="enNStatus"><option value="geplant">Geplant</option><option value="bestaetigt">Bestätigt</option><option value="abgesagt">Abgesagt</option></select></div>
         <div class="f wide">
           <label>Zugeteilte Mitarbeitende</label>
           <div class="ma-pick" id="enNMa"></div>
           <div class="pick-foot" id="enNMaFoot"></div>
         </div>
-        <div class="f"><label for="enNStatus">Status</label><select class="inp" id="enNStatus"><option value="geplant">Geplant</option><option value="bestaetigt">Bestätigt</option><option value="abgesagt">Abgesagt</option></select></div>
-        <div class="f wide"><label for="enNBemerkung">Bemerkung</label><textarea class="inp" id="enNBemerkung" rows="2" style="min-height:60px"></textarea></div>
+        <div class="f wide"><label for="enNBemerkung">Bemerkung</label><textarea class="inp" id="enNBemerkung" rows="3" style="min-height:84px"></textarea></div>
       </div>
     </div>
     <div class="dlg-ft">
@@ -3896,6 +3938,20 @@ const EN_STATUS = {
   geplant: ['Geplant', 'chip-n'], bestaetigt: ['Bestätigt', 'chip-p'],
   provisorisch: ['Provisorisch', 'chip-a'], abgesagt: ['Abgesagt', 'chip-x']
 };
+// Vorgegebene Einsatzarten (ENT-060). Vom Projektinhaber festgelegt.
+const EINSATZARTEN = ['Verkehrsdienst', 'Revierdienst', 'Sicherheitsdienst', 'Reinigung'];
+
+// Wichtig: Ein bestehender Einsatz kann eine Einsatzart tragen, die nicht in
+// der Liste steht -- aus der Zeit vor dieser Festlegung oder von einer
+// Masterschicht. Die wird ergaenzt statt stillschweigend ueberschrieben. Sonst
+// aendert schon das blosse Oeffnen und Speichern die Einsatzart.
+function einsatzartOptionen(wert) {
+  const w = (wert || '').trim();
+  const liste = EINSATZARTEN.slice();
+  if (w && !liste.includes(w)) { liste.push(w); }
+  return liste.map(a => `<option${a === w ? ' selected' : ''}>${esc(a)}</option>`).join('');
+}
+
 const EN_FELDER = ['kunde_name', 'titel', 'strasse', 'ort', 'einsatzart', 'sparte', 'datum', 'von', 'bis', 'bedarf', 'bemerkung'];
 const EN_LABEL = { kunde_name: 'Kunde', titel: 'Bezeichnung', strasse: 'Strasse', ort: 'Arbeitsort',
   einsatzart: 'Einsatzart', sparte: 'Sparte', datum: 'Datum', von: 'Von', bis: 'Bis', bedarf: 'Anzahl', bemerkung: 'Bemerkung' };
@@ -4145,17 +4201,21 @@ function pickRender(prefix, ids, ausserId) {
   box.innerHTML = mitarbeiter.map(m => {
     const c = k[m.id] || [];
     const dabei = gewaehlt.has(Number(m.id));
-    // Wer zur selben Zeit anderswo eingeteilt ist, lässt sich nicht auswählen.
-    // Bereits Zugeteilte bleiben bedienbar, damit sich eine bestehende
-    // Doppelbelegung überhaupt auflösen lässt.
-    const gesperrt = c.length > 0 && !dabei;
+    // Seit ENT-060 ist ein Konflikt keine Sackgasse mehr, sondern der Anfang
+    // einer Umplanung: Das Haekchen bleibt bedienbar, beim Setzen wird
+    // gefragt, und nach dem Ja verlaesst die Person die andere Schicht.
+    // Niemand ist danach an zwei Orten -- ENT-022 gilt unveraendert.
     const clash = c.map(x => `${x.titel || x.kunde_name} ${hm(x.von)}–${hm(x.bis)}`).join(', ');
-    return `<label class="${gesperrt ? 'gesperrt' : ''}">
-      <input type="checkbox" value="${Number(m.id)}"${dabei ? ' checked' : ''}${gesperrt ? ' disabled' : ''} onchange="pickFoot('${prefix}')">
+    return `<label class="${c.length ? 'umzuplanen' : 'frei'}">
+      <input type="checkbox" value="${Number(m.id)}"${dabei ? ' checked' : ''}
+             data-clash="${esc(clash)}" data-name="${esc(fullName(m) || m.name)}"
+             onchange="pickWahl('${prefix}', this)">
       <span class="who">
         <b>${esc(fullName(m) || m.name)}</b>
         <span>${esc(m.name)}</span>
-        ${c.length ? `<span class="clash${gesperrt ? ' sperr' : ''}">${gesperrt ? 'Nicht verfügbar — schon eingeteilt' : 'Doppelbelegung — bitte entfernen'}: ${esc(clash)}</span>` : ''}
+        ${c.length
+          ? `<span class="clash">Bereits eingeteilt: ${esc(clash)}</span>`
+          : `<span class="frei-marke">verfügbar</span>`}
       </span>
     </label>`;
   }).join('');
@@ -4163,6 +4223,36 @@ function pickRender(prefix, ids, ausserId) {
 }
 
 // Datum oder Zeit geändert → Überschneidungen neu bestimmen, Auswahl behalten.
+// Wer umgeplant werden soll -- je Formular gemerkt, damit der Speicheraufruf
+// die Namen einzeln nennen kann (ENT-060). Ein pauschales "mach schon" gibt es
+// nicht: der Server verlangt die Liste, damit niemand versehentlich eine ganze
+// Mannschaft umdisponiert.
+const pickUmplanen = { enN: new Set(), enE: new Set() };
+const pickUmplanenListe = prefix => Array.from(pickUmplanen[prefix] || []);
+
+// Haekchen gesetzt oder entfernt. Bei einem Konflikt wird gefragt -- und die
+// Frage sagt, was tatsaechlich passiert: die Person verlaesst die andere
+// Schicht. "Wirklich einsetzen?" allein waere zu wenig; wer das liest, denkt
+// an eine zweite Einteilung statt an eine Umplanung.
+function pickWahl(prefix, el) {
+  const id = Number(el.value);
+  const clash = el.dataset.clash || '';
+  const menge = pickUmplanen[prefix] || (pickUmplanen[prefix] = new Set());
+  if (el.checked && clash) {
+    const name = el.dataset.name || 'Diese Person';
+    const ok = confirm(
+      name + ' ist im gewählten Zeitraum bereits eingeteilt:\n' + clash + '\n\n'
+      + 'Beim Speichern wird ' + name + ' aus dieser Schicht entfernt und hier eingesetzt. '
+      + 'Die andere Schicht bleibt bestehen und ist danach unterbesetzt.\n\nWirklich umplanen?'
+    );
+    if (!ok) { el.checked = false; menge.delete(id); pickFoot(prefix); return; }
+    menge.add(id);
+  } else if (!el.checked) {
+    menge.delete(id);
+  }
+  pickFoot(prefix);
+}
+
 function pickRefresh(prefix) {
   pickRender(prefix, pickIds(prefix), prefix === 'enE' ? enTarget : null);
 }
@@ -4236,7 +4326,11 @@ function enSammeln(prefix) {
     bedarf: Math.min(99, Math.max(0, parseInt(v('bedarf'), 10) || 0)),
     status: v('status') || 'geplant',
     bemerkung: v('bemerkung'),
-    mitarbeiter: pickIds(prefix)
+    mitarbeiter: pickIds(prefix),
+    // Nur wer ausdruecklich bestaetigt wurde, wird umgeplant (ENT-060). Die
+    // Liste geht mit, damit der Server dieselbe Entscheidung trifft wie die
+    // Oberflaeche -- und nur diese eine.
+    umplanen: pickUmplanenListe(prefix)
   };
   if (!body.kunde_name || !body.ort || !body.datum || !body.von || !body.bis) return null;
   // Nur verknüpfen, wenn der Name exakt einem Kunden entspricht. Sonst bleibt
@@ -4307,7 +4401,21 @@ function openEinsatz(id) {
     </div>` : ''}
     <div class="form-grid">
       <div class="f wide"><label for="enEKunde_name">Kunde *</label><input class="inp" id="enEKunde_name"${sperr} list="dlKunden" value="${esc(e.kunde_name)}"></div>
-      <div class="f wide"><label for="enETitel">Bezeichnung</label><input class="inp" id="enETitel"${sperr} value="${esc(e.titel || '')}"></div>
+      <!-- Traegt die Sperre mit, damit die Zusicherung "alle Felder gesperrt"
+           wortwoertlich stimmt. Auslesen laesst sich der Wert trotzdem. -->
+      <input type="hidden" id="enETitel"${sperr} value="${esc(e.titel || '')}">
+      <div class="f"><label for="enEEinsatzart">Einsatzart</label>
+        <select class="inp" id="enEEinsatzart"${sperr}>${einsatzartOptionen(e.einsatzart)}</select>
+      </div>
+      <div class="f"><label for="enEDatum">Datum *</label><input class="inp" id="enEDatum"${sperr} type="date" value="${esc(tagVon(e))}" onchange="pickRefresh('enE')"></div>
+      <div class="f zeitpaar">
+        <label>Zeit *</label>
+        <div class="zp">
+          <input class="inp" id="enEVon"${sperr} type="time" value="${hm(e.von)}" aria-label="Von" onchange="pickRefresh('enE')">
+          <span class="tr">–</span>
+          <input class="inp" id="enEBis"${sperr} type="time" value="${hm(e.bis)}" aria-label="Bis" onchange="pickRefresh('enE')">
+        </div>
+      </div>
       <div class="f wide"><label for="enEStrasse">Arbeitsort — Strasse</label><input class="inp" id="enEStrasse"${sperr} value="${esc(e.strasse || '')}"></div>
       <div class="f"><label for="enEOrt">Arbeitsort — PLZ / Ort *</label><input class="inp" id="enEOrt"${sperr} value="${esc(e.ort)}"></div>
       <div class="f"><label for="enESparte">Sparte</label>
@@ -4316,18 +4424,14 @@ function openEinsatz(id) {
           <option value="reinigung"${e.sparte === 'reinigung' ? ' selected' : ''}>Reinigung</option>
         </select>
       </div>
-      <div class="f"><label for="enEEinsatzart">Einsatzart</label><input class="inp" id="enEEinsatzart"${sperr} value="${esc(e.einsatzart)}"></div>
-      <div class="f"><label for="enEDatum">Datum *</label><input class="inp" id="enEDatum"${sperr} type="date" value="${esc(tagVon(e))}" onchange="pickRefresh('enE')"></div>
       <div class="f"><label for="enEBedarf">Benötigte Mitarbeitende</label><input class="inp" id="enEBedarf"${sperr} type="number" min="0" max="99" value="${Number(e.bedarf)}" oninput="pickFoot('enE')"></div>
-      <div class="f"><label for="enEVon">Von *</label><input class="inp" id="enEVon"${sperr} type="time" value="${hm(e.von)}" onchange="pickRefresh('enE')"></div>
-      <div class="f"><label for="enEBis">Bis *</label><input class="inp" id="enEBis"${sperr} type="time" value="${hm(e.bis)}" onchange="pickRefresh('enE')"></div>
       <div class="f"><label for="enEStatus">Status</label><select class="inp" id="enEStatus"${sperr}>${opt}</select></div>
       <div class="f wide">
         <label>Zugeteilte Mitarbeitende</label>
         <div class="ma-pick" id="enEMa"></div>
         <div class="pick-foot" id="enEMaFoot"></div>
       </div>
-      <div class="f wide"><label for="enEBemerkung">Bemerkung</label><textarea class="inp" id="enEBemerkung"${sperr} rows="2" style="min-height:60px">${esc(e.bemerkung || '')}</textarea></div>
+      <div class="f wide"><label for="enEBemerkung">Bemerkung</label><textarea class="inp" id="enEBemerkung"${sperr} rows="3" style="min-height:84px">${esc(e.bemerkung || '')}</textarea></div>
     </div>
     <div class="zone">
       <div class="zone-hd">Doppelbelegung ist gesperrt</div>

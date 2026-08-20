@@ -405,6 +405,40 @@ function einsatz_abgeglichen(PDO $pdo, int $einsatzId): bool
     return (bool)$s->fetchColumn();
 }
 
+// Umplanung: eine Person aus den Schichten nehmen, in denen sie zur selben
+// Zeit schon steht (ENT-060).
+//
+// Das ist ausdruecklich KEINE Aufweichung von ENT-022. Niemand ist danach an
+// zwei Orten -- die Person wechselt die Schicht, statt in beiden zu stehen.
+// Genau deshalb wird hier GELOESCHT und nicht bloss hinzugefuegt.
+//
+// Zwei Dinge sind dabei unverhandelbar:
+//   1. Eine bereits abgeglichene Schicht wird nicht angefasst. Dort steht
+//      geleistete Zeit mit Lohnfolge; wer sie nachtraeglich umplant, aendert
+//      eine Abrechnung. Solche Faelle werden gemeldet, nicht still uebergangen.
+//   2. Die alte Schicht bleibt bestehen und wird dadurch unterbesetzt. Das ist
+//      gewollt: Die Luecke, die durch das Umplanen entsteht, muss sichtbar
+//      werden, sonst verschwindet sie aus der Planung.
+//
+// Rueckgabe: Liste der Schichten, aus denen NICHT entfernt werden konnte.
+function umplanen(PDO $pdo, array $konflikte, array $mitarbeiterIds): array
+{
+    $erlaubt = array_flip(array_map('intval', $mitarbeiterIds));
+    $blockiert = [];
+    foreach ($konflikte as $k) {
+        $maId = (int)($k['mitarbeiter_id'] ?? 0);
+        $esId = (int)($k['einsatz_id'] ?? 0);
+        if ($maId <= 0 || $esId <= 0 || !isset($erlaubt[$maId])) { continue; }
+        if (einsatz_abgeglichen($pdo, $esId)) {
+            $blockiert[] = $k;
+            continue;
+        }
+        $del = $pdo->prepare('DELETE FROM einsatz_zuteilung WHERE einsatz_id = ? AND mitarbeiter_id = ?');
+        $del->execute([$esId, $maId]);
+    }
+    return $blockiert;
+}
+
 // Bricht mit einer verstaendlichen Meldung ab, wenn die Schicht gesperrt ist.
 function einsatz_sperre_pruefen(PDO $pdo, int $einsatzId): void
 {

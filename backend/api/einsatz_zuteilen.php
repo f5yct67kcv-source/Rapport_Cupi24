@@ -81,8 +81,36 @@ if ($einsatz) {
     $bis = substr((string)$einsatz['bis'], 0, 5);
 }
 
+// Umplanung (ENT-060) -- dieselbe Regel wie in einsatz_save.php.
+$umplanen = array_values(array_unique(array_map('intval', (array)($input['umplanen'] ?? []))));
+
 if ($zuteilung) {
     $doppelt = doppelbelegungen($id, $datum, $von, $bis, $zuteilung);
+    if ($doppelt && $umplanen) {
+        $pdoU = db();
+        $pdoU->beginTransaction();
+        try {
+            $blockiert = umplanen($pdoU, $doppelt, $umplanen);
+            $pdoU->commit();
+        } catch (Throwable $e) {
+            $pdoU->rollBack();
+            throw $e;
+        }
+        if ($blockiert) {
+            $namen = [];
+            foreach ($blockiert as $d) {
+                $namen[$d['name']] = $d['name'] . ': ' . $d['was'] . ' ist bereits abgeglichen';
+            }
+            json_response([
+                'status' => 'error',
+                'gesperrt' => true,
+                'message' => 'Umplanen nicht moeglich — ' . implode(' — ', $namen)
+                    . '. Dort steht bereits geleistete Zeit; zuerst unter Abgleich die Sperre aufheben.',
+                'doppelbelegung' => array_values($blockiert),
+            ], 409);
+        }
+        $doppelt = doppelbelegungen($id, $datum, $von, $bis, $zuteilung);
+    }
     if ($doppelt) {
         $namen = [];
         foreach ($doppelt as $d) {
