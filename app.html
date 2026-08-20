@@ -349,6 +349,7 @@ const W = {
     passwortAendern: 'Passwort ändern', altesPasswort: 'Bisheriges Passwort',
     neuesPasswort: 'Neues Passwort', mind6: 'mindestens 6 Zeichen',
     passwortOk: 'Passwort geändert.', abmelden: 'Abmelden',
+    zumCockpit: 'Zum Cockpit',
     speichern: 'Speichern', abbrechen: 'Abbrechen', schliessen: 'Schliessen',
     datenHinweis: 'Änderungen an deinen Daten macht die Verwaltung.',
     netzfehler: 'Keine Verbindung. Bitte nochmals versuchen.',
@@ -769,7 +770,7 @@ function zeichneProfil() {
 
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
       <button class="btn btn-plain btn-wide" onclick="passwortBlatt()">${esc(w('passwortAendern'))}</button>
-      ${p.ist_admin ? `<a class="btn btn-plain btn-wide" href="dashboard.html">Cockpit</a>` : ''}
+      ${p.ist_admin ? `<a class="btn btn-plain btn-wide" href="dashboard.html" title="Zur Verwaltung">${esc(w('zumCockpit'))}</a>` : ''}
       <button class="btn btn-plain btn-wide" style="color:var(--neg)" onclick="abmelden()">${esc(w('abmelden'))}</button>
     </div>`;
   zeichneStunden();
