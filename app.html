@@ -190,6 +190,15 @@ svg.i-sm { width: 17px; height: 17px; }
   color: var(--ink-3); cursor: pointer;
 }
 .zahl-info:active { background: var(--line-soft); }
+/* Hinweis auf noch nicht abgeglichene Schichten (ENT-053). Bewusst in
+   ruhigem Grau und nicht in Warnfarbe: Im laufenden Monat ist ein offener
+   Abgleich der Normalfall, keine Stoerung. */
+.offen-hinweis {
+  font-size: 13px; line-height: 1.4; color: var(--ink-3);
+  padding: 10px 14px; margin-bottom: 12px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r); box-shadow: var(--sh-1);
+}
 .zahl-info svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ── Angabenliste */
@@ -392,6 +401,8 @@ const W = {
     bonusInfoLuecke: 'Feiertage sind hier noch nicht gerechnet — der GAV sieht den Bonus auch dort vor.',
     bonusInfoQuelle: 'Art. 12 Ziff. 2 GAV, Ausgabe 2026',
     infoAria: 'Was ist der Zeitbonus?',
+    offenEine: 'Eine Schicht in diesem Monat ist noch nicht abgeglichen und darum hier nicht enthalten.',
+    offenMehrere: 'Schichten in diesem Monat sind noch nicht abgeglichen und darum hier nicht enthalten.',
     speichern: 'Speichern', abbrechen: 'Abbrechen', schliessen: 'Schliessen',
     datenHinweis: 'Änderungen an deinen Daten macht die Verwaltung.',
     netzfehler: 'Keine Verbindung. Bitte nochmals versuchen.',
@@ -919,6 +930,18 @@ function zeichneStunden() {
     })
     .sort((a, b) => a.tag.localeCompare(b.tag) || String(a.von).localeCompare(String(b.von)));
 
+  // Was noch nicht abgeglichen ist, wird nicht gerechnet -- aber es wird auch
+  // nicht verschwiegen (ENT-053). Ohne diese Zeile sieht die Person eine Zahl,
+  // die ihr zu tief vorkommt, und kann nicht unterscheiden, ob der Abgleich
+  // noch aussteht oder ob etwas vergessen ging. Im laufenden Monat ist das
+  // der Regelfall, nicht die Ausnahme.
+  const offen = stdSchichten.filter(e => (e.ist_status || 'offen') === 'offen').length;
+  const offenZeile = offen
+    ? `<div class="offen-hinweis" id="stdOffen">${offen === 1
+        ? esc(w('offenEine'))
+        : `${offen} ${esc(w('offenMehrere'))}`}</div>`
+    : '';
+
   const monatsName = new Date(stdMonat + '-01T12:00:00')
     .toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
   const blaettern = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
@@ -929,7 +952,7 @@ function zeichneStunden() {
 
   if (!z.length) {
     box.innerHTML = blaettern + LEER(w('keineStunden'), w('keineStundenText'),
-      '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>');
+      '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>') + offenZeile;
     return;
   }
 
@@ -949,6 +972,7 @@ function zeichneStunden() {
       </div>
       <div class="zahl"><b>${esc(std(netto + bonus))}</b><span>${esc(w('gesamt'))}</span></div>
     </div>
+    ${offenZeile}
     <div class="karte" id="stdListe"><div class="karte-bd" style="padding:0">
       ${z.map(x => `<div style="padding:11px 14px;border-bottom:1px solid var(--line-soft)">
         <div style="display:flex;justify-content:space-between;gap:10px">
