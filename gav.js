@@ -134,3 +134,70 @@ function gavFeiertagLuecke(datum, von, bis, karte) {
   }
   return tage.some(t => (karte || {})[t] && new Date(t + 'T12:00:00').getDay() !== 0);
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   AUSLAGENERSATZ NACH ART. 18 — ZONENBESTIMMUNG (ENT-054)
+
+   Hier wird ausschliesslich die ZONE bestimmt, keine Franken. Das ist eine
+   bewusste Grenze: Die Beträge stehen zwar im Vertrag, aber bei mehreren
+   Einsätzen am selben Tag ist nach Art. 18 Ziff. 8 gar nicht bestimmbar,
+   welcher Einsatz die Pauschale trägt (GAV-AUS-010, offen). Eine Zahl auf
+   dem Bildschirm wird zur Auszahlung — also erst rechnen, wenn geklärt.
+
+   Gemessen wird IMMER ab Hauptanstellungsort (Art. 18 Ziff. 2, wörtlich:
+   "Es gilt immer die Berechnungsgrundlage: kürzeste effektive Wegstrecke
+   ausgehend vom Hauptanstellungsort zu seinem konkreten Einsatzort gemäss
+   'Google Maps', Hin- und Rückweg"). Der Nebenanstellungsort ist KEIN
+   zweiter Messpunkt — er erzeugt nur das Nebenanstellungsgebiet, und das
+   geht allen Pauschalzonen und der Regiezone vor.
+
+   Die Zonengrenzen bemessen sich an der EINFACHEN Strecke ("der Einsatzort
+   befindet sich zwischen 10.01 bis 20 km Wegstrecke ab Anstellungsort").
+   Dass die Pauschalen Hin- und Rückweg abdecken, ist eine Aussage über die
+   Beträge, nicht über die Grenzen — der PAKO-Kommentar bestätigt das:
+   "Alle Pauschalzonen sind als Hin- und Rückweg berechnet."       */
+
+const GAV_ZONEN = [
+  { schluessel: 'anstellungsgebiet', name: 'Anstellungsgebiet',
+    bis: 10, entschaedigung: false, quelle: 'Art. 18 Ziff. 3.1.1' },
+  { schluessel: 'pauschalzone1', name: 'Pauschalzone 1',
+    bis: 20, entschaedigung: true, quelle: 'Art. 18 Ziff. 3.1.2' },
+  { schluessel: 'pauschalzone2', name: 'Pauschalzone 2',
+    bis: 30, entschaedigung: true, quelle: 'Art. 18 Ziff. 3.1.3' },
+  { schluessel: 'regiezone', name: 'Regiezone',
+    bis: Infinity, entschaedigung: true, quelle: 'Art. 18 Ziff. 3.1.4' },
+];
+
+/* Zone eines Einsatzortes.
+     kmHao    — Wegstrecke Hauptanstellungsort -> Einsatzort, einfach
+     kmNao    — Wegstrecke Nebenanstellungsort -> Einsatzort (null, wenn keiner)
+     kmHaoNao — Wegstrecke zwischen den beiden Anstellungsorten (null ohne NAO)
+
+   Rückgabe: null, wenn die Distanz nicht bekannt ist. Das ist der wichtigste
+   Rückgabewert überhaupt — "nicht bekannt" darf NIE wie "keine Entschädigung"
+   aussehen. Genau dieser Fehler kostet Mitarbeitende sonst still ihr Geld. */
+function gavZone(kmHao, kmNao, kmHaoNao) {
+  const h = kmHao === null || kmHao === undefined || kmHao === '' ? null : Number(kmHao);
+  if (h === null || !isFinite(h) || h < 0) { return null; }
+
+  const n = kmNao === null || kmNao === undefined || kmNao === '' ? null : Number(kmNao);
+
+  // Das Nebenanstellungsgebiet geht allen anderen Zonen vor (Art. 18
+  // Ziff. 3.2.5 bzw. 3.3.5). OB dort etwas geschuldet ist, hängt am Abstand
+  // der beiden Anstellungsorte: unter 40 km nichts (Ziff. 3.2.5), ab 40 km
+  // eine Pauschale nach Formel (Ziff. 3.3.5).
+  if (n !== null && isFinite(n) && n <= 10) {
+    const d = kmHaoNao === null || kmHaoNao === undefined || kmHaoNao === '' ? null : Number(kmHaoNao);
+    if (d === null || !isFinite(d)) { return null; }   // unbestimmbar, nicht "keine"
+    return {
+      schluessel: 'nebenanstellungsgebiet',
+      name: 'Nebenanstellungsgebiet',
+      entschaedigung: d >= 40,
+      quelle: d >= 40 ? 'Art. 18 Ziff. 3.3.5' : 'Art. 18 Ziff. 3.2.5',
+      vorrang: true,
+    };
+  }
+
+  const z = GAV_ZONEN.find(x => h <= x.bis);
+  return { schluessel: z.schluessel, name: z.name, entschaedigung: z.entschaedigung, quelle: z.quelle, vorrang: false };
+}

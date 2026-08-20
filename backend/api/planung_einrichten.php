@@ -60,6 +60,56 @@ $schon = [];
 // ── 1. Tabellen. Reihenfolge zaehlt: worauf verwiesen wird, muss zuerst da sein.
 $tabellen = [
 
+// Vertraglich vereinbarte Anstellungsorte nach Art. 18 Ziff. 2 (ENT-054).
+// Der GAV erlaubt HOECHSTENS ZWEI, und wenn es zwei sind, muss der eine
+// als Hauptanstellungsort (HAO) und der andere als Nebenanstellungsort
+// (NAO) klar bezeichnet sein -- es gibt keine zwei HAO. Gemessen wird
+// immer ab HAO; der NAO erzeugt nur das vorrangige Nebenanstellungsgebiet.
+//
+// Der PAKO-Kommentar verlangt eine genaue Adresse mit Strasse und Nummer
+// ('ein Parkplatz ohne Adresse ist als vertraglich definierter
+// Anstellungsort nicht zulaessig') -- darum ist strasse hier NOT NULL,
+// anders als bei den Objekten.
+'anstellungsorte' => "
+CREATE TABLE IF NOT EXISTS anstellungsorte (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  bezeichnung VARCHAR(200) NOT NULL,
+  rolle VARCHAR(10) NOT NULL DEFAULT 'hao',
+  strasse VARCHAR(200) NOT NULL,
+  plz VARCHAR(10),
+  ort VARCHAR(200) NOT NULL,
+  km_zum_anderen DECIMAL(7,2) NULL,
+  aktiv TINYINT(1) NOT NULL DEFAULT 1,
+  bemerkung TEXT,
+  erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_rolle (rolle, aktiv)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Wegstrecke Anstellungsort -> Objekt (ENT-054). Eine Zeile je Paar.
+//
+// Warum am Objekt und nicht am Einsatz: Gemessen wird HAO -> Einsatzort,
+// und der Einsatzort ist das Objekt. Bei einem HAO und N Objekten gibt es
+// also N Distanzen, nicht eine je Schicht. Das ist der Grund, warum die
+// Sache ueberhaupt bezahlbar bleibt.
+//
+// quelle/ermittelt_am/bestaetigt_von halten fest, WOHER die Zahl stammt.
+// An der 10-km-Grenze entscheidet sie ueber Geld -- da darf man spaeter
+// nicht raten muessen, ob jemand sie eingetippt oder ein Dienst geliefert
+// hat.
+'objekt_distanz' => "
+CREATE TABLE IF NOT EXISTS objekt_distanz (
+  objekt_id INT NOT NULL,
+  anstellungsort_id INT NOT NULL,
+  km DECIMAL(7,2) NOT NULL,
+  quelle VARCHAR(50) NOT NULL DEFAULT 'manuell',
+  ermittelt_am DATE NULL,
+  bestaetigt_von VARCHAR(100) NULL,
+  bemerkung TEXT,
+  geaendert_am DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (objekt_id, anstellungsort_id),
+  KEY idx_ort (anstellungsort_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 'objekte' => "
 CREATE TABLE IF NOT EXISTS objekte (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -271,6 +321,10 @@ $spalten = [
     ['einsatz_zuteilung', 'zusage',   "ALTER TABLE einsatz_zuteilung ADD COLUMN zusage VARCHAR(20) NOT NULL DEFAULT 'offen' AFTER mitarbeiter_id"],
     ['objekte', 'einsatzart',         "ALTER TABLE objekte ADD COLUMN einsatzart VARCHAR(100) NOT NULL DEFAULT 'Revierdienst' AFTER kanton"],
     ['verfuegbarkeiten', 'gesehen_am', 'ALTER TABLE verfuegbarkeiten ADD COLUMN gesehen_am DATETIME NULL AFTER erfasst_am'],
+    // PLZ am Objekt (ENT-054). Fuer die Wegstrecke nach Art. 18 braucht es
+    // eine eindeutige Adresse; Strasse plus Ort allein ist in der Schweiz
+    // nicht immer eindeutig.
+    ['objekte', 'plz', "ALTER TABLE objekte ADD COLUMN plz VARCHAR(10) NULL AFTER strasse"],
     // Sparte (ENT-037). Der Bestand ist ausnahmslos Sicherheit -- die Reinigung
     // kommt erst mit diesem Schritt dazu. Die Vorgabe traegt die Altdaten also
     // richtig, ohne dass etwas von Hand nachgetragen werden muss.

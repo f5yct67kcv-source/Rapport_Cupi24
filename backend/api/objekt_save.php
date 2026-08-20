@@ -19,6 +19,9 @@ $name      = trim((string)($input['name'] ?? ''));
 $kundeName = trim((string)($input['kunde_name'] ?? ''));
 $kundeId   = isset($input['kunde_id']) && $input['kunde_id'] !== '' ? (int)$input['kunde_id'] : null;
 $strasse   = trim((string)($input['strasse'] ?? '')) ?: null;
+// PLZ fuer eine eindeutige Adresse -- Grundlage der Wegstrecke nach
+// Art. 18 Ziff. 2 (ENT-054).
+$plz       = trim((string)($input['plz'] ?? '')) ?: null;
 $ort       = trim((string)($input['ort'] ?? ''));
 $kanton    = strtoupper(trim((string)($input['kanton'] ?? 'SO')));
 $einsatzart = trim((string)($input['einsatzart'] ?? '')) ?: 'Revierdienst';
@@ -46,10 +49,10 @@ if ($kundeId !== null) {
 
 if ($id > 0) {
     $stmt = db()->prepare(
-        'UPDATE objekte SET kunde_id = ?, kunde_name = ?, name = ?, strasse = ?, ort = ?,
+        'UPDATE objekte SET kunde_id = ?, kunde_name = ?, name = ?, strasse = ?, plz = ?, ort = ?,
                 kanton = ?, einsatzart = ?, sparte = ?, aktiv = ?, bemerkung = ? WHERE id = ?'
     );
-    $stmt->execute([$kundeId, $kundeName, $name, $strasse, $ort, $kanton, $einsatzart, $sparte, $aktiv, $bemerkung, $id]);
+    $stmt->execute([$kundeId, $kundeName, $name, $strasse, $plz, $ort, $kanton, $einsatzart, $sparte, $aktiv, $bemerkung, $id]);
     $chk = db()->prepare('SELECT id FROM objekte WHERE id = ?');
     $chk->execute([$id]);
     if (!$chk->fetch()) {
@@ -57,10 +60,10 @@ if ($id > 0) {
     }
 } else {
     $stmt = db()->prepare(
-        'INSERT INTO objekte (kunde_id, kunde_name, name, strasse, ort, kanton, einsatzart, sparte, aktiv, bemerkung)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO objekte (kunde_id, kunde_name, name, strasse, plz, ort, kanton, einsatzart, sparte, aktiv, bemerkung)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
-    $stmt->execute([$kundeId, $kundeName, $name, $strasse, $ort, $kanton, $einsatzart, $sparte, $aktiv, $bemerkung]);
+    $stmt->execute([$kundeId, $kundeName, $name, $strasse, $plz, $ort, $kanton, $einsatzart, $sparte, $aktiv, $bemerkung]);
     $id = (int)db()->lastInsertId();
 }
 

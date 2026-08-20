@@ -1837,6 +1837,10 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
             </div>
             <label class="check" style="font-size:12.5px"><input type="checkbox" id="oInaktiv" onchange="renderObjekte()"> auch stillgelegte</label>
             <div class="sp" style="flex:1"></div>
+            <button class="btn btn-plain btn-sm" onclick="openAnstellungsorte()" title="Vertraglich vereinbarte Anstellungsorte nach Art. 18 GAV">
+              <svg class="i i-sm" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              Anstellungsorte
+            </button>
             <button class="btn btn-primary btn-sm" onclick="openObjektNeu()">
               <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Neues Objekt
@@ -2113,6 +2117,47 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
   </div>
 </div>
 
+<!-- Anstellungsorte nach Art. 18 Ziff. 2 (ENT-054) -->
+<div class="dlg-scrim" id="dlgAnst">
+  <div class="dlg wide">
+    <div class="dlg-hd">
+      <h2>Anstellungsorte</h2>
+      <p>Vertraglich vereinbarte Anstellungsorte nach Art. 18 Ziff. 2 GAV. Von hier aus wird die
+         Wegstrecke zu den Objekten gemessen — sie entscheidet, ob ein Auslagenersatz anfällt.</p>
+    </div>
+    <div class="dlg-bd">
+      <div class="msg-err" id="anErr" style="display:none"></div>
+      <div class="ki-hint web" style="margin-bottom:14px">
+        <span>Der GAV lässt <b>höchstens zwei</b> Anstellungsorte zu, und wenn es zwei sind, muss der eine
+        als <b>Hauptanstellungsort (HAO)</b> und der andere als <b>Nebenanstellungsort (NAO)</b> bezeichnet sein —
+        zwei Hauptanstellungsorte gibt es nicht. Gemessen wird immer ab HAO. Der PAKO-Kommentar verlangt eine
+        genaue Adresse mit Strasse und Nummer.</span>
+      </div>
+      <div id="anListe"></div>
+      <div class="form-grid" style="margin-top:16px">
+        <div class="f wide"><label for="anBez">Bezeichnung *</label><input class="inp" id="anBez" placeholder="z. B. Sitz"></div>
+        <div class="f"><label for="anRolle">Rolle</label>
+          <select class="inp" id="anRolle">
+            <option value="hao">Hauptanstellungsort (HAO)</option>
+            <option value="nao">Nebenanstellungsort (NAO)</option>
+          </select>
+        </div>
+        <div class="f"><label for="anKm">Wegstrecke zum anderen Ort (km)</label><input class="inp" id="anKm" inputmode="decimal" placeholder="nur bei zwei Orten"></div>
+        <div class="f wide"><label for="anStrasse">Strasse und Nummer *</label><input class="inp" id="anStrasse"></div>
+        <div class="f"><label for="anPlz">PLZ</label><input class="inp" id="anPlz"></div>
+        <div class="f"><label for="anOrt">Ort *</label><input class="inp" id="anOrt"></div>
+      </div>
+      <p class="zone-note">Die Wegstrecke zwischen den beiden Anstellungsorten entscheidet nach Art. 18 Ziff. 3.2
+         bzw. 3.3, ob im Nebenanstellungsgebiet überhaupt etwas geschuldet ist: unter 40 km nichts, ab 40 km eine
+         Pauschale nach Formel.</p>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgAnst')">Schliessen</button>
+      <button class="btn btn-primary" id="anBtn" onclick="anSpeichern()">Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Objekt anlegen oder ändern -->
 <div class="dlg-scrim" id="dlgObNeu">
   <div class="dlg">
@@ -2125,8 +2170,9 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
       <div class="form-grid">
         <div class="f wide"><label for="obName">Bezeichnung *</label><input class="inp" id="obName" placeholder="z. B. Einkaufszentrum Nord"></div>
         <div class="f wide"><label for="obKunde_name">Kunde *</label><input class="inp" id="obKunde_name" list="dlKunden" autocomplete="off"></div>
-        <div class="f wide"><label for="obStrasse">Strasse</label><input class="inp" id="obStrasse"></div>
-        <div class="f"><label for="obOrt">PLZ / Ort *</label><input class="inp" id="obOrt"></div>
+        <div class="f wide"><label for="obStrasse">Strasse und Nummer</label><input class="inp" id="obStrasse"></div>
+        <div class="f"><label for="obPlz">PLZ</label><input class="inp" id="obPlz" inputmode="numeric" maxlength="10"></div>
+        <div class="f"><label for="obOrt">Ort *</label><input class="inp" id="obOrt"></div>
         <div class="f"><label for="obKanton">Kanton</label><input class="inp" id="obKanton" value="SO" maxlength="2" style="text-transform:uppercase"></div>
         <div class="f"><label for="obSparte">Sparte</label>
           <select class="inp" id="obSparte">
@@ -2137,6 +2183,16 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <div class="f"><label for="obEinsatzart">Einsatzart</label><input class="inp" id="obEinsatzart" value="Revierdienst"></div>
         <div class="f wide"><label for="obBemerkung">Bemerkung</label><textarea class="inp" id="obBemerkung" rows="2" style="min-height:56px"></textarea></div>
         <div class="f wide"><label class="check"><input type="checkbox" id="obAktiv" checked> Objekt ist in Betrieb</label></div>
+      </div>
+
+      <!-- Wegstrecke und Zone nach Art. 18 (ENT-054). Steht bewusst im
+           Objektdialog und nicht beim Einsatz: Gemessen wird ab
+           Hauptanstellungsort zum Einsatzort, und der Einsatzort IST das
+           Objekt. Eine Zahl je Objekt, nicht eine je Schicht. -->
+      <div id="obDistanzBlock" style="margin-top:18px">
+        <div class="feld-titel">Wegstrecke ab Anstellungsort (Art. 18 GAV)</div>
+        <div id="obDistanzFelder"></div>
+        <div id="obZoneHint"></div>
       </div>
       <p class="zone-note" style="margin-top:4px">Der Kanton bestimmt, welche Feiertage für dieses Objekt gelten. Die Sparte ist die Vorgabe für neue Schichten — eine einzelne Vorlage kann davon abweichen, etwa eine Endreinigung an einem bewachten Objekt.</p>
     </div>
@@ -4250,7 +4306,11 @@ function kdArchivKlick() {
 
 // ══════════════════════════════════════════ OBJEKTE
 function loadObjekte() {
-  return api('objekt_list.php').then(({ ok, status, data }) => {
+  // Ohne die Anstellungsorte laesst sich keine Zone bestimmen -- also zuerst
+  // die, dann die Objekte. Fehlen sie (Einrichtung noch nicht gelaufen),
+  // bleibt die Spalte leer statt falsch.
+  const vorlauf = anstellungsorte.length ? Promise.resolve() : ladeAnstellungsorte();
+  return vorlauf.then(() => api('objekt_list.php')).then(({ ok, status, data }) => {
     if (status === 401) return doLogout();
     if (!ok || data.status !== 'ok') {
       $('oTable').innerHTML = EMPTY('Objekte nicht verfügbar',
@@ -4262,6 +4322,19 @@ function loadObjekte() {
     renderObjekte();
     if ($('pv-uebersicht').classList.contains('on')) renderMatrix();
   });
+}
+
+// Zone eines Objekts als Marke fuer die Liste (ENT-054).
+// Drei Zustaende, und der dritte ist der wichtigste: unbekannt. Er darf nie
+// wie "keine Entschaedigung" aussehen -- sonst faellt ein Objekt jenseits der
+// 10 km still durch, und die Mitarbeitenden bekommen ihr Geld nicht.
+function zoneChip(o) {
+  if (!anstellungsorte.length) { return '<span style="color:var(--ink-3)">–</span>'; }
+  const z = objektZone(o);
+  if (!z) { return '<span class="chip chip-w" title="Wegstrecke nicht hinterlegt — nicht beurteilbar">? offen</span>'; }
+  return z.entschaedigung
+    ? `<span class="chip chip-w" title="${esc(z.name)}, ${esc(z.quelle)}">${esc(z.name)}</span>`
+    : `<span class="chip chip-p" title="${esc(z.name)}, ${esc(z.quelle)}">keine</span>`;
 }
 
 function renderObjekte() {
@@ -4277,6 +4350,7 @@ function renderObjekte() {
   }
   $('oTable').innerHTML = `<table><thead><tr>
       <th>Objekt</th><th>Kunde</th><th>Ort</th><th>Kanton</th><th>Einsatzart</th>
+      <th>Auslagen</th>
       <th class="num">Masterschichten</th><th class="num">Std. je Durchgang</th><th>Zustand</th>
     </tr></thead><tbody>` + d.map(o => `
       <tr class="click" onclick="openObjekt(${Number(o.id)})">
@@ -4285,13 +4359,101 @@ function renderObjekte() {
         <td class="nowrap">${esc(o.ort)}${o.strasse ? `<div class="sec">${esc(o.strasse)}</div>` : ''}</td>
         <td class="nowrap">${esc(o.kanton)}</td>
         <td><span class="chip chip-n">${esc(o.einsatzart)}</span>${sparteChip(o)}</td>
+        <td>${zoneChip(o)}</td>
         <td class="num">${o.masterschichten ? nf(o.masterschichten) : '<span style="color:var(--ink-3)">–</span>'}</td>
         <td class="num nowrap">${o.masterschichten ? nf(o.stunden_je_einsatz, 2) + ' h' : '<span style="color:var(--ink-3)">–</span>'}</td>
         <td>${o.aktiv ? '<span class="chip chip-p">in Betrieb</span>' : '<span class="chip chip-n">stillgelegt</span>'}</td>
       </tr>`).join('') + `</tbody></table>`;
 }
 
-const OB_FELDER = ['name', 'kunde_name', 'strasse', 'ort', 'kanton', 'einsatzart', 'sparte', 'bemerkung'];
+const OB_FELDER = ['name', 'kunde_name', 'strasse', 'plz', 'ort', 'kanton', 'einsatzart', 'sparte', 'bemerkung'];
+
+// ══════════════════════════════════════════ AUSLAGENERSATZ ART. 18 (ENT-054)
+// Vertraglich vereinbarte Anstellungsorte. Hoechstens zwei, davon genau ein
+// Hauptanstellungsort -- das setzt der Server durch, hier wird es nur
+// angezeigt. Gemessen wird immer ab HAO.
+let anstellungsorte = [];
+
+function ladeAnstellungsorte() {
+  return api('anstellungsorte.php').then(({ ok, data }) => {
+    anstellungsorte = ok && data.status === 'ok' ? (data.orte || []) : [];
+    return anstellungsorte;
+  }).catch(() => { anstellungsorte = []; return anstellungsorte; });
+}
+
+const aoHao = () => anstellungsorte.find(o => o.rolle === 'hao' && o.aktiv) || null;
+const aoNao = () => anstellungsorte.find(o => o.rolle === 'nao' && o.aktiv) || null;
+
+// Zone eines Objekts aus den hinterlegten Wegstrecken.
+// Gibt null zurueck, wenn sie sich nicht bestimmen laesst -- und genau das
+// muss die Oberflaeche anders darstellen als "keine Entschaedigung".
+function objektZone(o) {
+  const hao = aoHao();
+  if (!hao || !o) { return null; }
+  const d = o.distanzen || {};
+  const kmHao = d[hao.id] ? d[hao.id].km : null;
+  const nao = aoNao();
+  const kmNao = nao && d[nao.id] ? d[nao.id].km : null;
+  return gavZone(kmHao, kmNao, nao ? nao.km_zum_anderen : null);
+}
+
+// Die Eingabefelder je Anstellungsort im Objektdialog.
+function obDistanzZeichnen(o) {
+  const feld = $('obDistanzFelder'), hint = $('obZoneHint');
+  if (!feld) { return; }
+  if (!anstellungsorte.length) {
+    feld.innerHTML = '';
+    hint.innerHTML = `<div class="ki-hint" style="color:var(--warn);background:var(--warn-soft)">
+      <span>Es ist noch kein Anstellungsort hinterlegt. Ohne ihn laesst sich nicht beurteilen,
+      ob fuer dieses Objekt ein Auslagenersatz nach Art. 18 GAV anfaellt.
+      Anstellungsorte werden in der Objektliste unter „Anstellungsorte“ erfasst.</span></div>`;
+    return;
+  }
+  const d = (o && o.distanzen) || {};
+  feld.innerHTML = `<div class="form-grid">` + anstellungsorte.map(a => `
+    <div class="f">
+      <label for="obKm${a.id}">${esc(a.bezeichnung)} <span style="color:var(--ink-3);font-weight:500">(${a.rolle === 'hao' ? 'HAO' : 'NAO'})</span></label>
+      <input class="inp" id="obKm${a.id}" inputmode="decimal" placeholder="km"
+             value="${d[a.id] !== undefined ? d[a.id].km : ''}" oninput="obZoneAktualisieren()">
+    </div>`).join('') + `</div>`;
+  obZoneAktualisieren();
+}
+
+// Der Hinweis, um den es dem Projektinhaber ging: waehrend der Eingabe
+// sichtbar machen, ob eine Vergütung nach Art. 18 dazukommt.
+function obZoneAktualisieren() {
+  const hint = $('obZoneHint');
+  if (!hint) { return; }
+  const hao = aoHao(), nao = aoNao();
+  if (!hao) { return; }
+  const lies = a => {
+    const el = $('obKm' + a.id);
+    const v = el ? (el.value || '').trim().replace(',', '.') : '';
+    return v === '' ? null : Number(v);
+  };
+  const kmHao = lies(hao);
+  const z = gavZone(kmHao, nao ? lies(nao) : null, nao ? nao.km_zum_anderen : null);
+
+  if (!z) {
+    // "Unbekannt" darf nie wie "keine Entschaedigung" aussehen.
+    hint.innerHTML = `<div class="ki-hint" style="color:var(--warn);background:var(--warn-soft)">
+      <span><b>Wegstrecke fehlt.</b> Ohne sie ist nicht beurteilbar, ob ein Auslagenersatz
+      nach Art. 18 GAV anfaellt. Die kuerzeste Wegstrecke ab Hauptanstellungsort in Google Maps
+      nachschlagen und hier eintragen.${nao && nao.km_zum_anderen === null
+        ? ' Ausserdem fehlt die Wegstrecke zwischen den beiden Anstellungsorten — sie entscheidet nach Ziff. 3.2/3.3 mit.'
+        : ''}</span></div>`;
+    return;
+  }
+  hint.innerHTML = z.entschaedigung
+    ? `<div class="ki-hint" style="color:var(--warn);background:var(--warn-soft)">
+        <span><b>${esc(z.name)} — Auslagenersatz faellt an.</b> Fuer Einsaetze an diesem Objekt
+        sind Fahrzeit- und Fahrkostenersatz nach ${esc(z.quelle)} geschuldet. Der Betrag wird hier
+        bewusst nicht gerechnet, solange offen ist, wie mehrere Einsaetze am selben Tag zu
+        behandeln sind (Art. 18 Ziff. 8).</span></div>`
+    : `<div class="ki-hint web">
+        <span><b>${esc(z.name)} — kein Auslagenersatz.</b> Bis 10 km ab Anstellungsort ist
+        nach ${esc(z.quelle)} nichts geschuldet.</span></div>`;
+}
 
 function openObjektNeu(o) {
   obTarget = o ? Number(o.id) : null;
@@ -4302,6 +4464,7 @@ function openObjektNeu(o) {
   });
   $('obAktiv').checked = o ? !!o.aktiv : true;
   $('obNeuErr').style.display = 'none';
+  obDistanzZeichnen(o);
   openDlg('dlgObNeu');
   $('obName').focus();
 }
@@ -4325,12 +4488,117 @@ function saveObjekt() {
     if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Speichern fehlgeschlagen.'; err.style.display = ''; return; }
     closeDlg('dlgObNeu');
     const neu = !obTarget;
-    loadObjekte().then(() => {
+    const objektId = Number(data.id || obTarget);
+    obDistanzenSpeichern(objektId).then(() => loadObjekte()).then(() => {
       toast(neu ? 'Objekt angelegt.' : 'Objekt gespeichert.');
-      if (neu) openObjekt(Number(data.id));      // direkt weiter zu den Masterschichten
+      if (neu) openObjekt(objektId);             // direkt weiter zu den Masterschichten
       else if (obTarget) openObjekt(obTarget);
     });
   });
+}
+
+// ── Verwaltung der Anstellungsorte
+let anTarget = null;
+
+function openAnstellungsorte() {
+  anTarget = null;
+  $('anErr').style.display = 'none';
+  ladeAnstellungsorte().then(() => { anListeZeichnen(); anFormularLeeren(); openDlg('dlgAnst'); });
+}
+
+function anFormularLeeren() {
+  anTarget = null;
+  ['anBez', 'anStrasse', 'anPlz', 'anOrt', 'anKm'].forEach(id => { $(id).value = ''; });
+  // Vorbelegung so, dass der wahrscheinliche naechste Schritt stimmt: Solange
+  // kein HAO da ist, ist der neue Ort einer; danach kann es nur noch ein NAO
+  // sein -- der Server wuerde einen zweiten HAO ohnehin zurueckweisen.
+  $('anRolle').value = aoHao() ? 'nao' : 'hao';
+  $('anBtn').textContent = 'Hinzufügen';
+}
+
+function anListeZeichnen() {
+  const box = $('anListe');
+  if (!anstellungsorte.length) {
+    box.innerHTML = '<p class="zone-note">Noch kein Anstellungsort erfasst.</p>';
+    return;
+  }
+  box.innerHTML = `<table class="tbl"><thead><tr>
+      <th>Bezeichnung</th><th>Rolle</th><th>Adresse</th><th class="num">Zum anderen Ort</th><th></th>
+    </tr></thead><tbody>` + anstellungsorte.map(a => `<tr>
+      <td><b>${esc(a.bezeichnung)}</b></td>
+      <td><span class="chip ${a.rolle === 'hao' ? 'chip-p' : 'chip-n'}">${a.rolle === 'hao' ? 'HAO' : 'NAO'}</span></td>
+      <td class="nowrap">${esc(a.strasse)}<div class="sec">${esc([a.plz, a.ort].filter(Boolean).join(' '))}</div></td>
+      <td class="num nowrap">${a.km_zum_anderen === null ? '<span style="color:var(--ink-3)">–</span>' : nf(a.km_zum_anderen, 2) + ' km'}</td>
+      <td class="nowrap">
+        <button class="btn btn-plain btn-sm" onclick="anBearbeiten(${a.id})">Ändern</button>
+        <button class="btn btn-plain btn-sm" style="color:var(--neg)" onclick="anLoeschen(${a.id})">Löschen</button>
+      </td>
+    </tr>`).join('') + `</tbody></table>`;
+}
+
+function anBearbeiten(id) {
+  const a = anstellungsorte.find(x => Number(x.id) === Number(id));
+  if (!a) { return; }
+  anTarget = a.id;
+  $('anBez').value = a.bezeichnung; $('anRolle').value = a.rolle;
+  $('anStrasse').value = a.strasse || ''; $('anPlz').value = a.plz || ''; $('anOrt').value = a.ort || '';
+  $('anKm').value = a.km_zum_anderen === null ? '' : a.km_zum_anderen;
+  $('anBtn').textContent = 'Speichern';
+}
+
+function anLoeschen(id) {
+  const a = anstellungsorte.find(x => Number(x.id) === Number(id));
+  if (!a) { return; }
+  // Mit dem Ort verschwinden auch alle daran haengenden Wegstrecken -- das
+  // muss dastehen, sonst ist es eine boese Ueberraschung.
+  if (!confirm(`„${a.bezeichnung}“ löschen?\n\nDamit verschwinden auch alle Wegstrecken, die von diesem Ort aus zu den Objekten hinterlegt sind.`)) { return; }
+  api('anstellungsorte.php', { method: 'POST', body: { id: a.id, loeschen: true } }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { toast('Löschen fehlgeschlagen.'); return; }
+    anstellungsorte = data.orte || [];
+    anListeZeichnen(); anFormularLeeren(); loadObjekte();
+  });
+}
+
+function anSpeichern() {
+  const err = $('anErr'); err.style.display = 'none';
+  const body = {
+    bezeichnung: $('anBez').value.trim(),
+    rolle: $('anRolle').value,
+    strasse: $('anStrasse').value.trim(),
+    plz: $('anPlz').value.trim(),
+    ort: $('anOrt').value.trim(),
+    km_zum_anderen: $('anKm').value.trim().replace(',', '.'),
+    aktiv: 1,
+  };
+  if (anTarget) { body.id = anTarget; }
+  if (!body.bezeichnung || !body.ort) {
+    err.textContent = 'Bezeichnung und Ort sind Pflicht.'; err.style.display = ''; return;
+  }
+  const b = $('anBtn'); b.disabled = true;
+  api('anstellungsorte.php', { method: 'POST', body }).then(({ ok, data }) => {
+    b.disabled = false;
+    if (!ok || data.status !== 'ok') {
+      err.textContent = data.message || 'Speichern fehlgeschlagen.'; err.style.display = ''; return;
+    }
+    anstellungsorte = data.orte || [];
+    anListeZeichnen(); anFormularLeeren(); loadObjekte();
+    toast('Anstellungsort gespeichert.');
+  });
+}
+
+// Wegstrecken je Anstellungsort ablegen. Ein leeres Feld loescht den Eintrag
+// und stellt damit "unbekannt" wieder her -- ausdruecklich nicht 0 km.
+function obDistanzenSpeichern(objektId) {
+  if (!objektId || !anstellungsorte.length) { return Promise.resolve(); }
+  return Promise.all(anstellungsorte.map(a => {
+    const el = $('obKm' + a.id);
+    if (!el) { return Promise.resolve(); }
+    const v = (el.value || '').trim().replace(',', '.');
+    return api('objekt_distanz_save.php', {
+      method: 'POST',
+      body: { objekt_id: objektId, anstellungsort_id: a.id, km: v === '' ? null : v, quelle: 'manuell' },
+    });
+  })).catch(() => {});
 }
 
 // ── Schublade: Objekt mit seinen Masterschichten
