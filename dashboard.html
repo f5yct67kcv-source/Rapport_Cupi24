@@ -2025,6 +2025,10 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             <!-- Etwas grösser als die übrigen Kopfzeilen-Knöpfe (kein
                  btn-sm) -- präsenter auf ausdrücklichen Wunsch, aber bewusst
                  nicht übertrieben: gleiche Familie, nur die nächste Stufe. -->
+            <button class="btn btn-plain" onclick="impOeffnen()" title="Kundenstamm aus einer CSV-Datei einlesen">
+              <svg class="i" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Importieren
+            </button>
             <button class="btn btn-primary" onclick="openKundeNeu()">
               <svg class="i" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Neuer Kunde
@@ -2465,6 +2469,62 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
     <div class="dlg-ft">
       <button class="btn btn-plain" onclick="closeDlg('dlgObNeu')">Abbrechen</button>
       <button class="btn btn-primary" id="obNeuBtn" onclick="saveObjekt()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Kundenstamm aus einer CSV-Datei einlesen (ENT-066). Drei Schritte in
+     einem Fenster: Datei waehlen, Spalten zuordnen, Bericht. Die Datei wird
+     im Browser gelesen und verlaesst ihn erst, wenn zugeordnet ist. -->
+<div class="dlg-scrim" id="dlgImp">
+  <div class="dlg wide">
+    <div class="dlg-hd">
+      <h2>Kunden importieren</h2>
+      <p>Aus einer CSV-Datei. Eine Zeile je Kunde, oberste Zeile sind die Spaltennamen.</p>
+    </div>
+    <div class="dlg-bd">
+      <div class="msg-err" id="impErr" style="display:none"></div>
+
+      <!-- Schritt 1 -->
+      <div id="impSchritt1">
+        <div class="ki-hint web on" style="margin-bottom:14px">
+          <span><b>Excel speichert das mit zwei Klicks:</b> „Datei → Speichern unter"
+          und als Format <b>CSV</b> wählen. Semikolon oder Komma als Trenner erkennt
+          das Werkzeug selbst, Umlaute ebenso. Nichts wird gespeichert, bevor du den
+          Bericht gesehen und bestätigt hast.</span>
+        </div>
+        <div class="f wide">
+          <label for="impDatei">CSV-Datei</label>
+          <input class="inp" type="file" id="impDatei" accept=".csv,text/csv,text/plain" onchange="impDateiGewaehlt(event)">
+        </div>
+      </div>
+
+      <!-- Schritt 2: Zuordnung -->
+      <div id="impSchritt2" style="display:none">
+        <p class="zone-note" id="impGefunden"></p>
+        <div class="ki-hint web on" style="margin-bottom:14px">
+          <span><b>Die Kundennummer vergibt das System</b> fortlaufend selbst und
+          unveränderlich (ENT-040) — sie lässt sich darum nicht importieren. Willst du
+          die Nummer aus dem Vorsystem behalten, ordne sie der <b>Notiz</b> zu, dann
+          bleibt sie auffindbar.</span>
+        </div>
+        <div class="tw" id="impZuordnung"></div>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-primary" onclick="impPruefen()">Prüfen</button>
+          <button class="btn btn-plain" onclick="impZuruecksetzen()">Andere Datei</button>
+        </div>
+      </div>
+
+      <!-- Schritt 3: Bericht -->
+      <div id="impSchritt3" style="display:none">
+        <div id="impBericht"></div>
+      </div>
+    </div>
+    <div class="dlg-ft">
+      <button class="btn btn-plain" onclick="closeDlg('dlgImp')">Schliessen</button>
+      <button class="btn btn-primary" id="impAnwendenBtn" style="display:none" onclick="impAnwenden()">
+        Jetzt anlegen
+      </button>
     </div>
   </div>
 </div>
@@ -8024,6 +8084,253 @@ const KU_WEGE_VORGABE = ['email', 'telefon', 'webseite'];
 const KU_PERSON_WEGE_VORGABE = ['email', 'mobil'];
 const KU_PAPIERKORB = '<svg class="i i-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
 const kuId = f => 'ku_' + f;
+
+// ══════════════════════════════════════════ KUNDENIMPORT (ENT-066)
+//
+// Die CSV wird im Browser gelesen und zugeordnet; erst die fertigen Zeilen
+// gehen an den Server. Das spart Upload-Grenzen und Zwischendateien -- und
+// die Kundendaten liegen zu keinem Zeitpunkt unbeaufsichtigt auf der Platte.
+//
+// Bewusst OHNE KI (ENT-012 verlangt, es zu pruefen, nicht es zu erzwingen):
+// Die Spaltenzuordnung ist ein einmaliger Handgriff mit fuenfzehn Auswahl-
+// feldern. Eine Sprachmodell-Abfrage waere hier langsamer, kostenpflichtig
+// und nicht nachvollziehbar -- die Namensliste unten leistet dasselbe
+// deterministisch und laesst sich testen.
+
+const IMP_ZIELE = [
+  ['name',          'Name / Firma'],
+  ['art',           'Art (unternehmen / privat)'],
+  ['anrede',        'Anrede'],
+  ['vorname',       'Vorname'],
+  ['nachname',      'Nachname'],
+  ['zusatzfeld',    'Namenszusatz'],
+  ['strasse',       'Strasse'],
+  ['hausnummer',    'Hausnummer'],
+  ['adresszusatz',  'Adresszusatz'],
+  ['plz',           'PLZ'],
+  ['ort',           'Ort'],
+  ['telefon',       'Telefon'],
+  ['email',         'E-Mail'],
+  ['kontaktperson', 'Kontaktperson'],
+  ['uid',           'UID'],
+  ['mwst_nr',       'MwSt-Nummer'],
+  ['notiz',         'Notiz'],
+];
+
+// Uebliche Spaltenueberschriften je Ziel, kleingeschrieben und ohne
+// Sonderzeichen. Die Liste muss nicht vollstaendig sein -- was sie nicht
+// trifft, ordnet man im Dialog von Hand zu.
+const IMP_SYNONYME = {
+  name:          ['name', 'firma', 'firmenname', 'kunde', 'kundenname', 'bezeichnung', 'company'],
+  art:           ['art', 'kundenart', 'typ', 'kundentyp'],
+  anrede:        ['anrede', 'titel', 'salutation'],
+  vorname:       ['vorname', 'firstname'],
+  nachname:      ['nachname', 'name2', 'lastname', 'familienname'],
+  zusatzfeld:    ['zusatz', 'namenszusatz', 'zusatzfeld', 'co'],
+  strasse:       ['strasse', 'str', 'adresse', 'street', 'strassenname'],
+  hausnummer:    ['hausnummer', 'nr', 'hausnr', 'nummer', 'housenumber'],
+  adresszusatz:  ['adresszusatz', 'postfach', 'adresszeile2'],
+  plz:           ['plz', 'postleitzahl', 'zip', 'postcode'],
+  ort:           ['ort', 'stadt', 'city', 'wohnort', 'plzort', 'plzundort'],
+  telefon:       ['telefon', 'tel', 'telefonnummer', 'phone', 'festnetz', 'mobil', 'natel'],
+  email:         ['email', 'mail', 'emailadresse', 'epost'],
+  kontaktperson: ['kontaktperson', 'ansprechpartner', 'ansprechperson', 'kontakt'],
+  uid:           ['uid', 'uidnummer', 'unternehmensid', 'che'],
+  mwst_nr:       ['mwst', 'mwstnr', 'mwstnummer', 'ustid', 'vat'],
+  notiz:         ['notiz', 'bemerkung', 'bemerkungen', 'hinweis', 'kommentar', 'info'],
+};
+
+let impKopf = [], impRohZeilen = [], impLetzterBericht = null;
+
+const impNorm = t => (t || '').toLowerCase().replace(/[^a-zäöüß0-9]/g, '')
+  .replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss');
+
+// CSV zerlegen. Beruecksichtigt Anfuehrungszeichen (ein Feld darf den Trenner
+// und Zeilenumbrueche enthalten) und die verdoppelten Anfuehrungszeichen, mit
+// denen Excel ein echtes " im Text schreibt.
+function impCsvZerlegen(text) {
+  text = text.replace(/^﻿/, '');                       // BOM aus Excel
+  const kopfzeile = text.split(/\r?\n/)[0] || '';
+  // Trenner raten: derjenige, der ausserhalb von Anfuehrungszeichen am
+  // haeufigsten in der Kopfzeile vorkommt.
+  let trenner = ';', beste = -1;
+  [';', ',', '\t', '|'].forEach(t => {
+    const n = kopfzeile.split(t).length - 1;
+    if (n > beste) { beste = n; trenner = t; }
+  });
+
+  const zeilen = [];
+  let feld = '', zeile = [], inAnf = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inAnf) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { feld += '"'; i++; } else { inAnf = false; }
+      } else { feld += c; }
+      continue;
+    }
+    if (c === '"') { inAnf = true; continue; }
+    if (c === trenner) { zeile.push(feld); feld = ''; continue; }
+    if (c === '\r') { continue; }
+    if (c === '\n') { zeile.push(feld); zeilen.push(zeile); zeile = []; feld = ''; continue; }
+    feld += c;
+  }
+  if (feld !== '' || zeile.length) { zeile.push(feld); zeilen.push(zeile); }
+
+  // Voellig leere Zeilen fliegen raus -- Excel haengt gern welche an.
+  const gefiltert = zeilen.filter(z => z.some(w => (w || '').trim() !== ''));
+  if (!gefiltert.length) { return { kopf: [], zeilen: [], trenner }; }
+  return { kopf: gefiltert[0].map(w => w.trim()), zeilen: gefiltert.slice(1), trenner };
+}
+
+// Vorschlag je Spalte. Jedes Ziel wird hoechstens einmal vergeben, sonst
+// landen "Telefon" und "Mobil" beide auf demselben Feld und der zweite Wert
+// ueberschreibt den ersten still.
+function impRaten(kopf) {
+  const vergeben = {}, zuordnung = kopf.map(() => '');
+  kopf.forEach((sp, i) => {
+    const n = impNorm(sp);
+    for (const [ziel, namen] of Object.entries(IMP_SYNONYME)) {
+      if (vergeben[ziel]) { continue; }
+      if (namen.includes(n)) { zuordnung[i] = ziel; vergeben[ziel] = true; return; }
+    }
+  });
+  return zuordnung;
+}
+
+function impOeffnen() { impZuruecksetzen(); openDlg('dlgImp'); }
+
+function impZuruecksetzen() {
+  impKopf = []; impRohZeilen = []; impLetzterBericht = null;
+  $('impSchritt1').style.display = '';
+  $('impSchritt2').style.display = 'none';
+  $('impSchritt3').style.display = 'none';
+  $('impAnwendenBtn').style.display = 'none';
+  $('impErr').style.display = 'none';
+  if ($('impDatei')) { $('impDatei').value = ''; }
+}
+
+function impFehler(text) {
+  const e = $('impErr');
+  e.textContent = text;
+  e.style.display = text ? '' : 'none';
+}
+
+function impDateiGewaehlt(ev) {
+  const datei = ev.target.files && ev.target.files[0];
+  if (!datei) { return; }
+  impFehler('');
+  const leser = new FileReader();
+  leser.onload = () => {
+    const z = impCsvZerlegen(String(leser.result || ''));
+    if (!z.kopf.length || !z.zeilen.length) {
+      impFehler('Die Datei enthält keine auswertbaren Zeilen. Erwartet wird eine Kopfzeile mit Spaltennamen und darunter je eine Zeile pro Kunde.');
+      return;
+    }
+    impKopf = z.kopf; impRohZeilen = z.zeilen;
+    const trennerName = { ';': 'Semikolon', ',': 'Komma', '\t': 'Tabulator', '|': 'Strich' }[z.trenner] || z.trenner;
+    $('impGefunden').textContent =
+      `${z.zeilen.length} Zeile${z.zeilen.length === 1 ? '' : 'n'} und ${z.kopf.length} Spalten gelesen, `
+      + `Trennzeichen ${trennerName}. Bitte die Zuordnung prüfen — nicht zugeordnete Spalten werden übergangen.`;
+    impZuordnungZeichnen();
+    $('impSchritt1').style.display = 'none';
+    $('impSchritt2').style.display = '';
+  };
+  leser.onerror = () => impFehler('Die Datei liess sich nicht lesen.');
+  leser.readAsText(datei, 'utf-8');
+}
+
+function impZuordnungZeichnen() {
+  const raten = impRaten(impKopf);
+  const optionen = ziel => ['<option value="">— nicht übernehmen —</option>']
+    .concat(IMP_ZIELE.map(([k, l]) =>
+      `<option value="${k}"${k === ziel ? ' selected' : ''}>${esc(l)}</option>`)).join('');
+  $('impZuordnung').innerHTML = `<table class="tbl"><thead><tr>
+      <th>Spalte in der Datei</th><th>Beispielwert</th><th>wird übernommen als</th>
+    </tr></thead><tbody>` + impKopf.map((sp, i) => {
+      const bsp = (impRohZeilen.find(z => (z[i] || '').trim() !== '') || [])[i] || '';
+      return `<tr>
+        <td><b>${esc(sp || '(ohne Namen)')}</b></td>
+        <td style="color:var(--ink-3)">${esc(bsp.length > 40 ? bsp.slice(0, 40) + '…' : bsp)}</td>
+        <td><select class="inp" id="impZ${i}">${optionen(raten[i])}</select></td>
+      </tr>`;
+    }).join('') + `</tbody></table>`;
+}
+
+// Aus Kopf, Zeilen und Zuordnung die Objekte bauen, die der Server erwartet.
+function impZeilenBauen() {
+  const ziele = impKopf.map((_, i) => { const el = $('impZ' + i); return el ? el.value : ''; });
+  return impRohZeilen.map(z => {
+    const o = {};
+    ziele.forEach((ziel, i) => {
+      if (!ziel) { return; }
+      const w = (z[i] || '').trim();
+      if (w === '') { return; }
+      // Mehrere Spalten auf dasselbe Ziel: aneinanderhaengen statt
+      // ueberschreiben. Verlorene Daten sind schlimmer als ein langes Feld.
+      o[ziel] = o[ziel] ? o[ziel] + ' ' + w : w;
+    });
+    return o;
+  });
+}
+
+function impSenden(modus) {
+  const zeilen = impZeilenBauen();
+  if (!zeilen.length) { impFehler('Keine Zeilen zu übernehmen.'); return Promise.resolve(); }
+  impFehler('');
+  return api('kunden_import.php', { method: 'POST', body: { modus, zeilen } }).then(r => {
+    if (!r.ok || r.data.status !== 'ok') {
+      impFehler(r.data && r.data.message ? r.data.message : 'Der Import ist fehlgeschlagen.');
+      return;
+    }
+    impLetzterBericht = r.data;
+    impBerichtZeichnen(r.data);
+    $('impSchritt2').style.display = 'none';
+    $('impSchritt3').style.display = '';
+    $('impAnwendenBtn').style.display = (modus === 'pruefen' && r.data.neu > 0) ? '' : 'none';
+  });
+}
+
+const impPruefen  = () => impSenden('pruefen');
+const impAnwenden = () => impSenden('anwenden').then(() => { loadKunden && loadKunden(); });
+
+function impBerichtZeichnen(b) {
+  const liste = (titel, eintraege, farbe) => !eintraege.length ? '' : `
+    <div style="margin-top:14px">
+      <div class="feld-titel" style="color:${farbe}">${titel} (${eintraege.length})</div>
+      <div class="tw"><table class="tbl"><tbody>${eintraege.slice(0, 50).map(e => `
+        <tr><td class="num" style="width:70px;color:var(--ink-3)">Zeile ${e.zeile}</td>
+            <td>${esc(e.name || '—')}</td>
+            <td style="color:var(--ink-3)">${esc(e.grund)}</td></tr>`).join('')}
+      </tbody></table></div>
+      ${eintraege.length > 50 ? '<p class="zone-note">… und ' + (eintraege.length - 50) + ' weitere.</p>' : ''}
+    </div>`;
+
+  const angewendet = b.modus === 'anwenden';
+  const kopf = angewendet
+    ? `<div class="ki-hint web on"><span><b>${b.angelegt} Kunde${b.angelegt === 1 ? '' : 'n'} angelegt.</b>
+        ${b.angelegt ? 'Vergebene Nummern: ' + esc(b.von_nummer) + ' bis ' + esc(b.bis_nummer) + '.' : ''}</span></div>`
+    : `<div class="ki-hint web on"><span><b>Trockenlauf — es wurde noch nichts gespeichert.</b>
+        Von ${b.gelesen} gelesenen Zeilen ${b.neu === 0 ? 'wäre nichts anzulegen' :
+        'würden <b>' + b.neu + '</b> Kunde' + (b.neu === 1 ? '' : 'n') + ' neu angelegt'}.</span></div>`;
+
+  const vorschau = (!angewendet && b.vorschau && b.vorschau.length) ? `
+    <div style="margin-top:14px">
+      <div class="feld-titel">So kämen sie an${b.neu > b.vorschau.length ? ' (erste ' + b.vorschau.length + ')' : ''}</div>
+      <div class="tw"><table class="tbl"><thead><tr><th>Zeile</th><th>Name</th><th>PLZ</th><th>Ort</th></tr></thead>
+      <tbody>${b.vorschau.map(v => `<tr><td class="num" style="color:var(--ink-3)">${v.zeile}</td>
+        <td><b>${esc(v.name)}</b></td><td>${esc(v.plz)}</td><td>${esc(v.ort)}</td></tr>`).join('')}
+      </tbody></table></div>
+    </div>` : '';
+
+  $('impBericht').innerHTML = kopf + vorschau
+    + liste('Übersprungen', b.uebersprungen || [], 'var(--ink-2)')
+    + liste('Nicht übernommen — unvollständig', b.fehler || [], 'var(--warn)')
+    + ((b.fehler || []).length ? `<p class="zone-note" style="margin-top:10px">
+        Unvollständige Zeilen bleiben liegen statt halb angelegt zu werden. Ergänze sie in
+        der Datei und importiere sie erneut — bereits angelegte Kunden werden dabei
+        übersprungen, es entstehen keine Doppel.</p>` : '');
+}
 
 // Zwei Einstiege, ein Formular. openKundeNeu ist zugleich das Ziel des
 // Diktat-Routers (ENT-032/042) und behält darum seine Signatur.
