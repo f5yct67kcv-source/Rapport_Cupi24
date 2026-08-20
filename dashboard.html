@@ -600,8 +600,11 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ag-tab .stift:hover { background: var(--line-soft); color: var(--ink); }
 .ag-plan { font-size: 11.5px; color: var(--ink-3); }
 
-/* Festgeschriebene Zeile: sichtbar, aber erkennbar nicht mehr im Zugriff. */
-.ag-tab tr.zu > td { background: var(--surface-2); }
+/* Festgeschriebene Zeile: sichtbar, aber erkennbar nicht mehr im Zugriff --
+   Text gedaempft (ausser dem Status-Chip, der seine Farbe selbst setzt und
+   damit lesbar bleibt), Hintergrund abgesetzt. */
+.ag-tab tr.zu > td { background: var(--surface-2); color: var(--ink-3); }
+.ag-tab tr.zu .ag-plan { color: var(--ink-3); }
 .ag-tab tr.zu.gewaehlt > td { background: var(--accent-soft); }
 .ag-tab tr.zu .inp:disabled { background: transparent; border-color: transparent; color: var(--ink-2); }
 .i-schloss { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2;
@@ -6179,7 +6182,7 @@ function renderAbgleich() {
       <th class="mitte"><input type="checkbox" class="haken" id="agAlle" ${alleGewaehlt ? 'checked' : ''} onchange="agAlleUm(this.checked)" aria-label="Alle auswählen"></th>
       <th>Planung</th><th>Mitarbeitende</th><th class="nowrap">Datum</th>
       <th class="mitte">von</th><th class="mitte">bis</th><th class="mitte">Pause</th><th class="num">Dauer</th>
-      <th>Kunde</th><th>Status</th><th class="mitte">Bearbeiten</th>
+      <th>Status</th><th class="mitte">Bearbeiten</th>
     </tr></thead><tbody>` + agZeilen.map(z => {
     const k = agKey(z);
     const gew = agGewaehlt.has(k);
@@ -6209,8 +6212,7 @@ function renderAbgleich() {
         <td class="mitte"><input class="inp" type="time" value="${esc(vBis)}"${ohne ? ' disabled' : ''} data-ag="bis" data-k="${esc(k)}" aria-label="Tatsächlich bis"></td>
         <td class="mitte"><input class="inp pause" type="number" min="0" max="600" step="5" value="${esc(String(vPause))}"${ohne ? ' disabled' : ''} data-ag="pause" data-k="${esc(k)}" aria-label="Pause in Minuten"></td>
         <td class="num nowrap" data-dauer="${esc(k)}">${ohne && !zu ? '–' : esc(agDauer(vVon, vBis, vPause))}</td>
-        <td>${esc(z.kunde_name)}</td>
-        <td class="nowrap"><span class="chip ${st[1]}">${zu ? SCHLOSS_ZU : ''}${esc(st[0])}</span></td>
+        <td class="nowrap"><span class="chip ${st[1]}">${zu ? SCHLOSS_ZU : ''}${esc(zu && z.ist_status === 'anwesend' ? 'Abgeglichen' : st[0])}</span></td>
         <td class="mitte"><button class="stift" onclick="openAbgleich('${esc(k)}')" title="${zu ? 'Festgeschrieben — zum Ändern Sperre aufheben' : 'Details'}" aria-label="Bearbeiten">${stiftSvg}</button></td>
       </tr>`;
   }).join('') + `</tbody></table>`;
