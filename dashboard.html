@@ -6454,6 +6454,16 @@ function agSammelSpeichern(status) {
 }
 
 // ── Schublade für eine einzelne Zeile ─────────────────────────────────────
+// Tabelle und Schublade zeigen DIESELBE Zeile. Steht in der Tabelle schon ein
+// Wert -- getippt oder vorgeschlagen --, muss die Schublade ihn übernehmen.
+// Sonst öffnet der Stift ein leeres Feld, das Speichern schreibt diese Leere
+// zurück, und die vorgeschlagene Pause verschwindet aus der Hauptseite,
+// obwohl sie eben noch dort stand.
+function agZeilenwert(k, feld, ersatz) {
+  const el = document.querySelector(`#agTable [data-ag="${feld}"][data-k="${CSS.escape(k)}"]`);
+  return el && !el.disabled && el.value !== '' ? el.value : ersatz;
+}
+
 function openAbgleich(k) {
   const z = agZeilen.find(x => agKey(x) === k);
   if (!z) { toast('Zeile nicht gefunden — bitte aktualisieren.'); return; }
@@ -6463,6 +6473,19 @@ function openAbgleich(k) {
   const erst = (z.ist_status || 'offen') === 'offen';
   const zu = agGesperrt(z) && !agEntsperrt.has(k);
   const vorwahl = erst ? (z.mitarbeiter_id ? 'anwesend' : 'ausgefallen') : z.ist_status;
+  // Pausendauer nach derselben Regel wie in der Tabellenzeile: erfasster Wert,
+  // sonst das in der Zeile Getippte, sonst der Sollwert aus Art. 13 Ziff. 1.
+  // Drei Quellen, eine Reihenfolge -- und dieselbe Vorschlagsmarkierung, damit
+  // ein Vorschlag hier so aussieht wie dort.
+  const dVon = agZeilenwert(k, 'von', erst ? hm(z.von) : (z.ist_von ? hm(z.ist_von) : ''));
+  const dBis = agZeilenwert(k, 'bis', erst ? hm(z.bis) : (z.ist_bis ? hm(z.ist_bis) : ''));
+  const dSoll = agPauseSoll(dVon, dBis);
+  const dErfasst = z.ist_pause_min !== null && z.ist_pause_min !== undefined;
+  const dPause = dErfasst
+    ? z.ist_pause_min
+    : agZeilenwert(k, 'pause', erst && dSoll && dSoll.min ? dSoll.min : '');
+  const dPauseVorschlag = !dErfasst && dPause !== '' &&
+    !!document.querySelector(`#agTable [data-ag="pause"][data-k="${CSS.escape(k)}"].vorschlag`);
   const opt = Object.keys(AG_STATUS)
     .map(s => `<option value="${s}"${vorwahl === s ? ' selected' : ''}>${AG_STATUS[s][0]}</option>`).join('');
   const sperr = zu ? ' disabled' : '';
@@ -6493,13 +6516,13 @@ function openAbgleich(k) {
       <div class="f wide"><label for="agdStatus">Was ist passiert?</label>
         <select class="inp" id="agdStatus" onchange="agdStatusUm()"${sperr}>${opt}</select></div>
       <div class="f"><label for="agdVon">Tatsächlich von</label>
-        <input class="inp" id="agdVon" type="time"${sperr} oninput="agdPauseHinweis()" value="${esc(erst ? hm(z.von) : (z.ist_von ? hm(z.ist_von) : ''))}"></div>
+        <input class="inp" id="agdVon" type="time"${sperr} oninput="agdPauseHinweis()" value="${esc(agZeilenwert(k, 'von', erst ? hm(z.von) : (z.ist_von ? hm(z.ist_von) : '')))}"></div>
       <div class="f"><label for="agdBis">Tatsächlich bis</label>
-        <input class="inp" id="agdBis" type="time"${sperr} oninput="agdPauseHinweis()" value="${esc(erst ? hm(z.bis) : (z.ist_bis ? hm(z.ist_bis) : ''))}"></div>
+        <input class="inp" id="agdBis" type="time"${sperr} oninput="agdPauseHinweis()" value="${esc(agZeilenwert(k, 'bis', erst ? hm(z.bis) : (z.ist_bis ? hm(z.ist_bis) : '')))}"></div>
       <div class="f"><label for="agdPauseVon">Pause ab</label>
-        <input class="inp" id="agdPauseVon" type="time"${sperr} value="${esc(z.ist_pause_von ? hm(z.ist_pause_von) : '')}"></div>
+        <input class="inp" id="agdPauseVon" type="time"${sperr} value="${esc(agZeilenwert(k, 'pausevon', z.ist_pause_von ? hm(z.ist_pause_von) : ''))}"></div>
       <div class="f"><label for="agdPause">Pause (Minuten)</label>
-        <input class="inp" id="agdPause" type="number" min="0" max="600" step="5"${sperr} oninput="agdPauseHinweis()" value="${esc(String(z.ist_pause_min ?? ''))}"></div>
+        <input class="inp${dPauseVorschlag ? ' vorschlag' : ''}" id="agdPause" type="number" min="0" max="600" step="5"${sperr} oninput="this.classList.remove('vorschlag');agdPauseHinweis()" value="${esc(String(dPause))}"></div>
       <div class="f wide" id="agdPauseGav"></div>
       <div class="f wide"><label>Pause bezahlt</label>
         <div class="wahl-reihe">
