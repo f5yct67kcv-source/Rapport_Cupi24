@@ -2286,10 +2286,11 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
                ansteht, die Sparte daneben sagt, WELCHE REGELN gelten. Stuende
                Reinigung in beiden Feldern, koennten sie auseinanderlaufen --
                und dann waere unklar, ob der GAV greift. -->
-          <select class="inp" id="enNEinsatzart">
+          <select class="inp" id="enNEinsatzart" onchange="artSparteKoppeln('enN')">
             <option>Verkehrsdienst</option>
             <option>Revierdienst</option>
             <option>Sicherheitsdienst</option>
+            <option>Reinigung</option>
           </select>
         </div>
         <div class="f"><label for="enNDatum">Datum *</label><input class="inp" id="enNDatum" type="date" onchange="pickRefresh('enN')"></div>
@@ -2309,10 +2310,11 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
         </div>
         <div class="f"><label for="enNOrt">Arbeitsort — PLZ / Ort *</label><input class="inp" id="enNOrt"></div>
         <div class="f"><label for="enNSparte">Sparte</label>
-          <select class="inp" id="enNSparte">
+          <select class="inp" id="enNSparte" onchange="spartenKonflikt('enN')">
             <option value="sicherheit">Sicherheit</option>
             <option value="reinigung">Reinigung</option>
           </select>
+          <div id="enNSparteHint"></div>
         </div>
         <div class="f"><label for="enNBedarf">Benötigte Mitarbeitende</label><input class="inp" id="enNBedarf" type="number" min="0" max="99" value="1" oninput="pickFoot('enN')"></div>
         <div class="f"><label for="enNStatus">Status</label><select class="inp" id="enNStatus"><option value="geplant">Geplant</option><option value="bestaetigt">Bestätigt</option><option value="abgesagt">Abgesagt</option></select></div>
@@ -2348,12 +2350,13 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
         <div class="f"><label for="obOrt">Ort *</label><input class="inp" id="obOrt"></div>
         <div class="f"><label for="obKanton">Kanton</label><input class="inp" id="obKanton" value="SO" maxlength="2" style="text-transform:uppercase"></div>
         <div class="f"><label for="obSparte">Sparte</label>
-          <select class="inp" id="obSparte" onchange="obZoneAktualisieren()">
+          <select class="inp" id="obSparte" onchange="obZoneAktualisieren(); spartenKonflikt('ob')">
             <option value="sicherheit">Sicherheit</option>
             <option value="reinigung">Reinigung</option>
           </select>
+          <div id="obSparteHint"></div>
         </div>
-        <div class="f"><label for="obEinsatzart">Einsatzart</label><input class="inp" id="obEinsatzart" value="Revierdienst"></div>
+        <div class="f"><label for="obEinsatzart">Einsatzart</label><input class="inp" id="obEinsatzart" value="Revierdienst" list="dlEinsatzarten" oninput="artSparteKoppeln('ob')"></div>
         <div class="f wide"><label for="obBemerkung">Bemerkung</label><textarea class="inp" id="obBemerkung" rows="2" style="min-height:56px"></textarea></div>
         <div class="f wide"><label class="check"><input type="checkbox" id="obAktiv" checked> Objekt ist in Betrieb</label></div>
       </div>
@@ -2622,6 +2625,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 
 <!-- Kundennamen für die Eingabehilfe in der Planung -->
 <datalist id="dlKunden"></datalist>
+<datalist id="dlEinsatzarten"><option>Verkehrsdienst</option><option>Revierdienst</option><option>Sicherheitsdienst</option><option>Reinigung</option></datalist>
 
 <!-- Einrichtung: Tabellen der Planung und Verfügbarkeit anlegen -->
 <div class="dlg-scrim" id="dlgEinrichtung">
@@ -3947,10 +3951,48 @@ const EN_STATUS = {
   provisorisch: ['Provisorisch', 'chip-a'], abgesagt: ['Abgesagt', 'chip-x']
 };
 // Vorgegebene Einsatzarten (ENT-060). Vom Projektinhaber festgelegt.
-// Ohne 'Reinigung' (ENT-061) -- die Sparte traegt diese Aussage.
+// Mit 'Reinigung' (ENT-062, auf Wunsch des Projektinhabers). Damit sagen zwei
+// Felder dasselbe -- das ist gewollt, aber es braucht eine Klammer:
+// artSpartekoppeln() zieht die Sparte mit, sobald die Einsatzart auf
+// Reinigung wechselt, und spartenKonflikt() macht sichtbar, wenn die beiden
+// sich doch widersprechen. Massgeblich fuer die GAV-Regeln bleibt die
+// SPARTE (ENT-061) -- daran aendert diese Liste nichts.
 // Bestehende abweichende Werte bleiben erhalten: einsatzartOptionen()
 // haengt einen unbekannten Wert an, statt ihn still zu ueberschreiben.
-const EINSATZARTEN = ['Verkehrsdienst', 'Revierdienst', 'Sicherheitsdienst'];
+const EINSATZARTEN = ['Verkehrsdienst', 'Revierdienst', 'Sicherheitsdienst', 'Reinigung'];
+const ART_REINIGUNG = 'reinigung';
+
+// Einsatzart -> Sparte nachziehen. Bewusst in BEIDE Richtungen, damit kein
+// Zustand haengen bleibt: Wer von Reinigung auf Revierdienst wechselt, will
+// nicht, dass die Sparte still auf Reinigung stehen bleibt und der Zeitbonus
+// weiterhin fehlt. Die Sparte laesst sich danach von Hand korrigieren -- und
+// wenn das geschieht, meldet sich spartenKonflikt().
+function artSparteKoppeln(prefix) {
+  const art = $(prefix + 'Einsatzart'), sp = $(prefix + 'Sparte');
+  if (!art || !sp) { return; }
+  const istReinigung = String(art.value || '').trim().toLowerCase() === ART_REINIGUNG;
+  sp.value = istReinigung ? 'reinigung' : 'sicherheit';
+  // Im Objektdialog haengt der Auslagenersatz-Hinweis an der Sparte (ENT-061).
+  if (prefix === 'ob' && typeof obZoneAktualisieren === 'function') { obZoneAktualisieren(); }
+  spartenKonflikt(prefix);
+}
+
+// Widersprechen sich Einsatzart und Sparte, steht es da -- still auseinander
+// laufen duerfen sie nicht. Massgeblich ist die Sparte; genau das sagt der
+// Hinweis, damit niemand raten muss.
+function spartenKonflikt(prefix) {
+  const art = $(prefix + 'Einsatzart'), sp = $(prefix + 'Sparte');
+  const box = $(prefix + 'SparteHint');
+  if (!art || !sp || !box) { return; }
+  const artR = String(art.value || '').trim().toLowerCase() === ART_REINIGUNG;
+  const spR = sp.value === 'reinigung';
+  if (artR === spR) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="ki-hint" style="color:var(--warn);background:var(--warn-soft);margin-top:8px">
+    <span>Einsatzart und Sparte widersprechen sich. <b>Massgeblich für die GAV-Regeln ist die Sparte
+    „${sp.value === 'reinigung' ? 'Reinigung' : 'Sicherheit'}"</b> — ${sp.value === 'reinigung'
+      ? 'es wird also kein Zeitbonus und kein Auslagenersatz gerechnet.'
+      : 'es wird also Zeitbonus und Auslagenersatz gerechnet.'}</span></div>`;
+}
 
 // Wichtig: Ein bestehender Einsatz kann eine Einsatzart tragen, die nicht in
 // der Liste steht -- aus der Zeit vor dieser Festlegung oder von einer
@@ -4303,6 +4345,10 @@ function openEinsatzNeu(felder, maNamen) {
 
   const ids = maNamen.map(n => (mitarbeiter.find(m => m.name === n) || {}).id).filter(Boolean);
   pickRender('enN', ids, null);
+  // Auch beim Oeffnen pruefen (ENT-062): Ein Diktat kann eine Einsatzart
+  // gesetzt haben, die nicht zur Sparte passt -- der Widerspruch soll sofort
+  // dastehen und nicht erst, wenn jemand ein Feld anfasst.
+  spartenKonflikt('enN');
   // Wird die Planung als erste Ansicht geöffnet, ist das Personal womöglich
   // noch unterwegs — dann die Auswahl nachziehen.
   if (!mitarbeiter.length) loadMitarbeiter().then(() => pickRender('enN', ids, null));
@@ -4416,7 +4462,7 @@ function openEinsatz(id) {
            wortwoertlich stimmt. Auslesen laesst sich der Wert trotzdem. -->
       <input type="hidden" id="enETitel"${sperr} value="${esc(e.titel || '')}">
       <div class="f"><label for="enEEinsatzart">Einsatzart</label>
-        <select class="inp" id="enEEinsatzart"${sperr}>${einsatzartOptionen(e.einsatzart)}</select>
+        <select class="inp" id="enEEinsatzart"${sperr} onchange="artSparteKoppeln('enE')">${einsatzartOptionen(e.einsatzart)}</select>
       </div>
       <div class="f"><label for="enEDatum">Datum *</label><input class="inp" id="enEDatum"${sperr} type="date" value="${esc(tagVon(e))}" onchange="pickRefresh('enE')"></div>
       <div class="f zeitpaar">
@@ -4430,10 +4476,11 @@ function openEinsatz(id) {
       <div class="f wide"><label for="enEStrasse">Arbeitsort — Strasse</label><input class="inp" id="enEStrasse"${sperr} value="${esc(e.strasse || '')}"></div>
       <div class="f"><label for="enEOrt">Arbeitsort — PLZ / Ort *</label><input class="inp" id="enEOrt"${sperr} value="${esc(e.ort)}"></div>
       <div class="f"><label for="enESparte">Sparte</label>
-        <select class="inp" id="enESparte"${sperr}>
+        <select class="inp" id="enESparte"${sperr} onchange="spartenKonflikt('enE')">
           <option value="sicherheit"${e.sparte !== 'reinigung' ? ' selected' : ''}>Sicherheit</option>
           <option value="reinigung"${e.sparte === 'reinigung' ? ' selected' : ''}>Reinigung</option>
         </select>
+        <div id="enESparteHint"></div>
       </div>
       <div class="f"><label for="enEBedarf">Benötigte Mitarbeitende</label><input class="inp" id="enEBedarf"${sperr} type="number" min="0" max="99" value="${Number(e.bedarf)}" oninput="pickFoot('enE')"></div>
       <div class="f"><label for="enEStatus">Status</label><select class="inp" id="enEStatus"${sperr}>${opt}</select></div>
@@ -4466,6 +4513,7 @@ function openEinsatz(id) {
      <div style="flex:1"></div>
      ${zu ? '' : '<button class="btn btn-primary" onclick="saveEinsatz()">Speichern</button>'}`;
   pickRender('enE', (e.mitarbeiter || []).map(m => m.id), Number(id));
+  spartenKonflikt('enE');
   if (zu) {
     document.querySelectorAll('#enEMa input').forEach(i => { i.disabled = true; });
   }
@@ -4818,6 +4866,7 @@ function openObjektNeu(o) {
   $('obAktiv').checked = o ? !!o.aktiv : true;
   $('obNeuErr').style.display = 'none';
   obDistanzZeichnen(o);
+  spartenKonflikt('ob');
   openDlg('dlgObNeu');
   $('obName').focus();
 }
