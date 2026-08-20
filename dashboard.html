@@ -586,14 +586,21 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ag-sammel .btn-quiet:hover { background: var(--surface-2); }
 
 /* Tabelle des Abgleichs: eine Zeile ist eine Person auf einer Schicht.
-   Kopf und Inhalt teilen die Ausrichtung -- eine linksbündige Überschrift
-   über einem rechtsbündigen Wert liest sich als Fehler. */
-.ag-tab td { padding-top: 5px; padding-bottom: 5px; vertical-align: middle; }
-.ag-tab th.mitte, .ag-tab td.mitte { text-align: center; }
-.ag-tab th.num, .ag-tab td.num { text-align: right; }
-.ag-tab th:not(.mitte):not(.num), .ag-tab td:not(.mitte):not(.num) { text-align: left; }
-.ag-tab .inp { padding: 4px 7px; font-size: 12.5px; width: 82px; text-align: center; }
-.ag-tab .inp.pause { width: 66px; }
+   ALLES linksbündig -- Kopf wie Inhalt, ohne Ausnahme. Gemischte Ausrichtung
+   (zentrierte Zeitköpfe, rechtsbündige Dauer) sah je Spalte für sich richtig
+   aus, ergab über die Tabelle hinweg aber kein Raster: das Auge findet keine
+   durchgehende Kante. Auch die Zahlenspalte „Dauer" steht darum links --
+   sie ist zweistellig und fix formatiert, ein rechter Flattersatz bringt
+   hier nichts. */
+.ag-tab th, .ag-tab td { text-align: left; padding-left: 14px; padding-right: 14px; }
+.ag-tab td { padding-top: 6px; padding-bottom: 6px; vertical-align: middle; }
+/* Haken und Bearbeiten schrumpfen auf ihren Inhalt, statt den überzähligen
+   Platz der Tabelle aufzusaugen -- sonst klafft zwischen Status und Stift
+   eine Lücke, die wie ein vergessenes Feld aussieht. */
+.ag-tab th:first-child, .ag-tab td:first-child,
+.ag-tab th:last-child, .ag-tab td:last-child { width: 1%; white-space: nowrap; }
+.ag-tab .inp { padding: 4px 8px; font-size: 12.5px; width: 84px; text-align: left; }
+.ag-tab .inp.pause { width: 68px; }
 .ag-tab .haken { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 .ag-tab tr.gewaehlt > td { background: var(--accent-soft); }
 .ag-tab .stift { border: none; background: transparent; color: var(--ink-3); cursor: pointer; padding: 5px; border-radius: var(--r-xs); display: inline-flex; }
@@ -609,7 +616,11 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ag-tab tr.zu .inp:disabled { background: transparent; border-color: transparent; color: var(--ink-2); }
 .i-schloss { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2;
   stroke-linecap: round; stroke-linejoin: round; margin-right: 4px; vertical-align: -1px; flex: none; }
-.chip .i-schloss { margin-right: 3px; }
+/* Im Status-Chip steht das Schloss HINTER dem Wort: erst die Aussage
+   („Abgeglichen"), dann das Symbol, das sie bekräftigt. Entsprechend
+   Abstand links statt rechts. Etwas grösser als sonst, damit es auf einen
+   Blick als Schloss erkennbar ist und nicht als Punkt. */
+.chip .i-schloss { width: 15px; height: 15px; stroke-width: 2; margin-right: 0; margin-left: 5px; }
 .zu-zone { border-color: var(--warn-line); background: var(--warn-soft); }
 .zu-zone .zone-hd, .zu-zone .zone-note { color: var(--warn); }
 
@@ -6179,10 +6190,10 @@ function renderAbgleich() {
   const alleGewaehlt = agZeilen.every(z => agGewaehlt.has(agKey(z)));
 
   $('agTable').innerHTML = `<table class="ag-tab"><thead><tr>
-      <th class="mitte"><input type="checkbox" class="haken" id="agAlle" ${alleGewaehlt ? 'checked' : ''} onchange="agAlleUm(this.checked)" aria-label="Alle auswählen"></th>
+      <th><input type="checkbox" class="haken" id="agAlle" ${alleGewaehlt ? 'checked' : ''} onchange="agAlleUm(this.checked)" aria-label="Alle auswählen"></th>
       <th>Planung</th><th>Mitarbeitende</th><th class="nowrap">Datum</th>
-      <th class="mitte">von</th><th class="mitte">bis</th><th class="mitte">Pause</th><th class="num">Dauer</th>
-      <th>Status</th><th class="mitte">Bearbeiten</th>
+      <th>von</th><th>bis</th><th>Pause</th><th>Dauer</th>
+      <th>Status</th><th>Bearbeiten</th>
     </tr></thead><tbody>` + agZeilen.map(z => {
     const k = agKey(z);
     const gew = agGewaehlt.has(k);
@@ -6201,19 +6212,19 @@ function renderAbgleich() {
     const ohne = zu || z.ist_status === 'abwesend' || z.ist_status === 'ausgefallen';
     return `
       <tr class="${gew ? 'gewaehlt' : ''}${zu ? ' zu' : ''}" data-k="${esc(k)}">
-        <td class="mitte"><input type="checkbox" class="haken" ${gew ? 'checked' : ''} onchange="agWaehlen('${esc(k)}', this.checked)" aria-label="Zeile auswählen"></td>
+        <td><input type="checkbox" class="haken" ${gew ? 'checked' : ''} onchange="agWaehlen('${esc(k)}', this.checked)" aria-label="Zeile auswählen"></td>
         <td>${z.titel ? esc(z.titel) : `<span style="color:var(--ink-3)">${esc(z.einsatzart)}</span>`}
             <div class="ag-plan">${esc(z.ort)}${z.sparte === 'reinigung' ? ' · Reinigung' : ''}</div></td>
         <td>${z.mitarbeiter_id
           ? `${esc(z.wer)}${z.personalnummer ? ` <span class="ag-plan">(${esc(z.personalnummer)})</span>` : ''}`
           : '<span style="color:var(--neg)">niemand eingeteilt</span>'}</td>
         <td class="nowrap">${dmy(z.datum)}<div class="ag-plan">${hm(z.von)}–${hm(z.bis)}</div></td>
-        <td class="mitte"><input class="inp" type="time" value="${esc(vVon)}"${ohne ? ' disabled' : ''} data-ag="von" data-k="${esc(k)}" aria-label="Tatsächlich von"></td>
-        <td class="mitte"><input class="inp" type="time" value="${esc(vBis)}"${ohne ? ' disabled' : ''} data-ag="bis" data-k="${esc(k)}" aria-label="Tatsächlich bis"></td>
-        <td class="mitte"><input class="inp pause" type="number" min="0" max="600" step="5" value="${esc(String(vPause))}"${ohne ? ' disabled' : ''} data-ag="pause" data-k="${esc(k)}" aria-label="Pause in Minuten"></td>
-        <td class="num nowrap" data-dauer="${esc(k)}">${ohne && !zu ? '–' : esc(agDauer(vVon, vBis, vPause))}</td>
-        <td class="nowrap"><span class="chip ${st[1]}">${zu ? SCHLOSS_ZU : ''}${esc(zu && z.ist_status === 'anwesend' ? 'Abgeglichen' : st[0])}</span></td>
-        <td class="mitte"><button class="stift" onclick="openAbgleich('${esc(k)}')" title="${zu ? 'Festgeschrieben — zum Ändern Sperre aufheben' : 'Details'}" aria-label="Bearbeiten">${stiftSvg}</button></td>
+        <td><input class="inp" type="time" value="${esc(vVon)}"${ohne ? ' disabled' : ''} data-ag="von" data-k="${esc(k)}" aria-label="Tatsächlich von"></td>
+        <td><input class="inp" type="time" value="${esc(vBis)}"${ohne ? ' disabled' : ''} data-ag="bis" data-k="${esc(k)}" aria-label="Tatsächlich bis"></td>
+        <td><input class="inp pause" type="number" min="0" max="600" step="5" value="${esc(String(vPause))}"${ohne ? ' disabled' : ''} data-ag="pause" data-k="${esc(k)}" aria-label="Pause in Minuten"></td>
+        <td class="nowrap" data-dauer="${esc(k)}">${ohne && !zu ? '–' : esc(agDauer(vVon, vBis, vPause))}</td>
+        <td class="nowrap"><span class="chip ${st[1]}">${esc(zu && z.ist_status === 'anwesend' ? 'Abgeglichen' : st[0])}${zu ? SCHLOSS_ZU : ''}</span></td>
+        <td><button class="stift" onclick="openAbgleich('${esc(k)}')" title="${zu ? 'Festgeschrieben — zum Ändern Sperre aufheben' : 'Details'}" aria-label="Bearbeiten">${stiftSvg}</button></td>
       </tr>`;
   }).join('') + `</tbody></table>`;
 
