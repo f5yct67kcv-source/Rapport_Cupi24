@@ -617,6 +617,9 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
    für eine Feststellung hält. */
 .ag-tab .inp.vorschlag { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent); }
 .ag-soll { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; color: var(--warn); }
+/* Netto ohne Pausenabzug, weil die Pause bezahlt ist -- der Wert weicht dann
+   bewusst von "Rohzeit minus Pause" ab und soll das auch zeigen. */
+.ag-tab td.netto-voll { color: var(--pos); font-weight: 620; }
 .zone.warn { border-color: var(--warn-line); background: var(--warn-soft); }
 .zone.warn .zone-hd, .zone.warn .zone-note { color: var(--warn); }
 
@@ -6171,11 +6174,22 @@ function agGefiltert() {
 
 // Dauer = bis − von − Pause. Reine Arithmetik über Mitternacht hinweg; ob
 // diese Zeit als Arbeitszeit im Sinne des GAV gilt, sagt sie NICHT.
-function agDauer(von, bis, pauseMin) {
+// Netto = Rohzeit minus Pause -- ausser die Pause ist für die Mitarbeitenden
+// bezahlt. Dann bleibt sie drin: Art. 13 Ziff. 2 rechnet eine bezahlte Pause
+// ausdrücklich zur Arbeitszeit (ENT-047).
+//
+// NUR die MA-Kennzeichnung wirkt hier. "Bezahlte Pause Kunde" ist eine
+// Verrechnungsfrage gegenüber dem Auftraggeber und hat mit dem Lohn nichts zu
+// tun -- die beiden dürfen nie zusammengeworfen werden.
+//
+// Ist die Kennzeichnung noch nicht gesetzt (null), wird abgezogen. Das ist die
+// bisherige Rechnung und bleibt der Ausgangszustand, solange niemand die
+// Feststellung nach Art. 13 Ziff. 2 getroffen hat.
+function agDauer(von, bis, pauseMin, pauseBezahltMa) {
   if (!von || !bis) return '';
   let d = agRohMin(von, bis);
   if (d === null) return '';
-  d -= Number(pauseMin || 0);
+  if (Number(pauseBezahltMa) !== 1) { d -= Number(pauseMin || 0); }
   if (d < 0) return '';
   return `${String(Math.floor(d / 60)).padStart(2, '0')}:${String(d % 60).padStart(2, '0')}`;
 }
@@ -6280,6 +6294,9 @@ function renderAbgleich() {
     const vPause = erfasst ? z.ist_pause_min : (erst && soll && soll.min ? soll.min : '');
     const vorgeschlagen = !erfasst && vPause !== '';
     const vPauseVon = z.ist_pause_von ? hm(z.ist_pause_von) : '';
+    // Nur die MA-Kennzeichnung -- die Kunden-Kennzeichnung betrifft die
+    // Verrechnung, nicht den Lohn, und darf Netto nicht anfassen.
+    const bezMa = Number(z.ist_pause_bezahlt_ma) === 1;
     // Gesperrt oder ohne Anwesenheit: in beiden Fällen sind die Zeitfelder tot.
     const ohne = zu || z.ist_status === 'abwesend' || z.ist_status === 'ausgefallen';
     return `
@@ -6300,7 +6317,8 @@ function renderAbgleich() {
           <span class="tr">min</span>
           <span class="ag-soll" data-soll="${esc(k)}">${esc(agSollHinweis(soll, vPause, ohne))}</span>
         </td>
-        <td class="nowrap" data-dauer="${esc(k)}">${ohne && !zu ? '–' : esc(agDauer(vVon, vBis, vPause))}</td>
+        <td class="nowrap${bezMa ? ' netto-voll' : ''}" data-dauer="${esc(k)}" data-bez="${bezMa ? 1 : 0}"
+            title="${bezMa ? 'Bezahlte Pause — nach Art. 13 Ziff. 2 nicht von der Nettozeit abgezogen' : 'Rohzeit minus Pause'}">${ohne && !zu ? '–' : esc(agDauer(vVon, vBis, vPause, bezMa ? 1 : 0))}</td>
         <td class="nowrap"><span class="chip ${st[1]}">${esc(zu && z.ist_status === 'anwesend' ? 'Abgeglichen' : st[0])}${zu ? SCHLOSS_ZU : ''}</span></td>
         <td><button class="stift" onclick="openAbgleich('${esc(k)}')" title="${zu ? 'Festgeschrieben — zum Ändern Sperre aufheben' : 'Details'}" aria-label="Bearbeiten">${stiftSvg}</button></td>
       </tr>`;
@@ -6323,7 +6341,7 @@ function agDauerNachfuehren(k) {
   const feld = document.querySelector(`#agTable [data-dauer="${CSS.escape(k)}"]`);
   const von = f('von'), bis = f('bis'), pause = f('pause');
   if (!von || !bis || !pause) return;
-  if (feld) feld.textContent = agDauer(von.value, bis.value, pause.value) || '';
+  if (feld) feld.textContent = agDauer(von.value, bis.value, pause.value, feld.dataset.bez) || '';
   // Sollpause hängt an den Zeiten -- ändert sich eine, ändert sich der Hinweis.
   const soll = agPauseSoll(von.value, bis.value);
   const hinweis = document.querySelector(`#agTable [data-soll="${CSS.escape(k)}"]`);
@@ -6527,7 +6545,7 @@ function openAbgleich(k) {
       <div class="f wide"><label>Pause bezahlt</label>
         <div class="wahl-reihe">
           <label for="agdBezMa" style="font-weight:500">
-            <input type="checkbox" id="agdBezMa"${sperr} ${Number(z.ist_pause_bezahlt_ma) === 1 ? 'checked' : ''}>
+            <input type="checkbox" id="agdBezMa"${sperr} onchange="agdPauseHinweis()" ${Number(z.ist_pause_bezahlt_ma) === 1 ? 'checked' : ''}>
             Mitarbeitende
           </label>
           <label for="agdBezKunde" style="font-weight:500">
@@ -6557,6 +6575,7 @@ function openAbgleich(k) {
      ${zu ? '' : '<button class="btn btn-primary" onclick="agdSpeichern()">Abgleich speichern</button>'}`;
   showDrawer();
   if (!zu) agdStatusUm();
+  agdPauseHinweis();
 }
 
 // Wer nicht da war oder wessen Schicht ausfiel, hat keine Ist-Zeiten — die
@@ -6580,9 +6599,24 @@ function agdStatusUm() {
 function agdPauseHinweis() {
   const box = $('agdPauseGav');
   if (!box) return;
-  const soll = agPauseSoll($('agdVon').value, $('agdBis').value);
-  if (!soll || !soll.min) { box.innerHTML = ''; return; }
+  const von = $('agdVon').value, bis = $('agdBis').value;
+  const bez = $('agdBezMa') && $('agdBezMa').checked ? 1 : 0;
   const ist = Number($('agdPause').value || 0);
+  // Die Nettofolge steht immer da, auch ohne Pausenpflicht: das Häkchen
+  // "bezahlt" verschiebt die Nettozeit, und wer es setzt, soll sehen, um
+  // wie viel. Eine Lohnfolge darf nicht unsichtbar bleiben.
+  const netto = agDauer(von, bis, ist, bez);
+  const nettoZeile = netto
+    ? `<div class="zone-note" style="margin-top:6px">Netto daraus: <b>${esc(netto)}</b>${
+        ist ? (bez
+          ? ` — die ${nf(ist)} Minuten Pause bleiben drin, weil sie als bezahlt festgestellt ist (Art. 13 Ziff. 2).`
+          : ` — ${nf(ist)} Minuten Pause abgezogen.`) : ''}</div>`
+    : '';
+  const soll = agPauseSoll(von, bis);
+  if (!soll || !soll.min) {
+    box.innerHTML = nettoZeile ? `<div class="zone" style="margin:0">${nettoZeile}</div>` : '';
+    return;
+  }
   const knapp = ist < soll.min;
   box.innerHTML = `<div class="zone${knapp ? ' warn' : ''}" style="margin:0">
     <div class="zone-hd">Art. 13 Ziff. 1 GAV: ${nf(soll.min)} Minuten</div>
@@ -6593,7 +6627,7 @@ function agdPauseHinweis() {
       <br><br>Bemessen auf der Rohzeit dieser einen Schicht. Ob mehrere Einsätze
       desselben Tages zusammenzuzählen sind und ob der Zeitbonus mitzählt, ist
       offen (GAV-AUS-007) — dieser Hinweis ist darum <b>kein</b> Nachweis der Einhaltung.
-    </div></div>`;
+    </div>${nettoZeile}</div>`;
 }
 
 // Doppelbestätigung: erst dieser Knopf, dann die Rückfrage. Aufgehoben wird
@@ -6644,7 +6678,7 @@ function agCsv() {
     // -- diese Unterscheidung muss auch im Export erhalten bleiben.
     z.ist_pause_bezahlt_ma === null || z.ist_pause_bezahlt_ma === undefined ? '' : (Number(z.ist_pause_bezahlt_ma) === 1 ? 'ja' : 'nein'),
     z.ist_pause_bezahlt_kunde === null || z.ist_pause_bezahlt_kunde === undefined ? '' : (Number(z.ist_pause_bezahlt_kunde) === 1 ? 'ja' : 'nein'),
-    agDauer(z.ist_von ? hm(z.ist_von) : '', z.ist_bis ? hm(z.ist_bis) : '', z.ist_pause_min),
+    agDauer(z.ist_von ? hm(z.ist_von) : '', z.ist_bis ? hm(z.ist_bis) : '', z.ist_pause_min, z.ist_pause_bezahlt_ma),
     (AG_STATUS[z.ist_status || 'offen'] || AG_STATUS.offen)[0], z.ist_bemerkung || ''].map(cell).join(';'));
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['﻿' + [hdr.map(cell).join(';'), ...rows].join('\r\n')], { type: 'text/csv;charset=utf-8' }));
