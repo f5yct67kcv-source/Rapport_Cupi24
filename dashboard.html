@@ -2157,6 +2157,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
               <button class="btn btn-primary" id="anBtn" onclick="anSpeichern()">Hinzufügen</button>
               <button class="btn btn-plain" onclick="anFormularLeeren()">Zurücksetzen</button>
             </div>
+            <p class="zone-note" id="anMessHinweis" style="margin-top:12px"></p>
             <p class="zone-note" style="margin-top:12px">Die Wegstrecke zwischen den beiden Anstellungsorten entscheidet
                nach Art. 18 Ziff. 3.2 bzw. 3.3, ob im Nebenanstellungsgebiet überhaupt etwas geschuldet ist:
                unter 40 km nichts, ab 40 km eine Pauschale nach Formel.</p>
@@ -2455,6 +2456,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
            Objekt. Eine Zahl je Objekt, nicht eine je Schicht. -->
       <div id="obDistanzBlock" style="margin-top:18px">
         <div class="feld-titel">Wegstrecke ab Anstellungsort (Art. 18 GAV)</div>
+        <p class="zone-note" id="obMessHinweis" style="margin:2px 0 10px"></p>
         <div id="obDistanzFelder"></div>
         <div id="obZoneHint"></div>
       </div>
@@ -4940,6 +4942,9 @@ function objektZone(o) {
 function obDistanzZeichnen(o) {
   const feld = $('obDistanzFelder'), hint = $('obZoneHint');
   if (!feld) { return; }
+  // Der Messhinweis steht ueber den Feldern, nicht erst in einer Warnung:
+  // Wer die Zahl eintippt, soll VORHER wissen, welche der Google-Routen gilt.
+  if ($('obMessHinweis')) { $('obMessHinweis').textContent = GAV_WEGSTRECKE_HINWEIS; }
   if (!anstellungsorte.length) {
     feld.innerHTML = '';
     hint.innerHTML = `<div class="ki-hint on" style="color:var(--warn);background:var(--warn-soft)">
@@ -5243,6 +5248,7 @@ function anFormularLeeren() {
 }
 
 function anListeZeichnen() {
+  if ($('anMessHinweis')) { $('anMessHinweis').textContent = GAV_WEGSTRECKE_HINWEIS; }
   const box = $('anListe');
   if (!anstellungsorte.length) {
     box.innerHTML = '<p class="zone-note">Noch kein Anstellungsort erfasst.</p>';

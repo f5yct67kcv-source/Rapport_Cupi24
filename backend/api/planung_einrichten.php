@@ -431,6 +431,12 @@ if (hat_spalte($pdo, 'kunden', 'kundennummer')) {
 // spaeter ueber die Oberflaeche aendert, bekommt sie nicht wieder
 // ueberschrieben.
 //
+// Die 18.0 km sind gemessen, nicht geschaetzt (OP-44 erledigt): kuerzeste
+// effektive Wegstrecke Trimbach -> Gelterkinden gemaess Google Maps, wie es
+// Art. 18 Ziff. 2 GAV verlangt. Google bietet auf dieser Strecke auch 19.2
+// und 20.4 km an; massgebend ist die kuerzeste, nicht die schnellste.
+// Unter 40 km, also gilt Art. 18 Ziff. 3.2.
+//
 // Betriebsdaten im Code sind an sich unschoen. Hier vertretbar, weil das
 // Werkzeug rein intern eingesetzt wird (ENT-008) und die Adressen auf
 // cupi24.ch oeffentlich stehen. Wuerde daraus je ein Produkt fuer Dritte,
@@ -449,11 +455,11 @@ if (hat_tabelle($pdo, 'anstellungsorte')) {
                 'INSERT INTO anstellungsorte (bezeichnung, rolle, strasse, plz, ort, km_zum_anderen, aktiv, bemerkung)
                  VALUES (?, ?, ?, ?, ?, ?, 1, ?)'
             );
-            $ins->execute(['Hauptsitz Trimbach', 'hao', 'Baslerstrasse 67', '4632', 'Trimbach', 19.0,
+            $ins->execute(['Hauptsitz Trimbach', 'hao', 'Baslerstrasse 67', '4632', 'Trimbach', 18.0,
                 'Hauptanstellungsort nach Art. 18 Ziff. 2 GAV (ENT-055). Von hier wird gemessen.']);
-            $ins->execute(['Standort Gelterkinden', 'nao', 'Rünenbergerstrasse 44', '4460', 'Gelterkinden', 19.0,
+            $ins->execute(['Standort Gelterkinden', 'nao', 'Rünenbergerstrasse 44', '4460', 'Gelterkinden', 18.0,
                 'Nebenanstellungsort nach Art. 18 Ziff. 2 GAV (ENT-055). Erzeugt das Nebenanstellungsgebiet.']);
-            $getan[] = 'Anstellungsorte Trimbach (HAO) und Gelterkinden (NAO) hinterlegt, 19 km auseinander';
+            $getan[] = 'Anstellungsorte Trimbach (HAO) und Gelterkinden (NAO) hinterlegt, 18.0 km auseinander';
         }
     }
 }

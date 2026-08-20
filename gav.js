@@ -157,6 +157,21 @@ function gavFeiertagLuecke(datum, von, bis, karte) {
    Beträge, nicht über die Grenzen — der PAKO-Kommentar bestätigt das:
    "Alle Pauschalzonen sind als Hin- und Rückweg berechnet."       */
 
+/* Der Satz, der beim Erfassen einer Wegstrecke auf dem Bildschirm stehen
+   muss. Er steht hier und nicht in der Oberflaeche, weil er eine GAV-Regel
+   wiedergibt und nicht eine Gestaltungsfrage ist -- und weil er an zwei
+   Stellen gebraucht wird (Anstellungsort und Objekt).
+
+   Der Hinweis ist kein Schoenheitsfehler-Schutz, sondern schliesst eine
+   echte Falle: Google Maps sortiert die Routenliste nach FAHRZEIT. Die
+   oberste Zeile ist damit die schnellste, nicht die kuerzeste. Wer sie
+   ungeprueft abschreibt, kann eine Zone zu hoch oder zu tief landen -- und
+   die Zonengrenzen liegen auf 10.00 / 20.00 / 30.00 km. */
+const GAV_WEGSTRECKE_HINWEIS =
+  'Kürzeste effektive Wegstrecke ab Hauptanstellungsort gemäss Google Maps '
+  + '(Art. 18 Ziff. 2 GAV) — nicht die schnellste. Google sortiert die Routen '
+  + 'nach Fahrzeit; massgebend ist die Route mit den wenigsten Kilometern.';
+
 const GAV_ZONEN = [
   { schluessel: 'anstellungsgebiet', name: 'Anstellungsgebiet',
     bis: 10, entschaedigung: false, quelle: 'Art. 18 Ziff. 3.1.1' },
