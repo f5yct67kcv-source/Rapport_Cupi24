@@ -416,6 +416,39 @@ if (hat_spalte($pdo, 'kunden', 'kundennummer')) {
     }
 }
 
+// ── 2b2. Die beiden Anstellungsorte einmalig hinterlegen (ENT-055).
+// Auf ausdrueckliche Bitte des Projektinhabers, damit er sie nicht von Hand
+// erfassen muss. Laeuft NUR, wenn die Tabelle leer ist -- wer die Orte
+// spaeter ueber die Oberflaeche aendert, bekommt sie nicht wieder
+// ueberschrieben.
+//
+// Betriebsdaten im Code sind an sich unschoen. Hier vertretbar, weil das
+// Werkzeug rein intern eingesetzt wird (ENT-008) und die Adressen auf
+// cupi24.ch oeffentlich stehen. Wuerde daraus je ein Produkt fuer Dritte,
+// muss dieser Block als Erstes verschwinden.
+//
+// Die 19 km stammen aus der Angabe des Projektinhabers, nicht aus einer
+// eigenen Messung. Sie entscheiden nach Art. 18: unter 40 km ist im
+// Nebenanstellungsgebiet nichts geschuldet (Ziff. 3.2.5).
+if (hat_tabelle($pdo, 'anstellungsorte')) {
+    $anzahl = (int)$pdo->query('SELECT COUNT(*) FROM anstellungsorte')->fetchColumn();
+    if ($anzahl === 0) {
+        if ($nurPruefen) {
+            $getan[] = 'Anstellungsorte Trimbach (HAO) und Gelterkinden (NAO) hinterlegen';
+        } else {
+            $ins = $pdo->prepare(
+                'INSERT INTO anstellungsorte (bezeichnung, rolle, strasse, plz, ort, km_zum_anderen, aktiv, bemerkung)
+                 VALUES (?, ?, ?, ?, ?, ?, 1, ?)'
+            );
+            $ins->execute(['Hauptsitz Trimbach', 'hao', 'Baslerstrasse 67', '4632', 'Trimbach', 19.0,
+                'Hauptanstellungsort nach Art. 18 Ziff. 2 GAV (ENT-055). Von hier wird gemessen.']);
+            $ins->execute(['Standort Gelterkinden', 'nao', 'Rünenbergerstrasse 44', '4460', 'Gelterkinden', 19.0,
+                'Nebenanstellungsort nach Art. 18 Ziff. 2 GAV (ENT-055). Erzeugt das Nebenanstellungsgebiet.']);
+            $getan[] = 'Anstellungsorte Trimbach (HAO) und Gelterkinden (NAO) hinterlegt, 19 km auseinander';
+        }
+    }
+}
+
 // ── 2c. PLZ aus dem bisherigen Ort-Feld herausloesen (ENT-044). Bis hierher
 // stand beides zusammen in einer Spalte ("4632 Trimbach"). Getrennt wird nur,
 // wo das Muster eindeutig ist: vier Ziffern, Leerzeichen, Rest. Passt es

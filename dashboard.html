@@ -1192,10 +1192,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
       </button>
 
       <div class="nav-lbl" style="margin-top:16px">Stammdaten</div>
-      <button class="nav-item" id="nav-mitarbeiter" title="Mitarbeitende" onclick="go('mitarbeiter')">
-        <svg class="i" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span class="lbl">Mitarbeitende</span>
-      </button>
       <div class="nav-gruppe" id="navg-kunden">
         <button class="nav-item nav-eltern" id="nav-kunden" title="Kunden" onclick="kuNavKlick()">
           <svg class="i" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
@@ -1206,6 +1202,23 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           <button class="nav-kind" id="nav-kunden-uebersicht" onclick="go('kunden'); kuGoTab('uebersicht')">Adressen</button>
           <button class="nav-kind" id="nav-kunden-objekte" onclick="go('kunden'); kuGoTab('objekte')">Objekte</button>
           <button class="nav-kind" id="nav-kunden-rapporte" onclick="go('kunden'); kuGoTab('rapporte')">Rapporte</button>
+        </div>
+      </div>
+
+      <!-- Administration (ENT-056). Die Mitarbeitenden sind hierher gezogen:
+           Sie sind zwar auch Stammdaten, aber der Bereich verwaltet Personen
+           und nicht Auftraggeber -- und er teilt sich die Rubrik jetzt mit den
+           betrieblichen Einstellungen, an denen dieselben Leute arbeiten. -->
+      <div class="nav-lbl" style="margin-top:16px">Administration</div>
+      <div class="nav-gruppe" id="navg-admin">
+        <button class="nav-item nav-eltern" id="nav-admin" title="Administration" onclick="adminNavKlick()">
+          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.5.66.86 1.19.91H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span class="lbl">Administration</span>
+          <svg class="i chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="nav-kinder">
+          <button class="nav-kind" id="nav-admin-mitarbeiter" onclick="go('mitarbeiter')">Mitarbeitende</button>
+          <button class="nav-kind" id="nav-admin-betrieb" onclick="go('betrieb')">Betrieb</button>
         </div>
       </div>
     </nav>
@@ -1837,10 +1850,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
             </div>
             <label class="check" style="font-size:12.5px"><input type="checkbox" id="oInaktiv" onchange="renderObjekte()"> auch stillgelegte</label>
             <div class="sp" style="flex:1"></div>
-            <button class="btn btn-plain btn-sm" onclick="openAnstellungsorte()" title="Vertraglich vereinbarte Anstellungsorte nach Art. 18 GAV">
-              <svg class="i i-sm" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              Anstellungsorte
-            </button>
             <button class="btn btn-primary btn-sm" onclick="openObjektNeu()">
               <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Neues Objekt
@@ -1895,6 +1904,58 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
           </div>
           <div class="kd-tab" id="kd-offerten">
             <div class="card"><div class="card-bd" id="kdOfferten"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════ BETRIEB ══════════════════════════
+           Einstellungen zum eigenen Unternehmen (ENT-056). Bisher lagen die
+           Anstellungsorte in einem Dialog unter den Objekten -- das war der
+           falsche Ort: Sie beschreiben nicht ein Objekt, sondern den Betrieb,
+           und sie sind die Messgrundlage fuer den gesamten Auslagenersatz. -->
+      <section class="view" id="view-betrieb">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd"><h3>Anstellungsorte</h3></div>
+          <div class="card-bd">
+            <div class="msg-err" id="anErr" style="display:none"></div>
+            <div class="ki-hint web on" style="margin-bottom:14px">
+              <span>Vertraglich vereinbarte Anstellungsorte nach <b>Art. 18 Ziff. 2 GAV</b>. Von hier aus wird
+              die Wegstrecke zu jedem Einsatzort gemessen — sie entscheidet, ob ein Auslagenersatz anfällt.
+              Der GAV lässt <b>höchstens zwei</b> zu, und wenn es zwei sind, muss der eine als
+              <b>Hauptanstellungsort (HAO)</b> und der andere als <b>Nebenanstellungsort (NAO)</b> bezeichnet
+              sein — zwei Hauptanstellungsorte gibt es nicht. Der PAKO-Kommentar verlangt eine genaue Adresse
+              mit Strasse und Nummer.</span>
+            </div>
+            <div id="anListe"></div>
+            <div class="form-grid" style="margin-top:16px">
+              <div class="f wide"><label for="anBez">Bezeichnung *</label><input class="inp" id="anBez" placeholder="z. B. Hauptsitz"></div>
+              <div class="f"><label for="anRolle">Rolle</label>
+                <select class="inp" id="anRolle">
+                  <option value="hao">Hauptanstellungsort (HAO)</option>
+                  <option value="nao">Nebenanstellungsort (NAO)</option>
+                </select>
+              </div>
+              <div class="f"><label for="anKm">Wegstrecke zum anderen Ort (km)</label><input class="inp" id="anKm" inputmode="decimal" placeholder="nur bei zwei Orten"></div>
+              <div class="f wide"><label for="anStrasse">Strasse und Nummer *</label><input class="inp" id="anStrasse"></div>
+              <div class="f"><label for="anPlz">PLZ</label><input class="inp" id="anPlz"></div>
+              <div class="f"><label for="anOrt">Ort *</label><input class="inp" id="anOrt"></div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:12px">
+              <button class="btn btn-primary" id="anBtn" onclick="anSpeichern()">Hinzufügen</button>
+              <button class="btn btn-plain" onclick="anFormularLeeren()">Zurücksetzen</button>
+            </div>
+            <p class="zone-note" style="margin-top:12px">Die Wegstrecke zwischen den beiden Anstellungsorten entscheidet
+               nach Art. 18 Ziff. 3.2 bzw. 3.3, ob im Nebenanstellungsgebiet überhaupt etwas geschuldet ist:
+               unter 40 km nichts, ab 40 km eine Pauschale nach Formel.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><h3>Was hier noch fehlt</h3></div>
+          <div class="card-bd">
+            <p class="zone-note">Weitere betriebliche Angaben — Firmenname, Rechnungsadresse, MWST-Nummer,
+               Zahlungskonditionen — sind noch nicht erfasst. Sie werden gebraucht, sobald aus dem Werkzeug
+               Offerten oder Rechnungen entstehen, und werden dann hier ergänzt.</p>
           </div>
         </div>
       </section>
@@ -2113,47 +2174,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
     <div class="dlg-ft">
       <button class="btn btn-plain" onclick="closeDlg('dlgEnNeu')">Abbrechen</button>
       <button class="btn btn-primary" id="enNeuBtn" onclick="createEinsatz()">Einsatz anlegen</button>
-    </div>
-  </div>
-</div>
-
-<!-- Anstellungsorte nach Art. 18 Ziff. 2 (ENT-054) -->
-<div class="dlg-scrim" id="dlgAnst">
-  <div class="dlg wide">
-    <div class="dlg-hd">
-      <h2>Anstellungsorte</h2>
-      <p>Vertraglich vereinbarte Anstellungsorte nach Art. 18 Ziff. 2 GAV. Von hier aus wird die
-         Wegstrecke zu den Objekten gemessen — sie entscheidet, ob ein Auslagenersatz anfällt.</p>
-    </div>
-    <div class="dlg-bd">
-      <div class="msg-err" id="anErr" style="display:none"></div>
-      <div class="ki-hint web" style="margin-bottom:14px">
-        <span>Der GAV lässt <b>höchstens zwei</b> Anstellungsorte zu, und wenn es zwei sind, muss der eine
-        als <b>Hauptanstellungsort (HAO)</b> und der andere als <b>Nebenanstellungsort (NAO)</b> bezeichnet sein —
-        zwei Hauptanstellungsorte gibt es nicht. Gemessen wird immer ab HAO. Der PAKO-Kommentar verlangt eine
-        genaue Adresse mit Strasse und Nummer.</span>
-      </div>
-      <div id="anListe"></div>
-      <div class="form-grid" style="margin-top:16px">
-        <div class="f wide"><label for="anBez">Bezeichnung *</label><input class="inp" id="anBez" placeholder="z. B. Sitz"></div>
-        <div class="f"><label for="anRolle">Rolle</label>
-          <select class="inp" id="anRolle">
-            <option value="hao">Hauptanstellungsort (HAO)</option>
-            <option value="nao">Nebenanstellungsort (NAO)</option>
-          </select>
-        </div>
-        <div class="f"><label for="anKm">Wegstrecke zum anderen Ort (km)</label><input class="inp" id="anKm" inputmode="decimal" placeholder="nur bei zwei Orten"></div>
-        <div class="f wide"><label for="anStrasse">Strasse und Nummer *</label><input class="inp" id="anStrasse"></div>
-        <div class="f"><label for="anPlz">PLZ</label><input class="inp" id="anPlz"></div>
-        <div class="f"><label for="anOrt">Ort *</label><input class="inp" id="anOrt"></div>
-      </div>
-      <p class="zone-note">Die Wegstrecke zwischen den beiden Anstellungsorten entscheidet nach Art. 18 Ziff. 3.2
-         bzw. 3.3, ob im Nebenanstellungsgebiet überhaupt etwas geschuldet ist: unter 40 km nichts, ab 40 km eine
-         Pauschale nach Formel.</p>
-    </div>
-    <div class="dlg-ft">
-      <button class="btn btn-plain" onclick="closeDlg('dlgAnst')">Schliessen</button>
-      <button class="btn btn-primary" id="anBtn" onclick="anSpeichern()">Hinzufügen</button>
     </div>
   </div>
 </div>
@@ -2651,7 +2671,8 @@ const TITLES = {
   planung:     ['Planung', 'Geplante Einsätze'],
   abgleich:    ['Schichten abgleichen', 'Was tatsächlich stattgefunden hat'],
   mitarbeiter: ['Mitarbeitende', 'Stammdaten'],
-  kunden:      ['Kunden', 'Stammdaten']
+  kunden:      ['Kunden', 'Stammdaten'],
+  betrieb:     ['Betrieb', 'Einstellungen zum eigenen Unternehmen']
 };
 
 // Monatsraster brauchen die volle Fensterbreite, alles andere bleibt auf
@@ -3055,6 +3076,16 @@ function go(view) {
   $('btnSprechen').style.display = view === 'uebersicht' ? 'none' : '';
   if (view !== 'planung') weiteAnsicht(false);
   if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
+  if (view === 'betrieb') ladeBetrieb();
+  // Die Administrationsgruppe klappt auf, wenn eine ihrer Seiten offen ist --
+  // und der Elternpunkt wird mitmarkiert, sonst sieht die Seitenleiste aus,
+  // als waere man nirgends (dasselbe Muster wie bei den Kunden, ENT-039).
+  const imAdmin = view === 'mitarbeiter' || view === 'betrieb';
+  $('navg-admin').classList.toggle('offen', imAdmin);
+  if (imAdmin) { $('nav-admin').classList.add('on'); }
+  document.querySelectorAll('#navg-admin .nav-kind').forEach(k => k.classList.remove('on'));
+  if (view === 'mitarbeiter') { $('nav-admin-mitarbeiter').classList.add('on'); }
+  if (view === 'betrieb') { $('nav-admin-betrieb').classList.add('on'); }
   if (view === 'abgleich') {
     // Vorgabe: der zurückliegende Monat bis heute. Wer weiter zurück will,
     // stellt den Zeitraum um.
@@ -4403,7 +4434,7 @@ function obDistanzZeichnen(o) {
   if (!feld) { return; }
   if (!anstellungsorte.length) {
     feld.innerHTML = '';
-    hint.innerHTML = `<div class="ki-hint" style="color:var(--warn);background:var(--warn-soft)">
+    hint.innerHTML = `<div class="ki-hint on" style="color:var(--warn);background:var(--warn-soft)">
       <span>Es ist noch kein Anstellungsort hinterlegt. Ohne ihn laesst sich nicht beurteilen,
       ob fuer dieses Objekt ein Auslagenersatz nach Art. 18 GAV anfaellt.
       Anstellungsorte werden in der Objektliste unter „Anstellungsorte“ erfasst.</span></div>`;
@@ -4436,7 +4467,7 @@ function obZoneAktualisieren() {
 
   if (!z) {
     // "Unbekannt" darf nie wie "keine Entschaedigung" aussehen.
-    hint.innerHTML = `<div class="ki-hint" style="color:var(--warn);background:var(--warn-soft)">
+    hint.innerHTML = `<div class="ki-hint on" style="color:var(--warn);background:var(--warn-soft)">
       <span><b>Wegstrecke fehlt.</b> Ohne sie ist nicht beurteilbar, ob ein Auslagenersatz
       nach Art. 18 GAV anfaellt. Die kuerzeste Wegstrecke ab Hauptanstellungsort in Google Maps
       nachschlagen und hier eintragen.${nao && nao.km_zum_anderen === null
@@ -4445,12 +4476,12 @@ function obZoneAktualisieren() {
     return;
   }
   hint.innerHTML = z.entschaedigung
-    ? `<div class="ki-hint" style="color:var(--warn);background:var(--warn-soft)">
+    ? `<div class="ki-hint on" style="color:var(--warn);background:var(--warn-soft)">
         <span><b>${esc(z.name)} — Auslagenersatz faellt an.</b> Fuer Einsaetze an diesem Objekt
         sind Fahrzeit- und Fahrkostenersatz nach ${esc(z.quelle)} geschuldet. Der Betrag wird hier
         bewusst nicht gerechnet, solange offen ist, wie mehrere Einsaetze am selben Tag zu
         behandeln sind (Art. 18 Ziff. 8).</span></div>`
-    : `<div class="ki-hint web">
+    : `<div class="ki-hint web on">
         <span><b>${esc(z.name)} — kein Auslagenersatz.</b> Bis 10 km ab Anstellungsort ist
         nach ${esc(z.quelle)} nichts geschuldet.</span></div>`;
 }
@@ -4497,13 +4528,22 @@ function saveObjekt() {
   });
 }
 
+// Klick auf "Administration": oeffnet die erste Unterseite, statt nur
+// auf- und zuzuklappen. Ein Menuepunkt, der nichts tut, ist ein Aergernis.
+function adminNavKlick() {
+  const offen = $('navg-admin').classList.contains('offen');
+  const drin = $('view-mitarbeiter').classList.contains('on') || $('view-betrieb').classList.contains('on');
+  if (offen && drin) { $('navg-admin').classList.toggle('offen'); return; }
+  go('mitarbeiter');
+}
+
 // ── Verwaltung der Anstellungsorte
 let anTarget = null;
 
-function openAnstellungsorte() {
+function ladeBetrieb() {
   anTarget = null;
   $('anErr').style.display = 'none';
-  ladeAnstellungsorte().then(() => { anListeZeichnen(); anFormularLeeren(); openDlg('dlgAnst'); });
+  return ladeAnstellungsorte().then(() => { anListeZeichnen(); anFormularLeeren(); });
 }
 
 function anFormularLeeren() {
