@@ -325,6 +325,15 @@ $spalten = [
     // eine eindeutige Adresse; Strasse plus Ort allein ist in der Schweiz
     // nicht immer eindeutig.
     ['objekte', 'plz', "ALTER TABLE objekte ADD COLUMN plz VARCHAR(10) NULL AFTER strasse"],
+    // Anstellungskategorie und vertragliches Pensum (ENT-065, Art. 8 GAV).
+    // Ohne sie gibt es keine Obergrenze, gegen die sich Jahresstunden
+    // vergleichen liessen -- 900, 1'800 oder 2'300 ist ein Unterschied.
+    // Bewusst NULL als Vorgabe und nicht 'C': Eine geratene Kategorie waere
+    // schlimmer als eine fehlende, weil sie eine Grenze behauptet.
+    ['mitarbeiter', 'anstellungskategorie', "ALTER TABLE mitarbeiter ADD COLUMN anstellungskategorie CHAR(1) NULL"],
+    ['mitarbeiter', 'pensum_stunden',      "ALTER TABLE mitarbeiter ADD COLUMN pensum_stunden INT NULL"],
+    // Eintrittsdatum fuer die Pro-rata-Regel aus Art. 8 Ziff. 1b.
+    ['mitarbeiter', 'eintritt',            "ALTER TABLE mitarbeiter ADD COLUMN eintritt DATE NULL"],
     // Sparte (ENT-037). Der Bestand ist ausnahmslos Sicherheit -- die Reinigung
     // kommt erst mit diesem Schritt dazu. Die Vorgabe traegt die Altdaten also
     // richtig, ohne dass etwas von Hand nachgetragen werden muss.

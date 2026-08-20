@@ -9,7 +9,8 @@ if (!$user['ist_admin']) {
 
 $rows = db()->query(
     'SELECT id, name, ist_admin, erstellt_am, personalnummer, anrede, vorname, nachname, geburtsdatum,
-            strasse, ort, telefon, mobil, email
+            strasse, ort, telefon, mobil, email,
+            anstellungskategorie, pensum_stunden, eintritt
      FROM mitarbeiter WHERE aktiv = 1 ORDER BY name'
 )->fetchAll();
 $rows = array_map(fn($r) => [

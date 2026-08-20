@@ -31,6 +31,9 @@ if ((int)$check->fetch()['c'] > 0) {
 $fields = [
     'personalnummer' => trim((string)($input['personalnummer'] ?? '')) ?: null,
     'anrede' => trim((string)($input['anrede'] ?? '')) ?: null,
+    'anstellungskategorie' => kategorie_pruefen($input['anstellungskategorie'] ?? null),
+    'pensum_stunden' => pensum_pruefen($input['pensum_stunden'] ?? null),
+    'eintritt' => trim((string)($input['eintritt'] ?? '')) ?: null,
     'vorname' => trim((string)($input['vorname'] ?? '')) ?: null,
     'nachname' => trim((string)($input['nachname'] ?? '')) ?: null,
     'geburtsdatum' => trim((string)($input['geburtsdatum'] ?? '')) ?: null,
@@ -43,13 +46,14 @@ $fields = [
 
 $hash = password_hash($password, PASSWORD_DEFAULT);
 $stmt = db()->prepare(
-    'INSERT INTO mitarbeiter (name, password_hash, ist_admin, personalnummer, anrede, vorname, nachname, geburtsdatum, strasse, ort, telefon, mobil, email)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO mitarbeiter (name, password_hash, ist_admin, personalnummer, anrede, vorname, nachname, geburtsdatum, strasse, ort, telefon, mobil, email, anstellungskategorie, pensum_stunden, eintritt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 );
 $stmt->execute([
     $name, $hash, $istAdmin,
     $fields['personalnummer'], $fields['anrede'], $fields['vorname'], $fields['nachname'], $fields['geburtsdatum'],
     $fields['strasse'], $fields['ort'], $fields['telefon'], $fields['mobil'], $fields['email'],
+    $fields['anstellungskategorie'], $fields['pensum_stunden'], $fields['eintritt'],
 ]);
 
 json_response(['status' => 'ok']);

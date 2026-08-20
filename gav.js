@@ -323,3 +323,74 @@ function gavStd(min) {
   const m = Math.max(0, Math.round(Number(min) || 0));
   return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   ANSTELLUNGSKATEGORIEN NACH ART. 8 (ENT-065)
+
+   Art. 8 Ziff. 1a, woertlich:
+     A  Monatslohn, vertraglich fix 1'801 bis 2'300 Stunden pro Kalenderjahr
+     B  Monatslohn, vertraglich fix   901 bis 1'800 Stunden
+     C  Stundenlohn, bis 900 Arbeitsstunden pro Kalenderjahr,
+        "inkl. Ferien und Zeitbonus von 10 % (gem. Art. 12 Ziff. 2 GAV)
+         sowie Zeitzuschlag (nach Art. 14 Ziff. 3 GAV)"
+
+   Der Zusatz bei C ist der Kern und leicht zu ueberlesen: Die 900 Stunden
+   sind BEWERTETE Zeit, nicht geleistete. Wer 860 Stunden nachts arbeitet,
+   liegt mit dem Zeitbonus bereits darueber. Eine Warnung auf der Rohzeit
+   kaeme zu spaet.
+
+   Zwei Schwellen, zwei verschiedene Bemessungen:
+     - die Kategoriegrenze (Ziff. 1c) auf BEWERTETER Zeit
+     - der Nachzahlungs-Ausloeser (Ziff. 4) bei 1'000 TATSAECHLICH
+       gearbeiteten Stunden fuer Kategorie C
+   Wer beides mit derselben Zahl prueft, liegt bei einem von beiden falsch.
+
+   WAS DIE ZAHL HEUTE NICHT ENTHAELT: Feiertagsbonus (GAV-AUS-006 offen),
+   Zeitzuschlag 25 % ueber 210 Std. (nicht gebaut), Ferien (nicht gebaut).
+   Die Summe ist damit systematisch ZU TIEF -- der Balken schlaegt zu spaet
+   aus, nie zu frueh. Deshalb heisst die Zahl in der Oberflaeche
+   "mindestens" und nicht "genau".                                       */
+
+const GAV_KATEGORIEN = {
+  A: { grenze: 2300, ab: 1801, lohn: 'Monatslohn' },
+  B: { grenze: 1800, ab: 901,  lohn: 'Monatslohn' },
+  C: { grenze: 900,  ab: 0,    lohn: 'Stundenlohn', rohGrenze: 1000 },
+};
+const GAV_KAT_TOLERANZ = 0.05;   // Art. 8 Ziff. 2: bis 5 % uebertragbar
+const GAV_KAT_QUELLE = 'Art. 8 Ziff. 1–4 GAV, Ausgabe 2026';
+
+/* Wo steht eine Person im Verhaeltnis zu ihrer Kategoriegrenze?
+     kategorie  — 'A' | 'B' | 'C' | null
+     bewertetMin— Nettozeit + Zeitbonus in Minuten (GAV-Stunden)
+     rohMin     — Nettozeit ohne Bonus, fuer Art. 8 Ziff. 4
+   Rueckgabe null, wenn keine Kategorie hinterlegt ist -- ohne sie gibt es
+   keine Grenze, und eine geratene waere schlimmer als keine. */
+function gavKatStand(kategorie, bewertetMin, rohMin) {
+  const k = GAV_KATEGORIEN[String(kategorie || '').toUpperCase()];
+  if (!k) { return null; }
+  const std = Number(bewertetMin || 0) / 60;
+  const roh = Number(rohMin || 0) / 60;
+  const toleranz = k.grenze * (1 + GAV_KAT_TOLERANZ);
+
+  let stufe = 'ok';
+  if (std > toleranz) { stufe = 'ueber_toleranz'; }
+  else if (std > k.grenze) { stufe = 'ueber_grenze'; }
+  else if (std >= k.grenze * 0.9) { stufe = 'nahe'; }
+
+  // Der zweite, unabhaengige Ausloeser -- nur Kategorie C, und auf der
+  // tatsaechlich gearbeiteten Zeit.
+  const rohUeber = !!(k.rohGrenze && roh > k.rohGrenze);
+
+  return {
+    kategorie: String(kategorie).toUpperCase(),
+    grenze: k.grenze,
+    toleranz: Math.round(toleranz),
+    rohGrenze: k.rohGrenze || null,
+    stunden: std,
+    rohStunden: roh,
+    anteil: k.grenze ? std / k.grenze : 0,
+    stufe,
+    rohUeber,
+    quelle: GAV_KAT_QUELLE,
+  };
+}

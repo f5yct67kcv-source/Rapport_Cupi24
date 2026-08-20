@@ -19,6 +19,9 @@ if ($name === '') {
 $fields = [
     'personalnummer' => trim((string)($input['personalnummer'] ?? '')) ?: null,
     'anrede' => trim((string)($input['anrede'] ?? '')) ?: null,
+    'anstellungskategorie' => kategorie_pruefen($input['anstellungskategorie'] ?? null),
+    'pensum_stunden' => pensum_pruefen($input['pensum_stunden'] ?? null),
+    'eintritt' => trim((string)($input['eintritt'] ?? '')) ?: null,
     'vorname' => trim((string)($input['vorname'] ?? '')) ?: null,
     'nachname' => trim((string)($input['nachname'] ?? '')) ?: null,
     'geburtsdatum' => trim((string)($input['geburtsdatum'] ?? '')) ?: null,
@@ -31,12 +34,14 @@ $fields = [
 
 $stmt = db()->prepare(
     'UPDATE mitarbeiter SET personalnummer = ?, anrede = ?, vorname = ?, nachname = ?, geburtsdatum = ?,
-            strasse = ?, ort = ?, telefon = ?, mobil = ?, email = ?
+            strasse = ?, ort = ?, telefon = ?, mobil = ?, email = ?,
+            anstellungskategorie = ?, pensum_stunden = ?, eintritt = ?
      WHERE name = ?'
 );
 $stmt->execute([
     $fields['personalnummer'], $fields['anrede'], $fields['vorname'], $fields['nachname'], $fields['geburtsdatum'],
     $fields['strasse'], $fields['ort'], $fields['telefon'], $fields['mobil'], $fields['email'],
+    $fields['anstellungskategorie'], $fields['pensum_stunden'], $fields['eintritt'],
     $name,
 ]);
 

@@ -1007,6 +1007,43 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
 .inp.aw-z.ki { border-color: var(--accent); background: var(--accent-soft); }
 
 /* ── Tagesliste: dieselben Daten auf schmalen Geräten */
+
+/* ── Pensen-Kontrolle (ENT-065) ────────────────────────────────────────
+   Der Balken ist bewusst KEIN Farbverlauf von gruen nach rot. Bei 600 von
+   900 Stunden ist nichts "leicht bedenklich" -- es ist in Ordnung. Ein
+   Verlauf erzeugt diffuse Beunruhigung und stumpft ab; die Farbe schlaegt
+   deshalb an den Schwellen um, und die Schwellen stehen als Marken drin. */
+.pn-kopf { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 16px 18px; margin-bottom: 14px; box-shadow: var(--sh-1); }
+.pn-skala { position: relative; height: 12px; border-radius: 7px; overflow: hidden;
+  background: linear-gradient(to right, var(--pos-soft) 0%, var(--pos-soft) 90%,
+    var(--warn-soft) 90%, var(--warn-soft) 100%); margin: 14px 0 6px; }
+.pn-skala .marke { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink-3); }
+.pn-skala-lbl { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-3); }
+
+.pn-zeile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 13px 16px; margin-bottom: 8px; box-shadow: var(--sh-1); }
+.pn-zeile .kopf { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.pn-zeile .kopf b { font-size: 15px; font-weight: 660; }
+.pn-zeile .kopf .sp { flex: 1; }
+.pn-zeile .zahl { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.pn-zeile .sub { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+
+.pn-bar { position: relative; height: 14px; border-radius: 8px; background: var(--line-soft);
+  margin: 9px 0 4px; overflow: hidden; }
+.pn-bar .fuell { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 8px; }
+/* Was noch nicht abgeglichen ist, wird schraffiert angedeutet statt
+   weggelassen -- die Luecke gehoert ins Bild (ENT-053). */
+.pn-bar .offen { position: absolute; top: 0; bottom: 0; opacity: .5;
+  background: repeating-linear-gradient(45deg, var(--ink-3) 0 4px, transparent 4px 8px); }
+.pn-bar .grenze { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink-1); }
+.pn-bar .tol { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--warn); }
+.pn-ok  .fuell { background: var(--pos); }
+.pn-nahe .fuell { background: var(--warn); }
+.pn-ueber_grenze .fuell { background: var(--warn); }
+.pn-ueber_toleranz .fuell { background: var(--neg); }
+.pn-ohne .fuell { background: var(--ink-3); }
+
 .nur-schmal { display: none; }
 
 /* Schlanke Mobilansicht (ENT-057). Unter 620 px bleiben nur die drei
@@ -1322,6 +1359,22 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
         <div class="nav-kinder">
           <button class="nav-kind" id="nav-admin-mitarbeiter" onclick="go('mitarbeiter')">Mitarbeitende</button>
           <button class="nav-kind" id="nav-admin-betrieb" onclick="go('betrieb')">Betrieb</button>
+        </div>
+      </div>
+
+      <!-- Kontrolle (ENT-065). Eigene Rubrik und nicht ein Reiter unter
+           Administration: Hier wachsen die Kontrollinstanzen zusammen --
+           Pensen heute, freie Tage und Ruhezeit-Uebersicht spaeter. Sie
+           beantworten alle dieselbe Frage: Wo weicht der Betrieb ab? -->
+      <div class="nav-lbl nur-desktop" style="margin-top:16px">Kontrolle</div>
+      <div class="nav-gruppe nur-desktop" id="navg-kontrolle">
+        <button class="nav-item nav-eltern" id="nav-kontrolle" title="Kontrolle" onclick="kontrolleNavKlick()">
+          <svg class="i" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          <span class="lbl">Kontrolle</span>
+          <svg class="i chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="nav-kinder">
+          <button class="nav-kind" id="nav-kontrolle-pensen" onclick="go('pensen')">Pensen</button>
         </div>
       </div>
 
@@ -2047,6 +2100,27 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
         </div>
       </section>
 
+      <!-- ══════════════════════════ PENSEN ══════════════════════════
+           Jahresstunden je Person gegen die Grenze ihrer Anstellungs-
+           kategorie (ENT-065, Art. 8 GAV). Die Seite visualisiert, was
+           sonst niemand im Kopf behaelt: zwoelf Monate mal zwanzig Leute. -->
+      <section class="view" id="view-pensen">
+        <div class="bar-tools">
+          <select class="inp" id="pnJahr" style="width:auto" onchange="ladePensen()" aria-label="Kalenderjahr"></select>
+          <select class="inp" id="pnSort" style="width:auto" onchange="zeichnePensen()" aria-label="Sortierung">
+            <option value="std_ab">Stunden, absteigend</option>
+            <option value="std_auf">Stunden, aufsteigend</option>
+            <option value="anteil_ab">Nähe zur Grenze, absteigend</option>
+            <option value="name">Name</option>
+          </select>
+          <div class="sp" style="flex:1"></div>
+          <label class="check" style="font-size:12.5px"><input type="checkbox" id="pnNurKat" onchange="zeichnePensen()"> nur mit hinterlegter Kategorie</label>
+        </div>
+        <div id="pnKopf"></div>
+        <div id="pnListe"></div>
+        <div id="pnHinweis"></div>
+      </section>
+
       <!-- ══════════════════════════ BETRIEB ══════════════════════════
            Einstellungen zum eigenen Unternehmen (ENT-056). Bisher lagen die
            Anstellungsorte in einem Dialog unter den Objekten -- das war der
@@ -2150,6 +2224,14 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
         <div class="f"><label for="maNeuTelefon">Telefon</label><input class="inp" id="maNeuTelefon"></div>
         <div class="f"><label for="maNeuMobil">Mobil</label><input class="inp" id="maNeuMobil"></div>
         <div class="f wide"><label for="maNeuEmail">E-Mail</label><input class="inp" id="maNeuEmail" type="email"></div>
+        <!-- Anstellung nach Art. 8 GAV (ENT-065). Leer lassen ist erlaubt und
+             sicherer als raten -- die Pensenkontrolle prueft dann schlicht nicht. -->
+        <div class="f"><label for="maNeuAnstellungskategorie">Anstellungskategorie</label>
+          <select class="inp" id="maNeuAnstellungskategorie">
+            <option value="">– keine –</option><option value="A">A</option><option value="B">B</option><option value="C">C</option>
+          </select></div>
+        <div class="f"><label for="maNeuPensum_stunden">Jahrespensum (Std.)</label><input class="inp" id="maNeuPensum_stunden" type="number" min="1" max="3000"></div>
+        <div class="f"><label for="maNeuEintritt">Eintritt</label><input class="inp" id="maNeuEintritt" type="date"></div>
         <div class="f wide"><label class="check"><input type="checkbox" id="maNeuAdmin"> Darf die Verwaltung benutzen (Admin)</label></div>
       </div>
     </div>
@@ -2715,9 +2797,13 @@ let kuWege = [];            // Kommunikationszeilen der Firma im offenen Dialog
 let kuPersonen = [];        // Ansprechpersonen im offenen Dialog
 let kdId = null;            // id des Kunden auf der Detailseite
 let kdTab = 'uebersicht';   // Detailseite: Übersicht, Rapporte oder Offerten
-const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email'];
+const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email',
+  // Art. 8 GAV (ENT-065): ohne Kategorie und Pensum gibt es keine Grenze,
+  // gegen die sich Jahresstunden pruefen liessen.
+  'anstellungskategorie','pensum_stunden','eintritt'];
 const MA_LABEL = { personalnummer:'Personalnummer', anrede:'Anrede', vorname:'Vorname', nachname:'Nachname',
-  geburtsdatum:'Geburtsdatum', strasse:'Strasse', ort:'PLZ / Ort', telefon:'Telefon', mobil:'Mobil', email:'E-Mail' };
+  geburtsdatum:'Geburtsdatum', strasse:'Strasse', ort:'PLZ / Ort', telefon:'Telefon', mobil:'Mobil', email:'E-Mail',
+  anstellungskategorie:'Anstellungskategorie', pensum_stunden:'Jahrespensum (Std.)', eintritt:'Eintritt' };
 const labelListe = fs => fs.map(f => MA_LABEL[f] || f).join(', ');
 const MIC = '<svg class="i i-sm" viewBox="0 0 24 24" style="margin-top:1px;flex:none"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>';
 
@@ -2835,7 +2921,8 @@ const TITLES = {
   abgleich:    ['Schichten abgleichen', 'Was tatsächlich stattgefunden hat'],
   mitarbeiter: ['Mitarbeitende', 'Stammdaten'],
   kunden:      ['Kunden', 'Stammdaten'],
-  betrieb:     ['Betrieb', 'Einstellungen zum eigenen Unternehmen']
+  betrieb:     ['Betrieb', 'Einstellungen zum eigenen Unternehmen'],
+  pensen:      ['Pensen', 'Jahresstunden gegen die Anstellungskategorie']
 };
 
 // Monatsraster brauchen die volle Fensterbreite, alles andere bleibt auf
@@ -3254,6 +3341,10 @@ function go(view) {
   document.querySelectorAll('#navg-admin .nav-kind').forEach(k => k.classList.remove('on'));
   if (view === 'mitarbeiter') { $('nav-admin-mitarbeiter').classList.add('on'); }
   if (view === 'betrieb') { $('nav-admin-betrieb').classList.add('on'); }
+  $('navg-kontrolle').classList.toggle('offen', view === 'pensen');
+  if (view === 'pensen') { $('nav-kontrolle').classList.add('on'); $('nav-kontrolle-pensen').classList.add('on'); }
+  else { $('nav-kontrolle-pensen').classList.remove('on'); }
+  if (view === 'pensen') { ladePensen(); }
   if (view === 'abgleich') {
     // Vorgabe: der zurückliegende Monat bis heute. Wer weiter zurück will,
     // stellt den Zeitraum um.
@@ -3781,7 +3872,7 @@ function mdDienstplaene() {
       <div class="lbl" style="margin-top:4px;text-transform:none;letter-spacing:0">Nacht und Sonntag, ohne Feiertage</div></div>
     <div class="md-kachel total"><div class="lbl">Total mit Zeitbonus</div><div class="val">${esc(mdStd(summeNetto + summeBonus))}</div>
       <div class="lbl" style="margin-top:4px;text-transform:none;letter-spacing:0">${esc(monat)}</div></div>
-  </div>` + (nettoRein > 0 ? `<div class="ki-hint web" id="mdSparten" style="margin-bottom:12px">
+  </div>` + (nettoRein > 0 ? `<div class="ki-hint web on" id="mdSparten" style="margin-bottom:12px">
     <span><b>Davon ${esc(mdStd(nettoGav))} Sicherheit (GAV)</b> und ${esc(mdStd(nettoRein))} Reinigung.
     Zeitbonus, 210-Stunden-Schwelle und Ferienentschädigung bemessen sich <b>nur auf den
     Sicherheitsstunden</b> — für die Reinigung gilt der GAV für private Sicherheitsdienstleistungen
@@ -4005,7 +4096,7 @@ function spartenKonflikt(prefix) {
   const artR = String(art.value || '').trim().toLowerCase() === ART_REINIGUNG;
   const spR = sp.value === 'reinigung';
   if (artR === spR) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="ki-hint" style="color:var(--warn);background:var(--warn-soft);margin-top:8px">
+  box.innerHTML = `<div class="ki-hint on" style="color:var(--warn);background:var(--warn-soft);margin-top:8px">
     <span>Einsatzart und Sparte widersprechen sich. <b>Massgeblich für die GAV-Regeln ist die Sparte
     „${sp.value === 'reinigung' ? 'Reinigung' : 'Sicherheit'}"</b> — ${sp.value === 'reinigung'
       ? 'es wird also kein Zeitbonus und kein Auslagenersatz gerechnet.'
@@ -4877,7 +4968,7 @@ function obZoneAktualisieren() {
   // Reinigung: gar nicht erst nach der Wegstrecke fragen (ENT-061).
   const sp = $('obSparte') ? $('obSparte').value : 'sicherheit';
   if (!gavGilt(sp)) {
-    hint.innerHTML = `<div class="ki-hint web"><span><b>Reinigungsobjekt — kein Auslagenersatz nach Art. 18.</b>
+    hint.innerHTML = `<div class="ki-hint web on"><span><b>Reinigungsobjekt — kein Auslagenersatz nach Art. 18.</b>
       Der GAV für private Sicherheitsdienstleistungen gilt für diese Sparte nicht. Welche Regeln stattdessen
       gelten, ist nicht Sache dieses Werkzeugs.</span></div>`;
     return;
@@ -4961,6 +5052,175 @@ function adminNavKlick() {
   const drin = $('view-mitarbeiter').classList.contains('on') || $('view-betrieb').classList.contains('on');
   if (offen && drin) { $('navg-admin').classList.toggle('offen'); return; }
   go('mitarbeiter');
+}
+
+
+// ══════════════════════════════════════════ PENSEN-KONTROLLE (ENT-065)
+// Jahresstunden je Person gegen die Grenze ihrer Anstellungskategorie.
+//
+// Die Zahl ist ausdruecklich ein MINDESTWERT. Was ihr fehlt, steht auf der
+// Seite: Feiertagsbonus (GAV-AUS-006 offen), Zeitzuschlag ueber 210 Stunden
+// (nicht gebaut), Ferien (nicht gebaut) -- alle drei fliessen nach Art. 8
+// Ziff. 1c in die Grenze ein. Der Balken schlaegt damit zu SPAET aus, nie zu
+// frueh. Eine Ampel, die zu spaet rot wird, ist gefaehrlicher als keine --
+// deshalb sagt die Seite es an jeder Zahl, nicht in einer Fussnote.
+let pensen = null;
+
+function ladePensen() {
+  const sel = $('pnJahr');
+  if (!sel.options.length) {
+    const j = new Date().getFullYear();
+    sel.innerHTML = [j + 1, j, j - 1, j - 2].map(x => `<option value="${x}"${x === j ? ' selected' : ''}>${x}</option>`).join('');
+  }
+  $('pnListe').innerHTML = '<div class="leer">…</div>';
+  return api('pensen.php?jahr=' + encodeURIComponent(sel.value)).then(({ ok, data }) => {
+    pensen = (ok && data.status === 'ok') ? data : null;
+    zeichnePensen();
+  });
+}
+
+// Bewertete und rohe Jahreszeit je Person -- gerechnet mit gav.js, damit die
+// Seite nie andere Zahlen zeigt als die Dienstplaene (ENT-049).
+function pnRechnen(m) {
+  let rohMin = 0, bonusMin = 0, reinMin = 0;
+  (m.schichten || []).forEach(x => {
+    const netto = gavNetto(x.von, x.bis, x.pause_min, x.pause_bezahlt_ma);
+    if (!netto) { return; }
+    const min = Number(netto.slice(0, 2)) * 60 + Number(netto.slice(3, 5));
+    if (!gavGilt(x.sparte)) { reinMin += min; return; }   // Reinigung zaehlt nicht (ENT-061)
+    rohMin += min;
+    bonusMin += gavBonusMin(x.datum, x.von, x.bis) || 0;
+  });
+  return { rohMin, bonusMin, reinMin, bewertetMin: rohMin + bonusMin };
+}
+
+function zeichnePensen() {
+  if (!pensen) {
+    $('pnListe').innerHTML = EMPTY('Pensen nicht verfügbar',
+      'Die Jahresstunden konnten nicht geladen werden.');
+    $('pnKopf').innerHTML = ''; $('pnHinweis').innerHTML = '';
+    return;
+  }
+  const nurKat = $('pnNurKat').checked;
+  const zeilen = pensen.mitarbeiter
+    .map(m => ({ m, z: pnRechnen(m), stand: null }))
+    .map(x => { x.stand = gavKatStand(x.m.kategorie, x.z.bewertetMin, x.z.rohMin); return x; })
+    .filter(x => !nurKat || x.stand);
+
+  const sort = $('pnSort').value;
+  zeilen.sort((a, b) => {
+    if (sort === 'name') { return (a.m.nachname || a.m.name).localeCompare(b.m.nachname || b.m.name); }
+    if (sort === 'anteil_ab') { return (b.stand ? b.stand.anteil : -1) - (a.stand ? a.stand.anteil : -1); }
+    const d = a.z.bewertetMin - b.z.bewertetMin;
+    return sort === 'std_auf' ? d : -d;
+  });
+
+  const ohneKat = pensen.mitarbeiter.filter(m => !m.kategorie).length;
+  const kritisch = zeilen.filter(x => x.stand && x.stand.stufe !== 'ok' && x.stand.stufe !== 'nahe').length;
+  const nahe = zeilen.filter(x => x.stand && x.stand.stufe === 'nahe').length;
+
+  // Der Massstab oben: erklaert einmal, was die Farben und die Marken in
+  // jeder Zeile bedeuten -- statt es zwanzigmal zu wiederholen.
+  $('pnKopf').innerHTML = `<div class="pn-kopf">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+      <b style="font-size:16px">Jahresstunden ${esc(String(pensen.jahr))}</b>
+      <span class="sp" style="flex:1"></span>
+      ${kritisch ? `<span class="chip chip-w">${nf(kritisch)} über der Grenze</span>` : ''}
+      ${nahe ? `<span class="chip chip-w">${nf(nahe)} nahe der Grenze</span>` : ''}
+      ${ohneKat ? `<span class="chip chip-n">${nf(ohneKat)} ohne Kategorie</span>` : ''}
+    </div>
+    <div class="pn-skala"><div class="marke" style="left:90%"></div></div>
+    <div class="pn-skala-lbl"><span>0</span><span>90 % der Grenze</span><span>Grenze + 5 %</span></div>
+    <p class="zone-note" style="margin-top:10px">Die Grenze richtet sich nach der Anstellungskategorie
+      (Art. 8 Ziff. 1a GAV): <b>C</b> 900 Stunden, <b>B</b> 1'800, <b>A</b> 2'300 — bei C ausdrücklich
+      <b>inklusive Ferien, Zeitbonus und Zeitzuschlag</b>. Bis 5 % Überschreitung sind auf das Folgejahr
+      übertragbar (Ziff. 2).</p>
+  </div>`;
+
+  if (!zeilen.length) {
+    $('pnListe').innerHTML = EMPTY('Nichts zu zeigen',
+      nurKat ? 'Für niemanden ist eine Anstellungskategorie hinterlegt.' : 'Keine aktiven Mitarbeitenden.');
+    $('pnHinweis').innerHTML = '';
+    return;
+  }
+
+  $('pnListe').innerHTML = zeilen.map(({ m, z, stand }) => {
+    const std = min => `${Math.floor(min / 60)}:${String(Math.round(min % 60)).padStart(2, '0')}`;
+    const name = [m.vorname, m.nachname].filter(Boolean).join(' ') || m.name;
+    const klasse = stand ? 'pn-' + stand.stufe : 'pn-ohne';
+    // Der Balken misst gegen die Grenze; die Skala endet bei Grenze + 5 %,
+    // damit die Toleranz sichtbar bleibt statt aus dem Bild zu laufen.
+    const skalaMax = stand ? stand.toleranz : 1;
+    const anteil = stand ? Math.min(100, (stand.stunden / skalaMax) * 100) : 0;
+    const grenzePos = stand ? (stand.grenze / skalaMax) * 100 : 0;
+    return `<div class="pn-zeile ${klasse}" data-ma="${Number(m.id)}">
+      <div class="kopf">
+        <b>${esc(name)}</b>
+        ${m.kategorie
+          ? `<span class="chip chip-n">Kategorie ${esc(m.kategorie)}</span>`
+          : `<span class="chip chip-w">Kategorie fehlt</span>`}
+        ${m.personalnummer ? `<span class="ag-plan">Nr. ${esc(m.personalnummer)}</span>` : ''}
+        <span class="sp"></span>
+        <span class="zahl">${stand ? 'mind. ' : ''}${esc(std(z.bewertetMin))} h${
+          stand ? ` <span style="font-weight:500;color:var(--ink-3)">von ${nf(stand.grenze)}</span>` : ''}</span>
+      </div>
+      ${stand ? `<div class="pn-bar">
+        <div class="fuell" style="width:${anteil.toFixed(1)}%"></div>
+        <div class="grenze" style="left:${grenzePos.toFixed(1)}%" title="Grenze der Kategorie ${esc(m.kategorie)}: ${nf(stand.grenze)} h"></div>
+        <div class="tol" style="left:99.5%" title="Grenze plus 5 % Toleranz: ${nf(stand.toleranz)} h"></div>
+      </div>` : ''}
+      <div class="sub">${esc(std(z.rohMin))} h geleistet${z.bonusMin ? ` · +${esc(std(z.bonusMin))} Zeitbonus` : ''}${
+        z.reinMin ? ` · ${esc(std(z.reinMin))} Reinigung (zählt nicht)` : ''}${
+        m.offen ? ` · <span style="color:var(--warn)">${nf(m.offen)} ${m.offen === 1 ? 'Schicht' : 'Schichten'} noch nicht abgeglichen</span>` : ''}</div>
+      ${stand ? pnMeldung(stand) : `<div class="sub" style="color:var(--warn)">Ohne hinterlegte Anstellungskategorie
+        lässt sich keine Grenze prüfen. Die Kategorie wird im Stammblatt der Person erfasst.</div>`}
+    </div>`;
+  }).join('');
+
+  $('pnHinweis').innerHTML = `<div class="ki-hint on" style="color:var(--warn);background:var(--warn-soft);margin-top:14px">
+    <span><b>Die Zahlen sind Mindestwerte.</b> Nach Art. 8 Ziff. 1c zählen in die Grenze auch
+    <b>Ferien</b>, der <b>Feiertagsbonus</b> und der <b>Zeitzuschlag über 210 Monatsstunden</b> —
+    alle drei rechnet die Plattform heute nicht (GAV-AUS-006 offen, Art. 14 Ziff. 3 nicht gebaut).
+    Die tatsächlichen Werte liegen also <b>höher</b> als hier angezeigt: Der Balken schlägt zu spät
+    aus, nie zu früh. Ebenfalls nicht enthalten sind Schichten, die noch nicht abgeglichen sind.</span></div>`;
+}
+
+// Was die Stufe bedeutet -- und ausdruecklich, was sie NICHT bedeutet.
+// Art. 8 Ziff. 3 ist gestaffelt: zuerst Entschaedigung des ganzen Pensums
+// zum hoeheren Ansatz, die Ueberfuehrungspflicht greift erst im
+// Wiederholungsfall. Die Software darf das nicht einebnen.
+function pnMeldung(st) {
+  const teile = [];
+  if (st.stufe === 'nahe') {
+    teile.push(`<span style="color:var(--warn)">Nähert sich der Grenze der Kategorie ${esc(st.kategorie)}
+      (${nf(st.grenze)} h).</span>`);
+  }
+  if (st.stufe === 'ueber_grenze') {
+    teile.push(`<span style="color:var(--warn)"><b>Über der Grenze</b> von ${nf(st.grenze)} h.
+      Bis ${nf(st.toleranz)} h (5 %) ist eine Übertragung auf das Folgejahr möglich (Art. 8 Ziff. 2).</span>`);
+  }
+  if (st.stufe === 'ueber_toleranz') {
+    teile.push(`<span style="color:var(--neg)"><b>Über der 5-%-Toleranz.</b> Nach Art. 8 Ziff. 2 sind
+      die Mehrstunden nachzuzahlen. Wird dabei eine höhere Kategorie erreicht, ist nach Ziff. 3
+      <b>das ganze Pensum</b> zum höheren Ansatz zu entschädigen — die Pflicht zur Überführung in die
+      höhere Kategorie greift <b>erst im Wiederholungsfall</b>.</span>`);
+  }
+  if (st.rohUeber) {
+    teile.push(`<span style="color:var(--neg)"><b>Über 1'000 tatsächlich gearbeitete Stunden.</b>
+      Nach Art. 8 Ziff. 4 besteht bei mehr als drei Monaten Anstellung Anspruch auf Nachzahlung zum
+      Ansatz der anwendbaren Kategorie. Diese Schwelle rechnet auf der geleisteten, nicht auf der
+      bewerteten Zeit.</span>`);
+  }
+  return teile.length ? `<div class="sub" style="margin-top:6px;line-height:1.5">${teile.join(' ')}</div>` : '';
+}
+
+function kontrolleNavKlick() {
+  const offen = $('navg-kontrolle').classList.contains('offen');
+  if (offen && $('view-pensen').classList.contains('on')) {
+    $('navg-kontrolle').classList.toggle('offen');
+    return;
+  }
+  go('pensen');
 }
 
 // ── Verwaltung der Anstellungsorte
@@ -6970,6 +7230,7 @@ function openMaNeu(felder) {
   $('maNeuAdmin').checked = false;
   MA_FELDER.forEach(f => {
     const el = $(maNeuId(f));
+    if (!el) { return; }
     el.value = felder[f] || '';
     el.classList.toggle('ki', ausDiktat && !!felder[f]);
   });
@@ -6993,7 +7254,7 @@ function createMa() {
   if (password.length < 6) { err.textContent = 'Passwort mindestens 6 Zeichen.'; err.style.display = ''; return; }
 
   const body = { name, password, ist_admin: $('maNeuAdmin').checked ? 1 : 0 };
-  MA_FELDER.forEach(f => { body[f] = $(maNeuId(f)).value.trim(); });
+  MA_FELDER.forEach(f => { const el = $(maNeuId(f)); if (el) { body[f] = el.value.trim(); } });
 
   const b = $('maNeuBtn'); b.disabled = true;
   api('mitarbeiter_create.php', { method: 'POST', body }).then(({ ok, data }) => {
@@ -7041,6 +7302,24 @@ function openMa(i, aenderungen) {
       ${inp('mobil', 'Mobil')}
       ${inp('email', 'E-Mail', 'email', true)}
     </div>
+    <!-- Anstellung nach Art. 8 GAV (ENT-065). Eigener Block statt einer
+         weiteren Zeile im Adressblock: Diese drei Angaben sind nicht
+         Kontaktdaten, sondern die Grundlage der Pensenkontrolle. -->
+    <div class="zone" style="margin-top:18px">
+      <div class="zone-hd">Anstellung nach Art. 8 GAV</div>
+      <div class="zone-note">Bestimmt, gegen welche Jahresgrenze die geleisteten Stunden geprüft werden:
+        <b>C</b> bis 900 Stunden (inkl. Ferien, Zeitbonus und Zeitzuschlag), <b>B</b> 901–1'800,
+        <b>A</b> 1'801–2'300. Bleibt das Feld leer, wird nichts geprüft — eine geratene Kategorie
+        behauptet eine Grenze, die niemand vereinbart hat.</div>
+      <div class="form-grid" style="margin-top:12px">
+        <div class="f"><label for="maE_anstellungskategorie">Kategorie</label>
+          <select class="inp${mark('anstellungskategorie')}" id="maE_anstellungskategorie">
+            ${['', 'A', 'B', 'C'].map(o => `<option value="${o}"${val('anstellungskategorie') === o ? ' selected' : ''}>${o || '– keine –'}</option>`).join('')}
+          </select></div>
+        ${inp('pensum_stunden', 'Jahrespensum (Std.)', 'number')}
+        ${inp('eintritt', 'Eintritt', 'date')}
+      </div>
+    </div>
     <div class="zone">
       <div class="zone-hd">Passwort</div>
       <div class="zone-note">Setzt ein neues Passwort und meldet die Person auf allen Geräten ab.</div>
@@ -7065,7 +7344,7 @@ function openMa(i, aenderungen) {
 function saveMa() {
   if (!maTarget) return;
   const body = { name: maTarget };
-  MA_FELDER.forEach(f => { body[f] = ($('maE_' + f).value || '').trim(); });
+  MA_FELDER.forEach(f => { const el = $('maE_' + f); if (el) { body[f] = (el.value || '').trim(); } });
   api('mitarbeiter_update.php', { method: 'POST', body }).then(({ ok, data }) => {
     if (!ok || data.status !== 'ok') { toast(data.message || 'Speichern fehlgeschlagen.'); return; }
     closeDrawer();

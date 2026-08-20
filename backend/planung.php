@@ -449,3 +449,15 @@ function einsatz_sperre_pruefen(PDO $pdo, int $einsatzId): void
             . 'Zum Aendern zuerst unter Abgleich die Sperre aufheben.'], 409);
     }
 }
+
+// Anstellungskategorie nach Art. 8 GAV (ENT-065). Leer bleibt leer: Eine
+// geratene Kategorie behauptet eine Obergrenze, die niemand vereinbart hat.
+function kategorie_pruefen($w): ?string {
+    $k = strtoupper(trim((string)$w));
+    return in_array($k, ['A', 'B', 'C'], true) ? $k : null;
+}
+function pensum_pruefen($w): ?int {
+    if ($w === null || $w === '' ) { return null; }
+    $n = (int)$w;
+    return ($n > 0 && $n <= 3000) ? $n : null;
+}
