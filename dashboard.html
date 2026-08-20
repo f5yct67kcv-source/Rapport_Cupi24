@@ -846,6 +846,11 @@ tbody tr.zu .i-schloss { color: var(--warn); }
 /* Selbst gesperrter Tag (ENT-028): sichtbar, aber nicht blockierend.
    Bewusst warngelb und nicht rot -- Rot ist der Doppelbelegung vorbehalten,
    die wirklich unmoeglich ist. */
+/* Ruhezeit-Warnung (ENT-064). Warngelb wie die Sperrtage, nicht rot: Sie
+   verbietet nichts, sie sagt etwas. Rot bleibt dem vorbehalten, was wirklich
+   unmoeglich ist. */
+.ma-pick .who .ruhe-warn { display: block; font-size: 11.5px; font-weight: 620; color: var(--warn); margin-top: 2px; }
+
 .ma-pick .who .sperrtag { display: block; font-size: 11.5px; font-weight: 620; color: var(--warn); margin-top: 2px; }
 
 /* Verfuegbarkeit auf einen Blick (ENT-060). Gruen heisst: im gewaehlten
@@ -4066,6 +4071,38 @@ function konflikte(datum, von, bis, ausserId) {
   return map;
 }
 
+// Ruhezeit-Unterschreitungen je Person (ENT-064). Dieselbe Datengrundlage
+// wie konflikte(), nur eine andere Frage: nicht "ueberlappen sich zwei
+// Schichten", sondern "wie gross ist die Luecke dazwischen".
+//
+// Der Blick geht bewusst ueber ein breites Fenster (+/- 3 Tage) und nicht nur
+// auf den Vor- und Folgetag: Eine Nachtschicht, die um 06:00 endet, kann mit
+// einem Einsatz kollidieren, der kalendarisch zwei Tage spaeter beginnt.
+function ruheLuecken(datum, von, bis, ausserId) {
+  const map = {};
+  if (!datum || !von || !bis) { return map; }
+  const t = new Date(datum + 'T12:00:00');
+  const rand = n => isoTag(new Date(t.getFullYear(), t.getMonth(), t.getDate() + n));
+  const vonTag = rand(-3), bisTag = rand(3);
+  const proMa = {};
+  einsaetze.forEach(e => {
+    if (Number(e.id) === Number(ausserId) || e.status === 'abgesagt') { return; }
+    const d = String(e.datum).slice(0, 10);
+    if (d < vonTag || d > bisTag) { return; }
+    (e.mitarbeiter || []).forEach(m => {
+      (proMa[m.id] = proMa[m.id] || []).push({
+        datum: d, von: hm(e.von), bis: hm(e.bis),
+        titel: e.titel || e.einsatzart, kunde_name: e.kunde_name,
+      });
+    });
+  });
+  Object.keys(proMa).forEach(id => {
+    const v = gavRuheVerletzungen(datum, hm(von), hm(bis), proMa[id]);
+    if (v.length) { map[id] = v; }
+  });
+  return map;
+}
+
 const fehlend = e => (e.status === 'abgesagt' ? 0 : Math.max(0, Number(e.bedarf) - (e.mitarbeiter || []).length));
 
 // Ein leeres Feld heisst "kein Limit auf dieser Seite" -- damit deckt derselbe
@@ -4264,8 +4301,10 @@ function pickRender(prefix, ids, ausserId) {
     return;
   }
   const k = konflikte($(enId(prefix, 'datum')).value, $(enId(prefix, 'von')).value, $(enId(prefix, 'bis')).value, ausserId);
+  const r = ruheLuecken($(enId(prefix, 'datum')).value, $(enId(prefix, 'von')).value, $(enId(prefix, 'bis')).value, ausserId);
   box.innerHTML = mitarbeiter.map(m => {
     const c = k[m.id] || [];
+    const ruhe = r[m.id] || [];
     const dabei = gewaehlt.has(Number(m.id));
     // Seit ENT-060 ist ein Konflikt keine Sackgasse mehr, sondern der Anfang
     // einer Umplanung: Das Haekchen bleibt bedienbar, beim Setzen wird
@@ -4281,7 +4320,10 @@ function pickRender(prefix, ids, ausserId) {
         <span>${esc(m.name)}</span>
         ${c.length
           ? `<span class="clash">Bereits eingeteilt: ${esc(clash)}</span>`
-          : `<span class="frei-marke">verfügbar</span>`}
+          : (ruhe.length ? '' : `<span class="frei-marke">verfügbar</span>`)}
+        ${ruhe.length ? `<span class="ruhe-warn" title="${esc(GAV_RUHEZEIT.quelle)}">Nur ${esc(gavStd(ruhe[0].minuten))} h Ruhezeit ${
+          ruhe[0].gegen.datum < $(enId(prefix, 'datum')).value ? 'seit' : 'bis zu'} „${esc(ruhe[0].gegen.titel || ruhe[0].gegen.kunde_name)}“ — verlangt sind ${GAV_RUHEZEIT.stundenMin}${
+          ruhe.length > 1 ? ` (und ${ruhe.length - 1} weitere)` : ''}</span>` : ''}
       </span>
     </label>`;
   }).join('');

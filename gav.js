@@ -241,3 +241,85 @@ const GAV_SPARTE = 'sicherheit';
 function gavGilt(sparte) {
   return String(sparte || GAV_SPARTE).toLowerCase() !== 'reinigung';
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   RUHEZEIT — DIE ERSTE KONTROLLINSTANZE (ENT-064)
+
+   Anders als Zeitbonus oder Auslagenersatz geht es hier nicht um Geld,
+   sondern um Gesundheit. Art. 14 Ziff. 4 GAV behaelt die
+   arbeitsgesetzlichen Vorschriften zu taeglicher Ruhezeit und maximaler
+   Tagesarbeitszeit ausdruecklich vor und ermaechtigt die PaKo, bei
+   ernstlichen Hinweisen auf regelmaessige grobe Verstoesse das
+   Arbeitsinspektorat einzuschalten.
+
+   Die Zahl stammt NICHT aus dem Gedaechtnis, sondern aus dem
+   PAKO-Kommentar zu Art. 15 Ziff. 5, woertlich:
+
+     "Ein freier Tag umfasst 24 Stunden plus die taegliche regulaere
+      Ruhezeit von 11 Stunden, d. h. 35 Stunden zwischen den Einsaetzen."
+
+   Damit sind zwei Schwellen belegt: 11 Stunden zwischen zwei Schichten,
+   35 Stunden, damit ein Tag als freier Tag zaehlt.
+
+   WAS HIER BEWUSST FEHLT: Das Arbeitsgesetz erlaubt, die taegliche
+   Ruhezeit einmal pro Woche auf 8 Stunden zu verkuerzen, sofern der
+   Durchschnitt ueber zwei Wochen 11 Stunden erreicht. Diese Ausnahme ist
+   hier NICHT umgesetzt -- der Gesetzestext liegt nicht im Repository, und
+   eine Ausnahme aus dem Gedaechtnis waere genau die Art von Annahme, die
+   CLAUDE.md verbietet. Folge: Das Werkzeug warnt in diesen Faellen zu oft,
+   nie zu selten. Das ist die richtige Richtung -- eine Warnung zu viel
+   kostet einen Klick, eine zu wenig kostet Ruhezeit.                    */
+
+const GAV_RUHEZEIT = {
+  stundenMin: 11,
+  freierTagMin: 35,
+  quelle: 'PAKO-Kommentar zu Art. 15 Ziff. 5 GAV, i.V.m. Art. 14 Ziff. 4 GAV',
+  ausnahmeOffen: 'Die Verkürzung auf 8 Stunden einmal pro Woche (Arbeitsgesetz) ist nicht umgesetzt.',
+};
+
+/* Lücke in Minuten zwischen dem Ende der einen und dem Beginn der
+   naechsten Schicht. Beide Schichten koennen ueber Mitternacht laufen --
+   gavRohMin() kennt das bereits, hier wird dieselbe Logik auf zwei
+   getrennte Termine angewandt.
+   Rueckgabe: null, wenn sich nichts bestimmen laesst. Ueberlappen sich
+   die beiden, ist es keine Ruhezeitfrage, sondern eine Doppelbelegung --
+   dann ebenfalls null, denn dafuer gibt es eine eigene Pruefung. */
+function gavRuheLuecke(datumA, vonA, bisA, datumB, vonB, bisB) {
+  const spanne = (d, v, b) => {
+    if (!d || !v || !b) { return null; }
+    const t0 = new Date(d + 'T00:00:00');
+    if (isNaN(t0.getTime())) { return null; }
+    const min = s => Number(String(s).slice(0, 2)) * 60 + Number(String(s).slice(3, 5));
+    const a = t0.getTime() / 60000 + min(v);
+    let e = t0.getTime() / 60000 + min(b);
+    if (e <= a) { e += 1440; }
+    return [a, e];
+  };
+  const A = spanne(datumA, vonA, bisA), B = spanne(datumB, vonB, bisB);
+  if (!A || !B) { return null; }
+  if (A[0] < B[1] && B[0] < A[1]) { return null; }   // Ueberlappung, nicht Ruhezeit
+  return B[0] >= A[1] ? B[0] - A[1] : A[0] - B[1];
+}
+
+/* Prueft eine geplante Schicht gegen die uebrigen Schichten einer Person.
+   `andere` ist eine Liste von {datum, von, bis, titel, kunde_name}.
+   Zurueck kommt eine Liste der Unterschreitungen, jeweils mit der
+   gefundenen Luecke -- damit die Meldung die Zahl nennen kann und nicht
+   nur "zu wenig". */
+function gavRuheVerletzungen(datum, von, bis, andere) {
+  if (!datum || !von || !bis) { return []; }
+  const grenze = GAV_RUHEZEIT.stundenMin * 60;
+  const treffer = [];
+  (andere || []).forEach(e => {
+    const l = gavRuheLuecke(datum, von, bis, e.datum, e.von, e.bis);
+    if (l === null || l >= grenze) { return; }
+    treffer.push({ minuten: l, gegen: e });
+  });
+  return treffer.sort((a, b) => a.minuten - b.minuten);
+}
+
+/* "8:30" aus 510 Minuten -- fuer die Meldung. */
+function gavStd(min) {
+  const m = Math.max(0, Math.round(Number(min) || 0));
+  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+}
