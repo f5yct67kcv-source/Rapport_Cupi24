@@ -2,7 +2,9 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- Kein Zoom (ENT-059) -- dieselbe Begruendung wie im Cockpit.
+     viewport-fit=cover bleibt: es haelt den Inhalt aus der Notch. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Cockpit</title>
 <link rel="icon" href="icons/icon-32.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -15,6 +17,11 @@
    Aufbau: grosse Flächen, untere Reiterleiste, dicke Zeitangaben.
    Gedacht für draussen: kurze Blicke, kalte Finger, helles Licht.
    ══════════════════════════════════════════════════════════════════ */
+
+/* Kein Zoom durch Doppeltippen oder Feld-Fokus (ENT-059). */
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+.inp, input, select, textarea { font-size: 16px; }
+
 :root {
   --shell:  #16181D;  --shell-hi: #1E2128;  --shell-line: #272B33;
   --shell-txt: #9298A5; --shell-txt-hi: #F3F5F8;

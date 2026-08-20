@@ -2,7 +2,13 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Kein Zoom auf dem Handy (ENT-059). Beim Scrollen rutschte man leicht in
+     eine Zoomgeste, danach stimmten die Verhaeltnisse nicht mehr. Dieselbe
+     Einstellung nutzt die Rapporterfassung schon laenger. Hinweis: iOS
+     ignoriert user-scalable=no aus Barrierefreiheitsgruenden -- gegen das
+     versehentliche Doppeltippen und das Zoomen beim Feld-Fokus hilft
+     zusaetzlich touch-action und eine Schriftgroesse ab 16px in Feldern. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Cockpit</title>
 <link rel="icon" href="icons/icon-32.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -993,6 +999,17 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
    WICHTIG: ausgeblendet ist nicht kaputt. Wer einen Menuepunkt vermisst,
    haelt die Anwendung fuer unvollstaendig -- darum steht im Fuss der
    Seitenleiste, wo diese Bereiche geblieben sind. */
+/* Umschaltpunkt der Seitenleiste (ENT-059): Ab hier ist sie eine Schublade,
+   und ab hier wandert der Hell/Dunkel-Schalter aus der Kopfzeile hinein.
+   Bewusst 900 px und nicht die 620 px der schlanken Ansicht -- sonst stuende
+   der Schalter dazwischen doppelt da. */
+.nur-schublade { display: none; }
+
+/* Kein Zoom durch Doppeltippen (ENT-059). Die Viewport-Angabe allein reicht
+   nicht: iOS ignoriert user-scalable=no. touch-action nimmt der Geste die
+   Grundlage, ohne das Scrollen anzutasten. */
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+
 /* Kein display im Normalfall -- das Element behaelt seine eigene Anzeigeart
    (Kacheln bleiben Kacheln, Knoepfe bleiben Flex). Nur die Mobilregel weiter
    unten blendet aus. Dasselbe Muster wie .nur-breit. */
@@ -1122,10 +1139,29 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
   .g-2-1, .g-1-1 { grid-template-columns: 1fr; }
 }
 @media (max-width: 900px) {
-  .side { transform: translateX(-100%); transition: transform .22s cubic-bezier(.32,.72,0,1); box-shadow: var(--sh-3); }
-  .side.on { transform: none; }
+  /* Die Seitenleiste faehrt nicht mehr von der Seite herein, sondern klappt
+     als Menue unter der Kopfzeile auf (ENT-059). Ein seitliches Panel nimmt
+     auf dem Handy die halbe Breite und laesst den Inhalt daneben verkuemmern;
+     ein Aufklappmenue ist das, was man dort erwartet. */
+  .side {
+    top: var(--top-h); left: 0; right: 0; bottom: auto; width: auto;
+    max-height: calc(100dvh - var(--top-h)); overflow-y: auto;
+    border-bottom: 1px solid var(--shell-line); box-shadow: var(--sh-3);
+    transform: translateY(-10px); opacity: 0; visibility: hidden;
+    transition: transform .18s cubic-bezier(.32,.72,0,1), opacity .18s, visibility .18s;
+  }
+  .side.on { transform: none; opacity: 1; visibility: visible; }
+  /* Der Markenkopf ist im Aufklappmenue doppelt -- die Kopfzeile sagt bereits,
+     wo man ist. */
+  .side-brand { display: none; }
+  .side-nav { padding: 10px 12px; }
   .main { margin-left: 0; }
   .btn-burger { display: inline-flex; }
+  .nur-schublade { display: flex; }
+  .ohne-schublade { display: none !important; }
+  /* iOS zoomt beim Antippen in jedes Feld unter 16 px hinein -- und bleibt
+     dann dort. 16 px ist keine Geschmacksfrage, sondern die Schwelle. */
+  .inp, .search input, input, select, textarea { font-size: 16px; }
   .content { padding: 18px 16px; }
   .topbar { padding: 0 16px; }
 }
@@ -1275,6 +1311,13 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         </span>
         <span class="lbl" id="navEinrichtungLbl">Einrichtung</span>
       </button>
+      <!-- Hell/Dunkel wandert auf dem Handy hierher (ENT-059): In einer
+           Kopfzeile mit vier Knoepfen war er einer zu viel, und gebraucht wird
+           er selten -- einmal eingestellt, bleibt es so. -->
+      <button class="nav-item nur-schublade" id="nav-thema" onclick="themaUm()">
+        <svg class="i" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>
+        <span class="lbl" id="navThemaLbl">Dunkle Darstellung</span>
+      </button>
       <div class="side-user">
         <div class="avatar" id="uAvatar">–</div>
         <div class="who">
@@ -1306,9 +1349,6 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
 
   <div class="main">
     <header class="topbar">
-      <button class="btn btn-quiet btn-sm btn-burger" onclick="toggleSide()" aria-label="Navigation">
-        <svg class="i" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
       <button class="btn btn-quiet btn-sm btn-schmal" id="btnSchmal" onclick="seiteUm()" title="Seitenleiste ein- oder ausklappen" aria-label="Seitenleiste ein- oder ausklappen">
         <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9.5" y1="4" x2="9.5" y2="20"/></svg>
       </button>
@@ -1325,7 +1365,7 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
         <svg class="i i-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
         <span class="lbl">Sprechen</span>
       </button>
-      <button class="thema-schalter" id="btnThema" onclick="themaUm()" role="switch" aria-checked="false" title="Hell oder dunkel" aria-label="Zwischen heller und dunkler Darstellung wechseln">
+      <button class="thema-schalter ohne-schublade" id="btnThema" onclick="themaUm()" role="switch" aria-checked="false" title="Hell oder dunkel" aria-label="Zwischen heller und dunkler Darstellung wechseln">
         <span class="knopf">
           <svg class="i-sonne" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="4.2" y1="4.2" x2="5.9" y2="5.9"/><line x1="18.1" y1="18.1" x2="19.8" y2="19.8"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.2" y1="19.8" x2="5.9" y2="18.1"/><line x1="18.1" y1="5.9" x2="19.8" y2="4.2"/></svg>
           <svg class="i-mond" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>
@@ -1334,6 +1374,12 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
       <button class="btn btn-plain btn-sm" onclick="dashBearbeitenStart()" id="btnDashBearbeiten" title="Übersicht anpassen">
         <svg class="i i-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
         <span class="lbl">Bearbeiten</span>
+      </button>
+      <!-- Burger ganz rechts aussen (ENT-059). Auf dem Handy liegt der Daumen
+           dort; links stand er nur, weil die Seitenleiste von links kam --
+           und das tut sie jetzt nicht mehr. -->
+      <button class="btn btn-quiet btn-sm btn-burger" onclick="toggleSide()" aria-label="Menü" aria-expanded="false" id="btnBurger">
+        <svg class="i" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="dash-editleiste" id="dashEditleiste" style="display:none">
         <button class="btn btn-plain btn-sm" onclick="dashZuruecksetzen()" title="Alle Container auf die Standardansicht zurücksetzen">
@@ -2932,7 +2978,7 @@ function renderBegruessung() {
       `als Nächstes: „${esc(wo)}“ ${wannWort} um ${hmKurz(e.von)}`,
     ];
     let satz = zeitSatz[Math.floor(Math.random() * zeitSatz.length)];
-    if (offen > 0) satz += ` — noch ${offen} ${offen === 1 ? 'Stelle offen' : 'Stellen offen'}`;
+    if (offen > 0) satz += ` — noch ${offen} ${offen === 1 ? 'Schicht offen' : 'Schichten offen'}`;
     teile.push(satz);
   } else {
     teile.push('kein anstehender Einsatz geplant');
@@ -3107,6 +3153,10 @@ function themaSetzen(w) {
     b.setAttribute('aria-checked', dunkel ? 'true' : 'false');
     b.title = dunkel ? 'Auf helle Darstellung wechseln' : 'Auf dunkle Darstellung wechseln';
   }
+  // Derselbe Zustand, zweite Stelle: der Eintrag im Menue benennt, wohin der
+  // Klick fuehrt -- nicht, wo man gerade steht.
+  const nb = $('navThemaLbl');
+  if (nb) { nb.textContent = dunkel ? 'Helle Darstellung' : 'Dunkle Darstellung'; }
   // Die Farbe der Systemleiste am Telefon mitziehen.
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', dunkel ? '#0B0D11' : '#16181D');
@@ -3193,7 +3243,23 @@ function go(view) {
   }
   history.replaceState(null, '', '#' + view);
 }
-function toggleSide() { $('side').classList.toggle('on'); }
+function toggleSide(auf) {
+  const s = $('side');
+  const offen = auf === undefined ? !s.classList.contains('on') : !!auf;
+  s.classList.toggle('on', offen);
+  const b = $('btnBurger');
+  if (b) { b.setAttribute('aria-expanded', offen ? 'true' : 'false'); }
+}
+
+// Ein Aufklappmenue, das offen bleibt, wenn man danebentippt, fuehlt sich
+// kaputt an (ENT-059). Der Burger selbst ist ausgenommen -- sonst wuerde sein
+// eigener Klick das Menue sofort wieder schliessen.
+document.addEventListener('click', e => {
+  const s = $('side');
+  if (!s || !s.classList.contains('on')) { return; }
+  if (s.contains(e.target) || e.target.closest('#btnBurger')) { return; }
+  toggleSide(false);
+});
 
 // Schmale Seitenleiste: mehr Platz für die breiten Raster. Die Wahl bleibt
 // erhalten, damit sie nicht bei jedem Laden neu getroffen werden muss.
@@ -5424,7 +5490,7 @@ function renderObjektplan() {
     <span title="Aus den Masterschichten, unabhängig davon ob schon Schichten erzeugt sind"><b>${nf(hSoll, 2)}</b> h Soll</span>
     <span class="voll"><b>${nf(hIst, 2)}</b> h besetzt</span>
     <span class="${hOffen ? 'offen' : ''}"><b>${nf(hOffen, 2)}</b> h offen</span>
-    <span class="${stellenOffen ? 'offen' : ''}"><b>${nf(stellenOffen)}</b> ${stellenOffen === 1 ? 'Stelle' : 'Stellen'}</span>`;
+    <span class="${stellenOffen ? 'offen' : ''}"><b>${nf(stellenOffen)}</b> ${stellenOffen === 1 ? 'Schicht' : 'Schichten'}</span>`;
 
   const tagKl = t => fei[t] ? 'fei' : ([0, 6].includes(new Date(t + 'T12:00:00').getDay()) ? 'we' : '');
   const kopf = tage.map(t => {
