@@ -557,6 +557,19 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ptab { display: none; }
 .ptab.on { display: block; }
 .ku-tab { display: none; }
+.ma-tab, .md-tab { display: none; }
+.ma-tab.on, .md-tab.on { display: block; }
+/* Summenkacheln der Dienstpläne: Rohzeit, Zeitbonus und Total stehen
+   NEBENEINANDER, nie als eine Zahl -- der PAKO-Kommentar zu Art. 12 Abs. 2
+   verlangt ausdrücklich, dass der Zeitzuschlag separat ausgewiesen wird. */
+.md-summen { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.md-kachel { flex: 1 1 150px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-sm); padding: 12px 14px; }
+.md-kachel .lbl { font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-3); }
+.md-kachel .val { font-size: 21px; font-weight: 680; margin-top: 3px; }
+.md-kachel.bonus .val { color: var(--accent); }
+.md-kachel.total { border-color: var(--accent-line); background: var(--accent-soft); }
+.md-kachel.total .val { color: var(--accent); }
 .ku-tab.on { display: block; }
 .kd-tab { display: none; }
 .kd-tab.on { display: block; }
@@ -1708,18 +1721,62 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
 
       <!-- ─────────── MITARBEITENDE ─────────── -->
       <section class="view" id="view-mitarbeiter">
-        <div class="bar-tools">
-          <div class="search">
-            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="inp" type="search" id="mQ" placeholder="Name, Ort oder Personalnummer …" oninput="renderMitarbeiter()">
+        <!-- Liste und Detailseite teilen sich den Bereich, wie bei Kunden
+             (ENT-040/048): der Klick auf eine Zeile ist ein Drilldown, kein
+             zweiter Seitenleisten-Punkt. Suche und "Neuer Mitarbeitender"
+             gehören zur Liste und verschwinden mit ihr -- auf einer
+             Detailseite hätte eine Listensuche nichts zu suchen. -->
+        <div class="ma-tab on" id="mv-liste">
+          <div class="bar-tools">
+            <div class="search">
+              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="inp" type="search" id="mQ" placeholder="Name, Ort oder Personalnummer …" oninput="renderMitarbeiter()">
+            </div>
+            <div class="sp" style="flex:1"></div>
+            <button class="btn btn-primary btn-sm" onclick="openMaNeu()">
+              <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Neuer Mitarbeitender
+            </button>
           </div>
-          <div class="sp" style="flex:1"></div>
-          <button class="btn btn-primary btn-sm" onclick="openMaNeu()">
-            <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Neuer Mitarbeitender
-          </button>
+          <div class="card"><div class="card-bd flush"><div class="tw" id="maTable"></div></div></div>
         </div>
-        <div class="card"><div class="card-bd flush"><div class="tw" id="maTable"></div></div></div>
+
+        <div class="ma-tab" id="mv-detail">
+          <div class="ku-detail-hd">
+            <button class="ku-zurueck" onclick="maGoTab('liste')" aria-label="Zurück zur Mitarbeiterliste">
+              <svg class="i" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div style="flex:1">
+              <h2 id="mdName">–</h2>
+              <div class="sub" id="mdSub">–</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="mdBearbeiten()">Bearbeiten</button>
+          </div>
+          <div class="tabs" id="mdTabs" style="margin-bottom:14px">
+            <button class="tab on" id="mdtab-uebersicht" onclick="mdGoTab('uebersicht')">Übersicht</button>
+            <button class="tab" id="mdtab-dienstplaene" onclick="mdGoTab('dienstplaene')">Dienstpläne</button>
+          </div>
+          <div class="md-tab on" id="md-uebersicht">
+            <div class="card"><div class="card-bd" id="mdInfo"></div></div>
+          </div>
+          <div class="md-tab" id="md-dienstplaene">
+            <div class="bar-tools bar-eng">
+              <div class="tool-gruppe">
+                <button class="btn btn-quiet btn-sm" onclick="mdMonatUm(-1)" aria-label="Vormonat">‹</button>
+                <input class="inp" type="month" id="mdMonat" style="width:auto" onchange="renderMaDetail()" aria-label="Monat">
+                <button class="btn btn-quiet btn-sm" onclick="mdMonatUm(1)" aria-label="Folgemonat">›</button>
+              </div>
+              <div class="sp" style="flex:1"></div>
+              <button class="btn btn-plain btn-sm" onclick="mdCsv()">
+                <svg class="i i-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                CSV
+              </button>
+            </div>
+            <div id="mdSummen"></div>
+            <div class="card"><div class="card-bd flush"><div class="tw" id="mdTable"></div></div></div>
+            <div id="mdVorbehalt"></div>
+          </div>
+        </div>
       </section>
 
       <!-- ─────────── KUNDEN ─────────── -->
@@ -2937,6 +2994,15 @@ function go(view) {
   // -- kein Zustand, der beim Verlassen hängen bleibt (ENT-039).
   $('navg-kunden').classList.toggle('offen', view === 'kunden');
   if (view === 'kunden') kuGoTab(kuTab);
+  // Der Mitarbeiterbereich startet immer bei der Liste. Eine Detailseite, die
+  // beim Zurückkommen noch offen steht, ist verwirrend -- anders als bei den
+  // Kunden, wo die Reiter echte Bereiche sind und ein Zustand Sinn ergibt.
+  if (view === 'mitarbeiter') {
+    maGoTab('liste');
+    // Die Dienstpläne lesen aus den Einsätzen; ohne sie bliebe jede Person leer.
+    if (!einsaetze.length) { loadEinsaetze(); }
+    if (!Object.keys(feiertage).length) { ladeFeiertagMap(); }
+  }
   if (view === 'planung') {
     // Die Planung braucht ausser den Einsätzen auch Objekte, Feiertage,
     // Personal (Zuteilung) und Kunden (Eingabehilfe im Formular).
@@ -3280,7 +3346,7 @@ function renderMitarbeiter() {
       <th>Pers-Nr.</th><th>Anrede</th><th>Vorname</th><th>Nachname</th><th>Anschrift</th>
       <th>Ort</th><th>Telefon</th><th>Mobil</th><th>E-Mail</th><th>Rolle</th>
     </tr></thead><tbody>` + d.map(m => `
-      <tr class="click" onclick="openMa(${mitarbeiter.indexOf(m)})">
+      <tr class="click" onclick="openMaDetail('${esc(m.name)}')">
         <td class="num nowrap">${dash(m.personalnummer)}</td>
         <td class="nowrap">${dash(m.anrede)}</td>
         <td class="nowrap">${dash(m.vorname)}</td>
@@ -3293,6 +3359,188 @@ function renderMitarbeiter() {
         <td>${Number(m.ist_admin) ? '<span class="chip chip-a">Admin</span>' : '<span class="chip chip-n">Mitarbeit.</span>'}</td>
       </tr>`).join('') + `</tbody></table>`;
 }
+
+// ── Mitarbeiter-Detailseite mit Dienstplänen (ENT-048) ────────────────────
+// Drilldown aus der Liste, gleiches Muster wie bei Kunden (ENT-040).
+let mdName = null;    // Login-Name der offenen Person
+let mdTab = 'uebersicht';
+
+function maGoTab(t) {
+  document.querySelectorAll('#view-mitarbeiter .ma-tab').forEach(v => v.classList.remove('on'));
+  $('mv-' + t).classList.add('on');
+  $('pgCrumb').textContent = t === 'detail' ? 'Mitarbeitendendetails' : 'Stammdaten';
+  if (t === 'liste') { mdName = null; renderMitarbeiter(); }
+}
+function openMaDetail(name) {
+  mdName = name;
+  if (!$('mdMonat').value) { $('mdMonat').value = isoTag().slice(0, 7); }
+  maGoTab('detail');
+  mdGoTab(mdTab);
+}
+function mdGoTab(t) {
+  mdTab = t;
+  document.querySelectorAll('#mdTabs .tab').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('#mv-detail .md-tab').forEach(v => v.classList.remove('on'));
+  $('mdtab-' + t).classList.add('on');
+  $('md-' + t).classList.add('on');
+  renderMaDetail();
+}
+function mdMonatUm(n) {
+  const m = $('mdMonat').value || isoTag().slice(0, 7);
+  const d = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + n, 1);
+  $('mdMonat').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  renderMaDetail();
+}
+function mdBearbeiten() {
+  const i = mitarbeiter.findIndex(x => x.name === mdName);
+  if (i >= 0) { openMa(i); }
+}
+
+// Alle abgeglichenen Schichten einer Person im gewählten Monat, chronologisch.
+// NUR abgeglichene (Wahl des Projektinhabers): was nicht geprüft ist, taugt
+// nicht als Nachweis geleisteter Zeit und soll hier auch nicht mitzählen.
+function mdZeilen() {
+  const m = $('mdMonat').value || isoTag().slice(0, 7);
+  const zeilen = [];
+  einsaetze.forEach(e => {
+    const tag = String(e.datum).slice(0, 10);
+    if (tag.slice(0, 7) !== m) { return; }
+    (e.mitarbeiter || []).forEach(p => {
+      if (p.name !== mdName) { return; }
+      const st = p.ist_status || 'offen';
+      if (st === 'offen') { return; }
+      const von = p.ist_von ? hm(p.ist_von) : '';
+      const bis = p.ist_bis ? hm(p.ist_bis) : '';
+      const bezahlt = Number(p.ist_pause_bezahlt_ma) === 1;
+      // Netto nach ENT-047: eine bezahlte Pause bleibt drin.
+      const netto = agDauer(von, bis, p.ist_pause_min, bezahlt ? 1 : 0);
+      const bonus = von && bis ? gavBonusMin(tag, von, bis) : 0;
+      zeilen.push({
+        datum: tag, von, bis, status: st,
+        titel: e.titel || e.einsatzart, kunde: e.kunde_name, ort: e.ort,
+        pause: p.ist_pause_min, pauseBezahlt: bezahlt, netto,
+        nettoMin: netto ? Number(netto.slice(0, 2)) * 60 + Number(netto.slice(3, 5)) : 0,
+        bonusMin: bonus,
+        feiertagLuecke: von && bis ? gavFeiertagLuecke(tag, von, bis) : false,
+      });
+    });
+  });
+  return zeilen.sort((a, b) => a.datum.localeCompare(b.datum) || String(a.von).localeCompare(String(b.von)));
+}
+
+const mdStd = min => `${nf(Math.floor(min / 60))}:${String(Math.round(min % 60)).padStart(2, '0')} h`;
+
+function renderMaDetail() {
+  const p = mitarbeiter.find(x => x.name === mdName);
+  if (!p) { maGoTab('liste'); return; }
+  $('mdName').textContent = fullName(p) || p.name;
+  $('mdSub').textContent = `${p.personalnummer ? 'Pers-Nr. ' + p.personalnummer + ' · ' : ''}${p.name}`
+    + (Number(p.ist_admin) ? ' · Verwaltung' : '');
+
+  if (mdTab === 'uebersicht') {
+    const leer = '<span style="color:var(--ink-3)">–</span>';
+    $('mdInfo').innerHTML = `
+      <dl class="ku-detail-info">
+        <dt>Anrede</dt><dd>${dash(p.anrede)}</dd>
+        <dt>Anschrift</dt><dd>${[p.strasse, p.ort].filter(Boolean).map(esc).join('<br>') || leer}</dd>
+        <dt>Geburtsdatum</dt><dd>${p.geburtsdatum ? dmy(p.geburtsdatum) : leer}</dd>
+        <dt>Telefon</dt><dd>${dash(p.telefon)}</dd>
+        <dt>Mobil</dt><dd>${dash(p.mobil)}</dd>
+        <dt>E-Mail</dt><dd>${dash(p.email)}</dd>
+        <dt>Rolle</dt><dd>${Number(p.ist_admin) ? 'Verwaltung (Admin)' : 'Mitarbeitende'}</dd>
+      </dl>`;
+    return;
+  }
+  mdDienstplaene();
+}
+
+function mdDienstplaene() {
+  const z = mdZeilen();
+  const monat = new Date(($('mdMonat').value || isoTag().slice(0, 7)) + '-01T12:00:00')
+    .toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
+
+  if (!z.length) {
+    $('mdSummen').innerHTML = '';
+    $('mdVorbehalt').innerHTML = '';
+    $('mdTable').innerHTML = EMPTY(`Nichts abgeglichen im ${monat}`,
+      'Hier stehen ausschliesslich Schichten, die unter „Abgleich" geprüft wurden. Geplante, aber noch nicht abgeglichene Schichten zählen bewusst nicht mit.');
+    return;
+  }
+
+  const summeNetto = z.reduce((a, x) => a + x.nettoMin, 0);
+  // Fehlt für ein Datum ein gültiges Regelwerk, wird der Bonus NICHT geschätzt.
+  const ohneRegel = z.filter(x => x.bonusMin === null);
+  const summeBonus = z.reduce((a, x) => a + (x.bonusMin || 0), 0);
+  const luecken = z.filter(x => x.feiertagLuecke);
+
+  $('mdSummen').innerHTML = `<div class="md-summen">
+    <div class="md-kachel"><div class="lbl">Geleistete Zeit</div><div class="val">${esc(mdStd(summeNetto))}</div>
+      <div class="lbl" style="margin-top:4px;text-transform:none;letter-spacing:0">${nf(z.length)} ${z.length === 1 ? 'Schicht' : 'Schichten'}</div></div>
+    <div class="md-kachel bonus"><div class="lbl">Zeitbonus Art. 12 Ziff. 2</div><div class="val">${esc(mdStd(summeBonus))}</div>
+      <div class="lbl" style="margin-top:4px;text-transform:none;letter-spacing:0">Nacht und Sonntag, ohne Feiertage</div></div>
+    <div class="md-kachel total"><div class="lbl">Total mit Zeitbonus</div><div class="val">${esc(mdStd(summeNetto + summeBonus))}</div>
+      <div class="lbl" style="margin-top:4px;text-transform:none;letter-spacing:0">${esc(monat)}</div></div>
+  </div>`;
+
+  $('mdTable').innerHTML = `<table class="md-tab-liste"><thead><tr>
+      <th class="nowrap">Datum</th><th>Einsatz</th><th>Kunde</th>
+      <th class="nowrap">Zeit</th><th class="nowrap">Pause</th>
+      <th class="nowrap">Geleistet</th><th class="nowrap">Zeitbonus</th><th>Status</th>
+    </tr></thead><tbody>` + z.map(x => {
+    const st = AG_STATUS[x.status] || AG_STATUS.offen;
+    const wd = WD[new Date(x.datum + 'T12:00:00').getDay()];
+    const fei = feiertage[x.datum];
+    return `<tr>
+      <td class="nowrap">${esc(wd)}, ${dmy(x.datum)}${fei ? `<div class="ag-plan">${esc(fei.name || 'Feiertag')}</div>` : ''}</td>
+      <td>${esc(x.titel)}<div class="ag-plan">${esc(x.ort || '')}</div></td>
+      <td>${esc(x.kunde || '')}</td>
+      <td class="nowrap">${x.von && x.bis ? `${esc(x.von)}–${esc(x.bis)}` : '<span style="color:var(--ink-3)">–</span>'}</td>
+      <td class="nowrap">${x.pause ? `${nf(x.pause)} min${x.pauseBezahlt ? ' <span class="chip chip-p">bezahlt</span>' : ''}` : '<span style="color:var(--ink-3)">–</span>'}</td>
+      <td class="nowrap strong">${x.netto ? esc(x.netto) : '<span style="color:var(--ink-3)">–</span>'}</td>
+      <td class="nowrap">${x.bonusMin === null
+        ? '<span class="chip chip-w">kein Regelwerk</span>'
+        : (x.bonusMin ? `+${esc(mdStd(x.bonusMin))}` : '<span style="color:var(--ink-3)">–</span>')}${
+        x.feiertagLuecke ? ' <span class="chip chip-w" title="Feiertagsbonus nicht gerechnet — GAV-AUS-006 offen">Feiertag</span>' : ''}</td>
+      <td><span class="chip ${st[1]}">${esc(st[0])}</span></td>
+    </tr>`;
+  }).join('') + `</tbody></table>`;
+
+  // Der Vorbehalt steht UNTER der Zahl, nicht in einer Fussnote irgendwo:
+  // wer die Summe liest, muss im selben Blick sehen, was ihr fehlt.
+  const regel = gavRegel(z[0].datum);
+  $('mdVorbehalt').innerHTML = `<div class="zone${luecken.length || ohneRegel.length ? ' warn' : ''}" style="margin-top:14px">
+    <div class="zone-hd">Das ist keine Arbeitszeitabrechnung nach Art. 12 Ziff. 5</div>
+    <div class="zone-note">
+      Enthalten sind die geleistete Zeit und der Zeitbonus für <b>Nacht- und Sonntagsarbeit</b>
+      (Art. 12 Ziff. 2, 6 Minuten je Stunde im Zeitfenster, anteilig).
+      <b>Nicht enthalten:</b> der Zeitbonus für Feiertage — welche Feiertagsliste gilt, ist
+      ungeklärt (GAV-AUS-006); der Zeitzuschlag von 25 % über 210 Monatsstunden (Art. 14 Ziff. 3);
+      Mehr-/Unterzeit-Saldo, Ferienguthaben, Absenzen. Die vom GAV verlangte monatliche
+      Abrechnung braucht all das und wird hier <b>nicht</b> ersetzt.
+      ${luecken.length ? `<br><br><b>${nf(luecken.length)} ${luecken.length === 1 ? 'Schicht liegt' : 'Schichten liegen'} auf einem Feiertag</b>, der kein Sonntag ist — für ${luecken.length === 1 ? 'sie' : 'sie'} fehlt ein Bonus, den der GAV vorsieht. Die Summe ist insoweit zu tief.` : ''}
+      ${ohneRegel.length ? `<br><br><b>${nf(ohneRegel.length)} ${ohneRegel.length === 1 ? 'Schicht liegt' : 'Schichten liegen'} ausserhalb des hinterlegten Regelwerks</b> (${esc(GAV_REGELWERK[0].ab)} bis ${esc(GAV_REGELWERK[0].bis)}). Dort wird bewusst nicht gerechnet, statt eine abgelaufene Regel anzuwenden.` : ''}
+      <br><br><span class="ag-plan">Regelwerk: ${esc((regel || GAV_REGELWERK[0]).quelle)}</span>
+    </div></div>`;
+}
+
+function mdCsv() {
+  const z = mdZeilen();
+  if (!z.length) { toast('Keine abgeglichenen Schichten in diesem Monat.'); return; }
+  const hdr = ['Datum', 'Einsatz', 'Kunde', 'Ort', 'Ist von', 'Ist bis', 'Pause_Min',
+    'Pause_bezahlt_MA', 'Geleistet_Min', 'Zeitbonus_Min', 'Status'];
+  const cell = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  const rows = z.map(x => [x.datum, x.titel, x.kunde, x.ort, x.von, x.bis, x.pause ?? '',
+    x.pauseBezahlt ? 'ja' : 'nein', x.nettoMin,
+    x.bonusMin === null ? '' : Math.round(x.bonusMin * 100) / 100,
+    (AG_STATUS[x.status] || AG_STATUS.offen)[0]].map(cell).join(';'));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + [hdr.map(cell).join(';'), ...rows].join('\r\n')],
+    { type: 'text/csv;charset=utf-8' }));
+  a.download = `dienstplaene-${mdName}-${$('mdMonat').value}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 
 // ══════════════════════════════════════════ KUNDEN
 // Erweiterte Suche (ENT-040): findet nicht nur die sichtbaren Spalten,
@@ -6072,6 +6320,76 @@ function askRemoveMa() {
       closeDrawer();
       Promise.all([loadMitarbeiter(), loadStats()]).then(() => toast('Mitarbeitender entfernt.'));
     }));
+}
+
+// ══════════════════════════════════════════ GAV-ZEITBONUS (ENT-048)
+// ERSTE BEWERTETE ZEIT IM SYSTEM. Bis hierher hat die Plattform nur
+// aufgezeichnet; ab hier rechnet sie einen GAV-Wert. Entsprechend eng:
+//
+// Art. 12 Ziff. 2 GAV: "Um der Nachtarbeit (23.00-06.00) und Sonntags- bzw.
+// Feiertagsarbeit (06.00-23.00) Rechnung zu tragen, wird ein Zeitbonus
+// gewaehrt. Dieser betraegt 6 Minuten (10 %) pro Stunde, die in diese
+// Zeitraeume faellt (inklusive Pause)."
+//
+// Was hier bewusst NICHT geschieht:
+//  - Feiertage bleiben aussen vor. Welche Liste gilt, ist offen (GAV-AUS-006);
+//    ein Feiertag, der kein Sonntag ist, bekommt darum keinen Bonus. Die Summe
+//    ist in dem Fall ZU TIEF und wird sichtbar gekennzeichnet.
+//  - Es entsteht kein Lohn und keine Rechnung. Der Wert wird angezeigt,
+//    nirgends gespeichert und in nichts weiterverrechnet.
+//
+// Versioniertes Regelwerk mit Gueltigkeitszeitraum, wie CLAUDE.md Teil B es
+// verlangt: eine spaetere GAV-Revision darf zurueckliegende Monate nicht
+// rueckwirkend veraendern. Faellt ein Datum in keinen Zeitraum, wird NICHT
+// gerechnet -- lieber keine Zahl als eine auf abgelaufener Grundlage.
+const GAV_REGELWERK = [
+  {
+    quelle: 'GAV private Sicherheitsdienstleistungen, Ausgabe 2026 (AVE vom 11.12.2025)',
+    ab: '2026-01-01', bis: '2026-12-31',
+    satz: 0.10,                 // 6 Minuten pro Stunde
+    nachtAb: 23 * 60, nachtBis: 6 * 60,     // 23:00-06:00, ueber Mitternacht
+    sonntagAb: 6 * 60, sonntagBis: 23 * 60, // 06:00-23:00 an Sonntagen
+  },
+];
+const gavRegel = datum => GAV_REGELWERK.find(r => datum >= r.ab && datum <= r.bis) || null;
+
+// Bonusminuten einer Schicht. Rechnet minutenweise ueber den tatsaechlichen
+// Kalenderverlauf, weil eine Schicht ueber Mitternacht in einen Sonntag
+// hineinlaufen kann. Rueckgabe null heisst "kein Regelwerk fuer dieses Datum".
+//
+// Die beiden Fenster sind komplementaer -- dieselbe Minute kann nie in beide
+// fallen, darum ist die vom PaKo bestaetigte Regel "nur einmal, nicht doppelt"
+// hier bauartbedingt eingehalten (GAV-AUS-001, geklaert).
+//
+// Anteilig statt nur volle Stunden: der Vertrag nennt 6 Minuten UND 10 % im
+// selben Atemzug, und ein Prozentsatz ist seiner Natur nach anteilig. Fuer
+// 15-Minuten-Runden ist das entscheidend -- siehe GAV-AUS-008.
+function gavBonusMin(datum, von, bis) {
+  const regel = gavRegel(datum);
+  if (!regel || !von || !bis) { return null; }
+  const min = t => Number(String(t).slice(0, 2)) * 60 + Number(String(t).slice(3, 5));
+  const start = min(von);
+  let ende = min(bis);
+  if (ende <= start) { ende += 1440; }
+  const tag0 = new Date(datum + 'T12:00:00');
+  let imFenster = 0;
+  for (let m = start; m < ende; m++) {
+    const tagesMin = ((m % 1440) + 1440) % 1440;
+    const d = new Date(tag0.getTime() + Math.floor(m / 1440) * 864e5);
+    const inNacht = tagesMin >= regel.nachtAb || tagesMin < regel.nachtBis;
+    const inSonntag = d.getDay() === 0 && tagesMin >= regel.sonntagAb && tagesMin < regel.sonntagBis;
+    if (inNacht || inSonntag) { imFenster++; }
+  }
+  return imFenster * regel.satz;
+}
+
+// Faellt eine Schicht auf einen im Kalender hinterlegten Feiertag, der kein
+// Sonntag ist? Dann fehlt in der Summe ein Bonus, den der GAV vorsieht --
+// das muss man sehen, sonst haelt man eine zu tiefe Zahl fuer vollstaendig.
+function gavFeiertagLuecke(datum, von, bis) {
+  const tage = [datum];
+  if (von && bis && bis <= von) { tage.push(plusTage(datum, 1)); }
+  return tage.some(t => feiertage[t] && new Date(t + 'T12:00:00').getDay() !== 0);
 }
 
 // ══════════════════════════════════════════ SCHICHTEN ABGLEICHEN (ENT-045)
