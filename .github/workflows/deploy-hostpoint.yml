@@ -17,6 +17,10 @@ jobs:
           cp index.html dist/index.html
           cp dashboard.html dist/dashboard.html
           cp app.html dist/app.html
+          # gav.js traegt die GAV-Regeln fuer BEIDE Oberflaechen (ENT-049).
+          # Fehlt sie hier, laden dashboard.html und app.html ins Leere und
+          # rechnen gar nichts mehr -- derselbe Fallstrick wie bei ENT-040.
+          cp gav.js dist/gav.js
           cp manifest.json dist/manifest.json
           cp sw.js dist/sw.js
           cp icons/*.png dist/icons/

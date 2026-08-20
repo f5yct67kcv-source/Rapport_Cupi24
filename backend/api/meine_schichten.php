@@ -22,7 +22,14 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $bis)) {
 $stmt = db()->prepare(
     'SELECT e.id, e.kunde_name, e.titel, e.strasse, e.ort, e.einsatzart,
             e.datum, e.von, e.bis, e.status, e.bemerkung,
-            z.zusage, o.name AS objekt_name
+            z.zusage, o.name AS objekt_name,
+            -- Der eigene Ist-Stand (ENT-049): damit die Person ihre
+            -- geleistete Zeit selbst nachschlagen kann. Weiterhin strikt auf
+            -- die eigene Zuteilung gefiltert -- fremde Ist-Zeiten sind hier
+            -- so wenig sichtbar wie fremde Namen.
+            z.ist_status, z.ist_von, z.ist_bis,
+            z.ist_pause_von, z.ist_pause_min,
+            z.ist_pause_bezahlt_ma, z.abgeglichen_am
      FROM einsatz_zuteilung z
      JOIN einsaetze e ON e.id = z.einsatz_id
      LEFT JOIN objekte o ON o.id = e.objekt_id
@@ -33,6 +40,11 @@ $stmt->execute([(int)$user['id'], $von, $bis]);
 
 $schichten = array_map(function ($e) {
     $e['id'] = (int)$e['id'];
+    $e['ist_pause_min'] = $e['ist_pause_min'] === null ? null : (int)$e['ist_pause_min'];
+    // null bleibt null: 'noch nicht festgestellt' ist etwas anderes als 'nein'
+    // (GAV-AUS-004). Ein Cast auf int wuerde beides zu 0 machen.
+    $e['ist_pause_bezahlt_ma'] = $e['ist_pause_bezahlt_ma'] === null
+        ? null : (int)$e['ist_pause_bezahlt_ma'];
     return $e;
 }, $stmt->fetchAll());
 

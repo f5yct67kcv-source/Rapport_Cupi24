@@ -300,6 +300,7 @@ svg.i-sm { width: 17px; height: 17px; }
 
 <div class="toast" id="toast"></div>
 
+<script src="gav.js"></script>
 <script>
 /* ══════════════════════════════════════════════════════════════════
    WORTLAUT — alle sichtbaren Texte an einer Stelle, damit dieselbe Sache
@@ -334,6 +335,15 @@ const W = {
     keineRapporte: 'Noch keine Rapporte', keineRapporteText: 'Erfasste Einsätze erscheinen hier.',
     zurErfassung: 'Zur Rapporterfassung',
     diesenMonat: 'Diesen Monat', stunden: 'Stunden', einsaetze: 'Einsätze',
+    meineStunden: 'Meine Stunden',
+    geleistet: 'Geleistet', zeitbonus: 'Zeitbonus', gesamt: 'Total',
+    keineStunden: 'Nichts abgeglichen',
+    keineStundenText: 'Hier stehen deine Schichten, sobald die Einsatzleitung sie geprüft und abgeglichen hat.',
+    stundenHinweisTitel: 'Das ist keine Lohnabrechnung',
+    stundenHinweis: 'Die Zahlen zeigen deine abgeglichenen Schichten und den Zeitbonus für Nacht- und Sonntagsarbeit (Art. 12 Ziff. 2 GAV). Noch NICHT enthalten sind der Bonus für Feiertage, der Zuschlag über 210 Monatsstunden, Ferien und Absenzen. Was am Ende ausbezahlt wird, steht auf deiner Lohnabrechnung — nicht hier. Bei Abweichungen bitte bei der Einsatzleitung melden.',
+    feiertagOffen: 'An Feiertagen fehlt hier noch ein Bonus, den der GAV vorsieht. Die Zahl ist deshalb eher zu tief.',
+    ohneRegelwerk: 'Für diesen Zeitraum ist kein Regelwerk hinterlegt — der Zeitbonus wird bewusst nicht gerechnet.',
+    pauseBezahlt: 'bezahlte Pause',
     persNr: 'Personalnummer', geburtsdatum: 'Geburtsdatum', adresse: 'Adresse',
     telefon: 'Telefon', mobil: 'Mobil', email: 'E-Mail', anmeldename: 'Anmeldename',
     passwortAendern: 'Passwort ändern', altesPasswort: 'Bisheriges Passwort',
@@ -356,7 +366,12 @@ let schichten = [];
 let rapporte = [];
 let sperrtage = {};   // Datum -> Bemerkung (ENT-028)
 let profil = null;
-let monat = { anzahl: 0, stunden: 0 };
+// Die frühere Monatssumme aus den Rapporten ist entfallen (ENT-049): der
+// Rapport kennt die tatsächliche Pausenabrechnung noch nicht, die entsteht
+// erst im Abgleich. Zwei Stundenzahlen für denselben Monat wären für
+// Mitarbeitende nicht auflösbar gewesen.
+let stdMonat = '';          // JJJJ-MM des angezeigten Monats
+let stdSchichten = null;    // null = noch nicht geladen
 let reiter = 'heute';
 let blattId = null;
 
@@ -460,7 +475,7 @@ function ladeSchichten() {
 }
 function ladeProfil() {
   return api('mein_profil.php').then(({ ok, data }) => {
-    if (ok && data.status === 'ok') { profil = data.profil; monat = data.monat || monat; }
+    if (ok && data.status === 'ok') { profil = data.profil; }
   });
 }
 function ladeRapporte() {
@@ -699,11 +714,10 @@ function sperreNotizSpeichern(t) {
 
 // ══════════════════════════════════════════ RAPPORT
 function zeichneRapport() {
-  let html = `<div class="zahlen">
-      <div class="zahl"><b>${nf(monat.anzahl)}</b><span>${esc(w('einsaetze'))}</span></div>
-      <div class="zahl"><b>${nf(monat.stunden, 1)}</b><span>${esc(w('stunden'))}</span></div>
-    </div>
-    <a class="btn btn-primary btn-wide" href="index.html" style="margin-bottom:8px">
+  // Keine Stundensumme mehr aus den Rapporten (ENT-049) -- massgeblich ist
+  // die abgeglichene Zeit unter Profil > Meine Stunden. Eine zweite Zahl
+  // zwei Fingertipps daneben haette ihr nur widersprochen.
+  let html = `<a class="btn btn-primary btn-wide" href="index.html" style="margin-bottom:8px">
       <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       ${esc(w('neuerRapport'))}
     </a>
@@ -739,11 +753,8 @@ function zeichneProfil() {
       </div>
     </div></div>
 
-    <div class="titel">${esc(w('diesenMonat'))}</div>
-    <div class="zahlen">
-      <div class="zahl"><b>${nf(monat.anzahl)}</b><span>${esc(w('einsaetze'))}</span></div>
-      <div class="zahl"><b>${nf(monat.stunden, 1)}</b><span>${esc(w('stunden'))}</span></div>
-    </div>
+    <div class="titel">${esc(w('meineStunden'))}</div>
+    <div id="stdBereich"></div>
 
     <div class="karte"><div class="karte-bd"><dl class="dl">
       ${zeile(w('persNr'), p.personalnummer)}
@@ -761,6 +772,113 @@ function zeichneProfil() {
       ${p.ist_admin ? `<a class="btn btn-plain btn-wide" href="dashboard.html">Cockpit</a>` : ''}
       <button class="btn btn-plain btn-wide" style="color:var(--neg)" onclick="abmelden()">${esc(w('abmelden'))}</button>
     </div>`;
+  zeichneStunden();
+}
+
+// ══════════════════════════════════════════ MEINE STUNDEN (ENT-049)
+// Die eigene, abgeglichene Arbeitszeit je Monat. Gerechnet wird mit denselben
+// Regeln wie in der Verwaltung -- gav.js liegt beiden Oberflächen zugrunde,
+// damit hier nie eine andere Zahl steht als dort.
+//
+// Gezeigt werden DREI getrennte Werte, nie einer: geleistete Zeit, Zeitbonus,
+// Total. Der PAKO-Kommentar zu Art. 12 Abs. 2 verlangt ausdrücklich, dass der
+// Zuschlag separat ausgewiesen wird.
+//
+// Und: der Hinweis darunter ist hier wichtiger als in der Verwaltung. Wer
+// seine eigene Zahl liest, hält sie leicht für die Lohnabrechnung -- sie ist
+// aber unvollständig (Feiertagsbonus, Zuschlag über 210 Std., Ferien,
+// Absenzen fehlen). Art. 12 Ziff. 5 verlangt eine vollständige Abrechnung;
+// diese Ansicht ersetzt sie nicht und sagt das im Klartext.
+function stdMonatSetzen(n) {
+  const m = stdMonat || new Date().toISOString().slice(0, 7);
+  const d = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + n, 1);
+  stdMonat = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  stdSchichten = null;
+  zeichneStunden();
+}
+
+function stdLaden() {
+  const erster = stdMonat + '-01';
+  const d = new Date(Number(stdMonat.slice(0, 4)), Number(stdMonat.slice(5, 7)), 0);
+  const letzter = `${stdMonat}-${String(d.getDate()).padStart(2, '0')}`;
+  return api(`meine_schichten.php?von=${erster}&bis=${letzter}`).then(({ ok, data }) => {
+    stdSchichten = ok && data.status === 'ok' ? (data.schichten || []) : [];
+    zeichneStunden();
+  });
+}
+
+function zeichneStunden() {
+  const box = $('stdBereich');
+  if (!box) return;
+  if (!stdMonat) { stdMonat = new Date().toISOString().slice(0, 7); }
+  if (stdSchichten === null) {
+    box.innerHTML = `<div class="karte"><div class="karte-bd" style="text-align:center;color:var(--ink-3)">…</div></div>`;
+    stdLaden();
+    return;
+  }
+
+  // Nur abgeglichene Schichten -- was nicht geprüft ist, ist kein Nachweis.
+  const z = stdSchichten
+    .filter(e => (e.ist_status || 'offen') !== 'offen')
+    .map(e => {
+      const tag = String(e.datum).slice(0, 10);
+      const von = e.ist_von ? hm(e.ist_von) : '';
+      const bis = e.ist_bis ? hm(e.ist_bis) : '';
+      const netto = gavNetto(von, bis, e.ist_pause_min, e.ist_pause_bezahlt_ma);
+      return {
+        tag, von, bis, netto, titel: e.titel || e.einsatzart, kunde: e.kunde_name,
+        pause: e.ist_pause_min, pauseBezahlt: Number(e.ist_pause_bezahlt_ma) === 1,
+        nettoMin: netto ? Number(netto.slice(0, 2)) * 60 + Number(netto.slice(3, 5)) : 0,
+        bonusMin: von && bis ? gavBonusMin(tag, von, bis) : 0,
+      };
+    })
+    .sort((a, b) => a.tag.localeCompare(b.tag) || String(a.von).localeCompare(String(b.von)));
+
+  const monatsName = new Date(stdMonat + '-01T12:00:00')
+    .toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
+  const blaettern = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <button class="btn btn-plain" id="stdZurueck" onclick="stdMonatSetzen(-1)" style="padding:6px 12px" aria-label="Vormonat">‹</button>
+      <div style="flex:1;text-align:center;font-weight:640">${esc(monatsName)}</div>
+      <button class="btn btn-plain" id="stdVor" onclick="stdMonatSetzen(1)" style="padding:6px 12px" aria-label="Folgemonat">›</button>
+    </div>`;
+
+  if (!z.length) {
+    box.innerHTML = blaettern + LEER(w('keineStunden'), w('keineStundenText'),
+      '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>');
+    return;
+  }
+
+  const netto = z.reduce((a, x) => a + x.nettoMin, 0);
+  const ohneRegel = z.some(x => x.bonusMin === null);
+  const bonus = z.reduce((a, x) => a + (x.bonusMin || 0), 0);
+  const std = min => `${Math.floor(min / 60)}:${String(Math.round(min % 60)).padStart(2, '0')}`;
+
+  box.innerHTML = blaettern + `
+    <div class="zahlen" id="stdZahlen">
+      <div class="zahl"><b>${esc(std(netto))}</b><span>${esc(w('geleistet'))}</span></div>
+      <div class="zahl"><b>+${esc(std(bonus))}</b><span>${esc(w('zeitbonus'))}</span></div>
+      <div class="zahl"><b>${esc(std(netto + bonus))}</b><span>${esc(w('gesamt'))}</span></div>
+    </div>
+    <div class="karte" id="stdListe"><div class="karte-bd" style="padding:0">
+      ${z.map(x => `<div style="padding:11px 14px;border-bottom:1px solid var(--line-soft)">
+        <div style="display:flex;justify-content:space-between;gap:10px">
+          <div style="min-width:0">
+            <div style="font-weight:620">${esc(dmy(x.tag))} · ${esc(x.titel)}</div>
+            <div style="font-size:12.5px;color:var(--ink-3)">${esc(x.kunde || '')}${x.von ? ` · ${esc(x.von)}–${esc(x.bis)}` : ''}${
+              x.pause ? ` · ${nf(x.pause)} min${x.pauseBezahlt ? ' ' + esc(w('pauseBezahlt')) : ''}` : ''}</div>
+          </div>
+          <div style="text-align:right;white-space:nowrap">
+            <div style="font-weight:700">${esc(x.netto || '–')}</div>
+            ${x.bonusMin ? `<div style="font-size:12px;color:var(--accent)">+${esc(std(x.bonusMin))}</div>` : ''}
+          </div>
+        </div></div>`).join('')}
+    </div></div>
+    <div class="karte" id="stdHinweis"><div class="karte-bd">
+      <div style="font-weight:640;margin-bottom:4px">${esc(w('stundenHinweisTitel'))}</div>
+      <p style="font-size:13px;color:var(--ink-3);margin:0">${esc(w('stundenHinweis'))}</p>
+      <p style="font-size:13px;color:var(--warn);margin:8px 0 0">${esc(w('feiertagOffen'))}</p>
+      ${ohneRegel ? `<p style="font-size:13px;color:var(--warn);margin:8px 0 0">${esc(w('ohneRegelwerk'))}</p>` : ''}
+    </div></div>`;
 }
 
 // ══════════════════════════════════════════ BLATT

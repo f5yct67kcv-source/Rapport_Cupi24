@@ -20,16 +20,13 @@ if (!$m) {
 }
 $m['ist_admin'] = (bool)$m['ist_admin'];
 
-// Ein paar eigene Zahlen -- was die Person selbst erfasst hat.
-$z = db()->prepare(
-    'SELECT COUNT(*) AS anzahl, COALESCE(SUM(netto_h), 0) AS stunden
-     FROM rapporte WHERE mitarbeiter_id = ? AND datum >= ?'
-);
-$z->execute([(int)$user['id'], date('Y-m-01')]);
-$monat = $z->fetch() ?: ['anzahl' => 0, 'stunden' => 0];
-
+// Die frueher hier gerechnete Monatssumme aus den Rapporten ist mit ENT-049
+// entfallen. Grund (vom Projektinhaber): Der Rapport kennt die tatsaechliche
+// Pausenabrechnung noch nicht -- die entsteht erst im Abgleich. Zwei
+// Stundenzahlen fuer denselben Monat waeren fuer Mitarbeitende nicht
+// aufloesbar gewesen. Massgeblich ist die abgeglichene Schichtzeit; sie
+// kommt aus meine_schichten.php.
 json_response([
     'status' => 'ok',
     'profil' => $m,
-    'monat' => ['anzahl' => (int)$monat['anzahl'], 'stunden' => (float)$monat['stunden']],
 ]);

@@ -1104,6 +1104,7 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
   .drawer-ft span { display: none; }
 }
 </style>
+<script src="gav.js"></script>
 <script>
 /* Muss VOR dem ersten Zeichnen laufen, sonst blitzt die helle Fassung
    kurz auf, bevor die dunkle greift (ENT-029). Ohne gespeicherte Wahl
@@ -3421,7 +3422,7 @@ function mdZeilen() {
         pause: p.ist_pause_min, pauseBezahlt: bezahlt, netto,
         nettoMin: netto ? Number(netto.slice(0, 2)) * 60 + Number(netto.slice(3, 5)) : 0,
         bonusMin: bonus,
-        feiertagLuecke: von && bis ? gavFeiertagLuecke(tag, von, bis) : false,
+        feiertagLuecke: von && bis ? gavLuecke(tag, von, bis) : false,
       });
     });
   });
@@ -6322,75 +6323,10 @@ function askRemoveMa() {
     }));
 }
 
-// ══════════════════════════════════════════ GAV-ZEITBONUS (ENT-048)
-// ERSTE BEWERTETE ZEIT IM SYSTEM. Bis hierher hat die Plattform nur
-// aufgezeichnet; ab hier rechnet sie einen GAV-Wert. Entsprechend eng:
-//
-// Art. 12 Ziff. 2 GAV: "Um der Nachtarbeit (23.00-06.00) und Sonntags- bzw.
-// Feiertagsarbeit (06.00-23.00) Rechnung zu tragen, wird ein Zeitbonus
-// gewaehrt. Dieser betraegt 6 Minuten (10 %) pro Stunde, die in diese
-// Zeitraeume faellt (inklusive Pause)."
-//
-// Was hier bewusst NICHT geschieht:
-//  - Feiertage bleiben aussen vor. Welche Liste gilt, ist offen (GAV-AUS-006);
-//    ein Feiertag, der kein Sonntag ist, bekommt darum keinen Bonus. Die Summe
-//    ist in dem Fall ZU TIEF und wird sichtbar gekennzeichnet.
-//  - Es entsteht kein Lohn und keine Rechnung. Der Wert wird angezeigt,
-//    nirgends gespeichert und in nichts weiterverrechnet.
-//
-// Versioniertes Regelwerk mit Gueltigkeitszeitraum, wie CLAUDE.md Teil B es
-// verlangt: eine spaetere GAV-Revision darf zurueckliegende Monate nicht
-// rueckwirkend veraendern. Faellt ein Datum in keinen Zeitraum, wird NICHT
-// gerechnet -- lieber keine Zahl als eine auf abgelaufener Grundlage.
-const GAV_REGELWERK = [
-  {
-    quelle: 'GAV private Sicherheitsdienstleistungen, Ausgabe 2026 (AVE vom 11.12.2025)',
-    ab: '2026-01-01', bis: '2026-12-31',
-    satz: 0.10,                 // 6 Minuten pro Stunde
-    nachtAb: 23 * 60, nachtBis: 6 * 60,     // 23:00-06:00, ueber Mitternacht
-    sonntagAb: 6 * 60, sonntagBis: 23 * 60, // 06:00-23:00 an Sonntagen
-  },
-];
-const gavRegel = datum => GAV_REGELWERK.find(r => datum >= r.ab && datum <= r.bis) || null;
-
-// Bonusminuten einer Schicht. Rechnet minutenweise ueber den tatsaechlichen
-// Kalenderverlauf, weil eine Schicht ueber Mitternacht in einen Sonntag
-// hineinlaufen kann. Rueckgabe null heisst "kein Regelwerk fuer dieses Datum".
-//
-// Die beiden Fenster sind komplementaer -- dieselbe Minute kann nie in beide
-// fallen, darum ist die vom PaKo bestaetigte Regel "nur einmal, nicht doppelt"
-// hier bauartbedingt eingehalten (GAV-AUS-001, geklaert).
-//
-// Anteilig statt nur volle Stunden: der Vertrag nennt 6 Minuten UND 10 % im
-// selben Atemzug, und ein Prozentsatz ist seiner Natur nach anteilig. Fuer
-// 15-Minuten-Runden ist das entscheidend -- siehe GAV-AUS-008.
-function gavBonusMin(datum, von, bis) {
-  const regel = gavRegel(datum);
-  if (!regel || !von || !bis) { return null; }
-  const min = t => Number(String(t).slice(0, 2)) * 60 + Number(String(t).slice(3, 5));
-  const start = min(von);
-  let ende = min(bis);
-  if (ende <= start) { ende += 1440; }
-  const tag0 = new Date(datum + 'T12:00:00');
-  let imFenster = 0;
-  for (let m = start; m < ende; m++) {
-    const tagesMin = ((m % 1440) + 1440) % 1440;
-    const d = new Date(tag0.getTime() + Math.floor(m / 1440) * 864e5);
-    const inNacht = tagesMin >= regel.nachtAb || tagesMin < regel.nachtBis;
-    const inSonntag = d.getDay() === 0 && tagesMin >= regel.sonntagAb && tagesMin < regel.sonntagBis;
-    if (inNacht || inSonntag) { imFenster++; }
-  }
-  return imFenster * regel.satz;
-}
-
-// Faellt eine Schicht auf einen im Kalender hinterlegten Feiertag, der kein
-// Sonntag ist? Dann fehlt in der Summe ein Bonus, den der GAV vorsieht --
-// das muss man sehen, sonst haelt man eine zu tiefe Zahl fuer vollstaendig.
-function gavFeiertagLuecke(datum, von, bis) {
-  const tage = [datum];
-  if (von && bis && bis <= von) { tage.push(plusTage(datum, 1)); }
-  return tage.some(t => feiertage[t] && new Date(t + 'T12:00:00').getDay() !== 0);
-}
+// GAV-Regeln liegen in gav.js -- gemeinsam mit der Mitarbeiter-App, damit
+// dieselbe Schicht dort und hier nie verschiedene Zahlen ergibt (ENT-049).
+// Der Feiertagskalender ist je Oberflaeche verschieden, darum hier gebunden.
+const gavLuecke = (datum, von, bis) => gavFeiertagLuecke(datum, von, bis, feiertage);
 
 // ══════════════════════════════════════════ SCHICHTEN ABGLEICHEN (ENT-045)
 // Rückschau statt Vorausplanung: was war geplant, was hat stattgefunden.
@@ -6492,59 +6428,12 @@ function agGefiltert() {
 
 // Dauer = bis − von − Pause. Reine Arithmetik über Mitternacht hinweg; ob
 // diese Zeit als Arbeitszeit im Sinne des GAV gilt, sagt sie NICHT.
-// Netto = Rohzeit minus Pause -- ausser die Pause ist für die Mitarbeitenden
-// bezahlt. Dann bleibt sie drin: Art. 13 Ziff. 2 rechnet eine bezahlte Pause
-// ausdrücklich zur Arbeitszeit (ENT-047).
-//
-// NUR die MA-Kennzeichnung wirkt hier. "Bezahlte Pause Kunde" ist eine
-// Verrechnungsfrage gegenüber dem Auftraggeber und hat mit dem Lohn nichts zu
-// tun -- die beiden dürfen nie zusammengeworfen werden.
-//
-// Ist die Kennzeichnung noch nicht gesetzt (null), wird abgezogen. Das ist die
-// bisherige Rechnung und bleibt der Ausgangszustand, solange niemand die
-// Feststellung nach Art. 13 Ziff. 2 getroffen hat.
-function agDauer(von, bis, pauseMin, pauseBezahltMa) {
-  if (!von || !bis) return '';
-  let d = agRohMin(von, bis);
-  if (d === null) return '';
-  if (Number(pauseBezahltMa) !== 1) { d -= Number(pauseMin || 0); }
-  if (d < 0) return '';
-  return `${String(Math.floor(d / 60)).padStart(2, '0')}:${String(d % 60).padStart(2, '0')}`;
-}
+// Beides kommt aus gav.js -- hier nur die im Abgleich gewohnten Namen.
+const agDauer = gavNetto;
+const agRohMin = gavRohMin;
 
-// Rohzeit in Minuten: bis minus von, über Mitternacht hinweg. Ohne Pausenabzug
-// -- die Pausenpflicht bemisst sich an der Zeit VOR dem Abzug, sonst wäre die
-// Rechnung zirkulär (die Pause würde ihre eigene Pflicht wegkürzen).
-function agRohMin(von, bis) {
-  if (!von || !bis) return null;
-  const min = t => Number(String(t).slice(0, 2)) * 60 + Number(String(t).slice(3, 5));
-  let d = min(bis) - min(von);
-  if (d < 0) d += 1440;
-  return d;
-}
-
-// ── Pausenpflicht nach Art. 13 Ziff. 1 GAV ────────────────────────────────
-// WÖRTLICH aus dem Vertrag, keine eigene Auslegung: 15 Min. bei mehr als
-// fünfeinhalb Stunden, 30 Min. bei mehr als sieben, 60 Min. bei mehr als neun.
-// Die Zahlen selbst sind eindeutig. Offen -- und darum im Auslegungsregister
-// als GAV-AUS-007 vermerkt -- ist ausschliesslich, WORAUF sie angewendet
-// werden: Rohzeit oder bewertete Zeit, und was bei mehreren getrennten
-// Einsätzen desselben Tages als "ununterbrochen" gilt. Hier gilt die engste
-// Lesart: Rohzeit der einzelnen Schicht (ENT-046, Wahl des Projektinhabers).
-//
-// Aus diesem Wert wird NICHTS berechnet: kein Lohn, keine bewertete Zeit,
-// keine Rechnung. Er ist ein Vorschlag, den ein Mensch bestätigt.
-const AG_PAUSE_REGEL = [
-  { abMin: 9 * 60, pause: 60, text: 'mehr als 9 Std.' },
-  { abMin: 7 * 60, pause: 30, text: 'mehr als 7 Std.' },
-  { abMin: 5.5 * 60, pause: 15, text: 'mehr als 5½ Std.' },
-];
-function agPauseSoll(von, bis) {
-  const roh = agRohMin(von, bis);
-  if (roh === null) return null;
-  const treffer = AG_PAUSE_REGEL.find(r => roh > r.abMin);
-  return treffer ? { min: treffer.pause, weil: treffer.text } : { min: 0, weil: null };
-}
+const AG_PAUSE_REGEL = GAV_PAUSE_REGEL;
+const agPauseSoll = gavPauseSoll;
 
 // Kurzhinweis neben dem Feld. Sagt nur, was der Vertrag verlangt und was
 // erfasst ist -- er behauptet NICHT, dass die Schicht damit zulässig war.
