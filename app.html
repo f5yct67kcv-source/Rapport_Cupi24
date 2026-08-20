@@ -179,6 +179,18 @@ svg.i-sm { width: 17px; height: 17px; }
 .zahl { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 15px 16px; box-shadow: var(--sh-1); }
 .zahl b { display: block; font-size: 25px; font-weight: 720; letter-spacing: -.8px; line-height: 1.15; }
 .zahl span { font-size: 11.5px; font-weight: 650; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-3); }
+.zahl { position: relative; }
+/* Fragezeichen in der Ecke der Zeitbonus-Kachel (ENT-052). Bewusst gross
+   genug zum Antippen (42 px), auch wenn das Symbol darin klein ist -- eine
+   30-Pixel-Flaeche trifft auf dem Handy niemand zuverlaessig. */
+.zahl-info {
+  position: absolute; top: 3px; right: 3px; width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: none; padding: 0; border-radius: 50%;
+  color: var(--ink-3); cursor: pointer;
+}
+.zahl-info:active { background: var(--line-soft); }
+.zahl-info svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ── Angabenliste */
 .dl { display: grid; grid-template-columns: 40% 1fr; gap: 0 12px; }
@@ -368,6 +380,18 @@ const W = {
     zumCockpit: 'Zum Cockpit',
     stundenZeile: 'Abgeglichene Schichten, Monat für Monat',
     zurueckZumProfil: 'Zurück zum Profil',
+    bonusInfoTitel: 'Zeitbonus',
+    bonusInfoWofuer: 'Wofür',
+    bonusInfoWofuerT: 'Für Nachtarbeit von 23:00 bis 06:00 und für Sonntags- bzw. Feiertagsarbeit von 06:00 bis 23:00.',
+    bonusInfoWieviel: 'Wie viel',
+    bonusInfoWievielT: '6 Minuten (10 %) pro Stunde, die in diese Zeiträume fällt — Pause inbegriffen.',
+    bonusInfoWas: 'Zeit, nicht Geld',
+    bonusInfoWasT: 'Der Bonus fliesst in die Arbeitszeit ein. Er wird als Zeit gutgeschrieben.',
+    bonusInfoEinmal: 'Nur einmal',
+    bonusInfoEinmalT: 'Die beiden Zeitfenster überschneiden sich nicht. Jede Stunde bekommt den Bonus genau einmal, nie doppelt.',
+    bonusInfoLuecke: 'Feiertage sind hier noch nicht gerechnet — der GAV sieht den Bonus auch dort vor.',
+    bonusInfoQuelle: 'Art. 12 Ziff. 2 GAV, Ausgabe 2026',
+    infoAria: 'Was ist der Zeitbonus?',
     speichern: 'Speichern', abbrechen: 'Abbrechen', schliessen: 'Schliessen',
     datenHinweis: 'Änderungen an deinen Daten macht die Verwaltung.',
     netzfehler: 'Keine Verbindung. Bitte nochmals versuchen.',
@@ -917,7 +941,12 @@ function zeichneStunden() {
   box.innerHTML = blaettern + `
     <div class="zahlen" id="stdZahlen">
       <div class="zahl"><b>${esc(std(netto))}</b><span>${esc(w('geleistet'))}</span></div>
-      <div class="zahl"><b>+${esc(std(bonus))}</b><span>${esc(w('zeitbonus'))}</span></div>
+      <div class="zahl">
+        <button class="zahl-info" id="bonusInfo" onclick="bonusInfoBlatt()" aria-label="${esc(w('infoAria'))}" title="${esc(w('infoAria'))}">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><line x1="12" y1="11" x2="12" y2="16.5"/><line x1="12" y1="7.6" x2="12" y2="7.7"/></svg>
+        </button>
+        <b>+${esc(std(bonus))}</b><span>${esc(w('zeitbonus'))}</span>
+      </div>
       <div class="zahl"><b>${esc(std(netto + bonus))}</b><span>${esc(w('gesamt'))}</span></div>
     </div>
     <div class="karte" id="stdListe"><div class="karte-bd" style="padding:0">
@@ -988,6 +1017,38 @@ function melden(zusage) {
     zeichne();
     toast(w('gemeldet'));
   });
+}
+
+// ══════════════════════════════════════════ ZEITBONUS ERKLAERT (ENT-052)
+// Der Zeitbonus steht als Zahl auf der Kachel, aber die wenigsten kennen den
+// GAV. Eine Zahl, die niemand einordnen kann, erzeugt Rueckfragen oder --
+// schlimmer -- stilles Misstrauen.
+//
+// Der Text sagt AUSSCHLIESSLICH, was im Wortlaut von Art. 12 Ziff. 2 steht,
+// geprueft gegen gav-2026.pdf, plus die vom PAKO-Kommentar bestaetigte Regel
+// "nur einmal, nicht doppelt" (GAV-AUS-001). Keine eigene Auslegung -- das
+// verbietet CLAUDE.md ausdruecklich, und hier liest es die betroffene Person.
+//
+// Was NICHT drinsteht und bewusst nicht: die anteilige Berechnung bei
+// angebrochenen Stunden. Die ist bis heute eine vorlaeufige Annahme
+// (GAV-AUS-008, Status offen) und darf niemandem als Regel verkauft werden.
+function bonusInfoBlatt() {
+  blattId = null;
+  $('blTitel').textContent = w('bonusInfoTitel');
+  const punkt = (k, t) => `<div style="margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px">${esc(k)}</div>
+      <div style="font-size:15px;line-height:1.45">${esc(t)}</div>
+    </div>`;
+  $('blBody').innerHTML =
+    punkt(w('bonusInfoWofuer'), w('bonusInfoWofuerT')) +
+    punkt(w('bonusInfoWieviel'), w('bonusInfoWievielT')) +
+    punkt(w('bonusInfoWas'), w('bonusInfoWasT')) +
+    punkt(w('bonusInfoEinmal'), w('bonusInfoEinmalT')) +
+    `<div style="font-size:13.5px;color:var(--warn);font-weight:600;margin-bottom:12px">${esc(w('bonusInfoLuecke'))}</div>
+     <div style="font-size:12.5px;color:var(--ink-3)">${esc(w('bonusInfoQuelle'))}</div>`;
+  $('blFuss').innerHTML =
+    `<button class="btn btn-primary" onclick="blattZu()">${esc(w('schliessen'))}</button>`;
+  blattZeigen();
 }
 
 function passwortBlatt() {
