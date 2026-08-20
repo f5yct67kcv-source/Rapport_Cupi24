@@ -2282,10 +2282,11 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
              laeuft der Wert unveraendert durch Laden und Speichern. -->
         <input type="hidden" id="enNTitel" value="">
         <div class="f"><label for="enNEinsatzart">Einsatzart</label>
-          <!-- Ohne "Reinigung" (ENT-061): Die Einsatzart sagt, WELCHE ARBEIT
-               ansteht, die Sparte daneben sagt, WELCHE REGELN gelten. Stuende
-               Reinigung in beiden Feldern, koennten sie auseinanderlaufen --
-               und dann waere unklar, ob der GAV greift. -->
+          <!-- Mit "Reinigung" (ENT-062). Die Einsatzart sagt, WELCHE ARBEIT
+               ansteht, die Sparte daneben sagt, WELCHE REGELN gelten -- und
+               massgeblich fuer den GAV bleibt die SPARTE (ENT-061). Damit die
+               beiden nicht auseinanderlaufen, zieht artSparteKoppeln() die
+               Sparte mit und spartenKonflikt() meldet einen Widerspruch. -->
           <select class="inp" id="enNEinsatzart" onchange="artSparteKoppeln('enN')">
             <option>Verkehrsdienst</option>
             <option>Revierdienst</option>
