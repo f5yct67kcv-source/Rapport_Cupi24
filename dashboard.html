@@ -2282,11 +2282,14 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
              laeuft der Wert unveraendert durch Laden und Speichern. -->
         <input type="hidden" id="enNTitel" value="">
         <div class="f"><label for="enNEinsatzart">Einsatzart</label>
+          <!-- Ohne "Reinigung" (ENT-061): Die Einsatzart sagt, WELCHE ARBEIT
+               ansteht, die Sparte daneben sagt, WELCHE REGELN gelten. Stuende
+               Reinigung in beiden Feldern, koennten sie auseinanderlaufen --
+               und dann waere unklar, ob der GAV greift. -->
           <select class="inp" id="enNEinsatzart">
             <option>Verkehrsdienst</option>
             <option>Revierdienst</option>
             <option>Sicherheitsdienst</option>
-            <option>Reinigung</option>
           </select>
         </div>
         <div class="f"><label for="enNDatum">Datum *</label><input class="inp" id="enNDatum" type="date" onchange="pickRefresh('enN')"></div>
@@ -2345,7 +2348,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
         <div class="f"><label for="obOrt">Ort *</label><input class="inp" id="obOrt"></div>
         <div class="f"><label for="obKanton">Kanton</label><input class="inp" id="obKanton" value="SO" maxlength="2" style="text-transform:uppercase"></div>
         <div class="f"><label for="obSparte">Sparte</label>
-          <select class="inp" id="obSparte">
+          <select class="inp" id="obSparte" onchange="obZoneAktualisieren()">
             <option value="sicherheit">Sicherheit</option>
             <option value="reinigung">Reinigung</option>
           </select>
@@ -3691,9 +3694,12 @@ function mdZeilen() {
       const bezahlt = Number(p.ist_pause_bezahlt_ma) === 1;
       // Netto nach ENT-047: eine bezahlte Pause bleibt drin.
       const netto = agDauer(von, bis, p.ist_pause_min, bezahlt ? 1 : 0);
-      const bonus = von && bis ? gavBonusMin(tag, von, bis) : 0;
+      // Fuer Reinigungseinsaetze gilt der Sicherheits-GAV nicht (ENT-061) --
+      // also auch kein Zeitbonus. Die Nettozeit bleibt, sie ist Arithmetik.
+      const gav = gavGilt(sparteVon(e));
+      const bonus = (gav && von && bis) ? gavBonusMin(tag, von, bis) : 0;
       zeilen.push({
-        datum: tag, von, bis, status: st,
+        datum: tag, von, bis, status: st, gav,
         titel: e.titel || e.einsatzart, kunde: e.kunde_name, ort: e.ort,
         pause: p.ist_pause_min, pauseBezahlt: bezahlt, netto,
         nettoMin: netto ? Number(netto.slice(0, 2)) * 60 + Number(netto.slice(3, 5)) : 0,
@@ -3774,10 +3780,12 @@ function mdDienstplaene() {
       <td class="nowrap">${x.von && x.bis ? `${esc(x.von)}–${esc(x.bis)}` : '<span style="color:var(--ink-3)">–</span>'}</td>
       <td class="nowrap">${x.pause ? `${nf(x.pause)} min${x.pauseBezahlt ? ' <span class="chip chip-p">bezahlt</span>' : ''}` : '<span style="color:var(--ink-3)">–</span>'}</td>
       <td class="nowrap strong">${x.netto ? esc(x.netto) : '<span style="color:var(--ink-3)">–</span>'}</td>
-      <td class="nowrap">${x.bonusMin === null
-        ? '<span class="chip chip-w">kein Regelwerk</span>'
-        : (x.bonusMin ? `+${esc(mdStd(x.bonusMin))}` : '<span style="color:var(--ink-3)">–</span>')}${
-        x.feiertagLuecke ? ' <span class="chip chip-w" title="Feiertagsbonus nicht gerechnet — GAV-AUS-006 offen">Feiertag</span>' : ''}</td>
+      <td class="nowrap">${x.gav === false
+        ? '<span class="chip chip-n" title="Reinigungseinsatz — der GAV für private Sicherheitsdienstleistungen gilt hier nicht (ENT-061)">Reinigung</span>'
+        : (x.bonusMin === null
+          ? '<span class="chip chip-w">kein Regelwerk</span>'
+          : (x.bonusMin ? `+${esc(mdStd(x.bonusMin))}` : '<span style="color:var(--ink-3)">–</span>'))}${
+        x.gav !== false && x.feiertagLuecke ? ' <span class="chip chip-w" title="Feiertagsbonus nicht gerechnet — GAV-AUS-006 offen">Feiertag</span>' : ''}</td>
       <td><span class="chip ${st[1]}">${esc(st[0])}</span></td>
     </tr>`;
   }).join('') + `</tbody></table>`;
@@ -3939,7 +3947,10 @@ const EN_STATUS = {
   provisorisch: ['Provisorisch', 'chip-a'], abgesagt: ['Abgesagt', 'chip-x']
 };
 // Vorgegebene Einsatzarten (ENT-060). Vom Projektinhaber festgelegt.
-const EINSATZARTEN = ['Verkehrsdienst', 'Revierdienst', 'Sicherheitsdienst', 'Reinigung'];
+// Ohne 'Reinigung' (ENT-061) -- die Sparte traegt diese Aussage.
+// Bestehende abweichende Werte bleiben erhalten: einsatzartOptionen()
+// haengt einen unbekannten Wert an, statt ihn still zu ueberschreiben.
+const EINSATZARTEN = ['Verkehrsdienst', 'Revierdienst', 'Sicherheitsdienst'];
 
 // Wichtig: Ein bestehender Einsatz kann eine Einsatzart tragen, die nicht in
 // der Liste steht -- aus der Zeit vor dieser Festlegung oder von einer
@@ -4658,6 +4669,9 @@ function loadObjekte() {
 function zoneChip(o) {
   if (!anstellungsorte.length) { return '<span style="color:var(--ink-3)">–</span>'; }
   const z = objektZone(o);
+  if (z && z.schluessel === 'reinigung') {
+    return '<span class="chip chip-n" title="Reinigungsobjekt — der GAV für private Sicherheitsdienstleistungen gilt hier nicht (ENT-061)">Reinigung</span>';
+  }
   if (!z) { return '<span class="chip chip-w" title="Wegstrecke nicht hinterlegt — nicht beurteilbar">? offen</span>'; }
   return z.entschaedigung
     ? `<span class="chip chip-w" title="${esc(z.name)}, ${esc(z.quelle)}">${esc(z.name)}</span>`
@@ -4717,6 +4731,10 @@ const aoNao = () => anstellungsorte.find(o => o.rolle === 'nao' && o.aktiv) || n
 function objektZone(o) {
   const hao = aoHao();
   if (!hao || !o) { return null; }
+  // Der Auslagenersatz nach Art. 18 steht im selben GAV wie der Zeitbonus --
+  // fuer Reinigungsobjekte gilt er nicht (ENT-061). Eigener Rueckgabewert,
+  // damit die Anzeige "gilt nicht" von "nicht beurteilbar" unterscheiden kann.
+  if (!gavGilt(sparteVon(o))) { return { schluessel: 'reinigung', name: 'Reinigung', entschaedigung: false, quelle: 'GAV Sicherheit gilt nicht', vorrang: false }; }
   const d = o.distanzen || {};
   const kmHao = d[hao.id] ? d[hao.id].km : null;
   const nao = aoNao();
@@ -4753,6 +4771,14 @@ function obZoneAktualisieren() {
   if (!hint) { return; }
   const hao = aoHao(), nao = aoNao();
   if (!hao) { return; }
+  // Reinigung: gar nicht erst nach der Wegstrecke fragen (ENT-061).
+  const sp = $('obSparte') ? $('obSparte').value : 'sicherheit';
+  if (!gavGilt(sp)) {
+    hint.innerHTML = `<div class="ki-hint web"><span><b>Reinigungsobjekt — kein Auslagenersatz nach Art. 18.</b>
+      Der GAV für private Sicherheitsdienstleistungen gilt für diese Sparte nicht. Welche Regeln stattdessen
+      gelten, ist nicht Sache dieses Werkzeugs.</span></div>`;
+    return;
+  }
   const lies = a => {
     const el = $('obKm' + a.id);
     const v = el ? (el.value || '').trim().replace(',', '.') : '';
@@ -7086,9 +7112,14 @@ function agSollHinweis(soll, wert, ohne) {
   const ist = wert === '' || wert === null || wert === undefined ? 0 : Number(wert);
   return ist < soll.min ? `Soll ${soll.min}′` : '';
 }
-function agPauseTitel(soll, vorgeschlagen) {
+// Fuer Reinigung nennt der Hinweis das ARBEITSGESETZ statt den GAV (ENT-061).
+// Der Hinweis selbst bleibt: Die Schwellen 5½ / 7 / 9 Stunden stehen so auch
+// in Art. 15 ArG, das unabhaengig von jedem GAV gilt. Wer die Pausen mit dem
+// GAV abschaltet, entfernt einen Hinweis, der von Gesetzes wegen weiter gilt.
+function agPauseTitel(soll, vorgeschlagen, sparte) {
   if (!soll || !soll.min) return 'Pausendauer in Minuten';
-  const basis = `Art. 13 Ziff. 1 GAV: ${soll.min} Minuten bei ${soll.weil} ununterbrochener Arbeitszeit.`;
+  const quelle = gavGilt(sparte) ? 'Art. 13 Ziff. 1 GAV' : 'Art. 15 ArG';
+  const basis = `${quelle}: ${soll.min} Minuten bei ${soll.weil} ununterbrochener Arbeitszeit.`;
   return vorgeschlagen
     ? `${basis} Vorgeschlagen, noch nicht gespeichert — bitte gegen den Rapport prüfen.`
     : basis;
@@ -7164,7 +7195,7 @@ function renderAbgleich() {
         <td class="nowrap ag-pause">
           <input class="inp pv" type="time" value="${esc(vPauseVon)}"${ohne ? ' disabled' : ''} data-ag="pausevon" data-k="${esc(k)}" aria-label="Pause ab" title="Pause ab (Beginn)">
           <span class="tr">/</span>
-          <input class="inp pause${vorgeschlagen ? ' vorschlag' : ''}" type="number" min="0" max="600" step="5" value="${esc(String(vPause))}"${ohne ? ' disabled' : ''} data-ag="pause" data-k="${esc(k)}" aria-label="Pausendauer in Minuten" title="${esc(agPauseTitel(soll, vorgeschlagen))}">
+          <input class="inp pause${vorgeschlagen ? ' vorschlag' : ''}" type="number" min="0" max="600" step="5" value="${esc(String(vPause))}"${ohne ? ' disabled' : ''} data-ag="pause" data-k="${esc(k)}" aria-label="Pausendauer in Minuten" title="${esc(agPauseTitel(soll, vorgeschlagen, z.sparte))}">
           <span class="tr">min</span>
           <span class="ag-soll" data-soll="${esc(k)}">${esc(agSollHinweis(soll, vPause, ohne))}</span>
         </td>

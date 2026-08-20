@@ -388,6 +388,8 @@ const W = {
     feiertagOffen: 'An Feiertagen fehlt hier noch ein Bonus, den der GAV vorsieht. Die Zahl ist deshalb eher zu tief.',
     ohneRegelwerk: 'Für diesen Zeitraum ist kein Regelwerk hinterlegt — der Zeitbonus wird bewusst nicht gerechnet.',
     pauseBezahlt: 'bezahlte Pause',
+    reinigung: 'Reinigung — kein Zeitbonus',
+    reinigungHinweis: 'Für Reinigungseinsätze gilt der GAV für private Sicherheitsdienstleistungen nicht. Die geleistete Zeit zählt selbstverständlich, aber es wird kein Zeitbonus für Nacht- und Sonntagsarbeit gerechnet. Was für die Reinigung gilt, sagt dir die Einsatzleitung.',
     persNr: 'Personalnummer', geburtsdatum: 'Geburtsdatum', adresse: 'Adresse',
     telefon: 'Telefon', mobil: 'Mobil', email: 'E-Mail', anmeldename: 'Anmeldename',
     passwortAendern: 'Passwort ändern', altesPasswort: 'Bisheriges Passwort',
@@ -928,11 +930,15 @@ function zeichneStunden() {
       const von = e.ist_von ? hm(e.ist_von) : '';
       const bis = e.ist_bis ? hm(e.ist_bis) : '';
       const netto = gavNetto(von, bis, e.ist_pause_min, e.ist_pause_bezahlt_ma);
+      // Reinigungsschichten bekommen keinen Zeitbonus (ENT-061): Der GAV fuer
+      // private Sicherheitsdienstleistungen gilt fuer sie nicht. Die geleistete
+      // Zeit zaehlt selbstverstaendlich weiter -- nur die Bewertung entfaellt.
+      const gav = gavGilt(e.sparte);
       return {
-        tag, von, bis, netto, titel: e.titel || e.einsatzart, kunde: e.kunde_name,
+        tag, von, bis, netto, gav, titel: e.titel || e.einsatzart, kunde: e.kunde_name,
         pause: e.ist_pause_min, pauseBezahlt: Number(e.ist_pause_bezahlt_ma) === 1,
         nettoMin: netto ? Number(netto.slice(0, 2)) * 60 + Number(netto.slice(3, 5)) : 0,
-        bonusMin: von && bis ? gavBonusMin(tag, von, bis) : 0,
+        bonusMin: (gav && von && bis) ? gavBonusMin(tag, von, bis) : 0,
       };
     })
     .sort((a, b) => a.tag.localeCompare(b.tag) || String(a.von).localeCompare(String(b.von)));
@@ -986,7 +992,8 @@ function zeichneStunden() {
           <div style="min-width:0">
             <div style="font-weight:620">${esc(dmy(x.tag))} · ${esc(x.titel)}</div>
             <div style="font-size:12.5px;color:var(--ink-3)">${esc(x.kunde || '')}${x.von ? ` · ${esc(x.von)}–${esc(x.bis)}` : ''}${
-              x.pause ? ` · ${nf(x.pause)} min${x.pauseBezahlt ? ' ' + esc(w('pauseBezahlt')) : ''}` : ''}</div>
+              x.pause ? ` · ${nf(x.pause)} min${x.pauseBezahlt ? ' ' + esc(w('pauseBezahlt')) : ''}` : ''}${
+              x.gav === false ? ` · ${esc(w('reinigung'))}` : ''}</div>
           </div>
           <div style="text-align:right;white-space:nowrap">
             <div style="font-weight:700">${esc(x.netto || '–')}</div>
@@ -999,6 +1006,8 @@ function zeichneStunden() {
       <p style="font-size:13px;color:var(--ink-3);margin:0">${esc(w('stundenHinweis'))}</p>
       <p style="font-size:13px;color:var(--warn);margin:8px 0 0">${esc(w('feiertagOffen'))}</p>
       ${ohneRegel ? `<p style="font-size:13px;color:var(--warn);margin:8px 0 0">${esc(w('ohneRegelwerk'))}</p>` : ''}
+      ${z.some(x => x.gav === false)
+        ? `<p style="font-size:13px;color:var(--ink-3);margin:8px 0 0">${esc(w('reinigungHinweis'))}</p>` : ''}
     </div></div>`;
 }
 

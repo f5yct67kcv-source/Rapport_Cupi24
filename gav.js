@@ -201,3 +201,43 @@ function gavZone(kmHao, kmNao, kmHaoNao) {
   const z = GAV_ZONEN.find(x => h <= x.bis);
   return { schluessel: z.schluessel, name: z.name, entschaedigung: z.entschaedigung, quelle: z.quelle, vorrang: false };
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   GELTUNGSBEREICH: NUR SICHERHEIT (ENT-061)
+
+   Das gesamte Regelwerk in dieser Datei stammt aus dem GAV für private
+   Sicherheitsdienstleistungen. Für Reinigungseinsätze gilt er nicht — der
+   Projektinhaber hat das am 2026-08-20 festgestellt und die Verantwortung
+   für diese Sparte ausdrücklich übernommen.
+
+   Massgeblich ist die SPARTE, nicht die Einsatzart: Sie steht am Objekt als
+   Vorgabe und wird auf den Einsatz vererbt, wo sie verbindlich ist
+   (ENT-037). Die Einsatzart beschreibt die Arbeit, die Sparte das Regelwerk.
+
+   Was hier ABGESCHALTET wird, weil es nur aus diesem GAV stammt:
+     - Zeitbonus für Nacht- und Sonntagsarbeit (Art. 12 Ziff. 2)
+     - Auslagenersatz nach Art. 18 (Zonen, Fahrzeit-, Fahrkostenersatz)
+     - die 210-Stunden-Schwelle (Art. 14 Ziff. 3)
+
+   Was BLEIBT, und das ist der Punkt, der leicht übersehen wird:
+     - Der Pausenhinweis. Die Schwellen 5½ / 7 / 9 Stunden stehen ebenso in
+       Art. 15 des ARBEITSGESETZES, das unabhängig von jedem GAV gilt. Der
+       PAKO-Kommentar sagt es selbst: "Die Pausen sind auch in Art. 15 ArG
+       geregelt." Der GAV schreibt sie nicht vor, er wiederholt sie. Wer die
+       Pausen mit dem GAV abschaltet, entfernt einen Hinweis, der von Gesetzes
+       wegen weiter gilt.
+     - Die Nettozeit. Bis minus von minus unbezahlte Pause ist Arithmetik,
+       keine Auslegung.
+
+   OFFEN und ausdrücklich nicht behauptet: ob für die Reinigung ein eigener
+   GAV gilt. Das ist nicht geprüft und liegt beim Projektinhaber.        */
+
+const GAV_SPARTE = 'sicherheit';
+
+/* Gilt das Sicherheits-Regelwerk für diesen Einsatz?
+   Eingabe ist die Sparte des Einsatzes (oder ersatzweise die des Objekts).
+   Fehlt sie, wird SICHERHEIT angenommen — die vorsichtige Richtung: Lieber
+   einen Bonus zu viel prüfen als einen zu wenig zahlen. */
+function gavGilt(sparte) {
+  return String(sparte || GAV_SPARTE).toLowerCase() !== 'reinigung';
+}

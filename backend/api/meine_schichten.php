@@ -20,7 +20,10 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $bis)) {
 }
 
 $stmt = db()->prepare(
-    'SELECT e.id, e.kunde_name, e.titel, e.strasse, e.ort, e.einsatzart,
+    // e.sparte muss mit (ENT-061): Ohne sie koennte die App nicht wissen,
+    // dass fuer eine Reinigungsschicht kein Zeitbonus zu rechnen ist --
+    // sie wuerde eine Zahl ausweisen, die es nicht gibt.
+    'SELECT e.id, e.kunde_name, e.titel, e.strasse, e.ort, e.einsatzart, e.sparte,
             e.datum, e.von, e.bis, e.status, e.bemerkung,
             z.zusage, o.name AS objekt_name,
             -- Der eigene Ist-Stand (ENT-049): damit die Person ihre
