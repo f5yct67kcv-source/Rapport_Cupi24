@@ -1,0 +1,19 @@
+# Dateien mit echten Zugangsdaten. Im Repository stehen nur Platzhalter
+# (__DB_PASS__ usw.), die beim Deploy aus GitHub Secrets ersetzt werden.
+# Wer lokal gegen die echte Datenbank oder die Anthropic-API testen will,
+# legt die Werte in eine dieser Dateien -- Git nimmt sie dann nie mit.
+secrets.local.php
+*.local.php
+.env
+.env.*
+
+# Der Deploy baut diesen Ordner selbst. Er enthaelt nach dem Ersetzen der
+# Platzhalter die ECHTEN Zugangsdaten -- er darf niemals ins Repository.
+dist/
+
+# System- und Editordateien
+.DS_Store
+Thumbs.db
+*~
+.vscode/
+.idea/

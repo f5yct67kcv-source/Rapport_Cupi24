@@ -69,3 +69,42 @@ lokal oeffnet, sieht keine Geheimnisse.
 
 `setup.php`/`setup.html` werden bewusst **nicht** mit ausgeliefert: die
 Ersteinrichtung war ein einmaliger manueller Upload und ist erledigt (OP-17).
+
+## Zugangsdaten — welche es gibt und woher sie kommen
+
+**Hier stehen keine Werte, nur die Liste.** Die Werte selbst gehoeren in einen
+Passwortmanager. In GitHub sind sie hinterlegt unter
+`Settings → Secrets and variables → Actions` und lassen sich dort **nicht mehr
+auslesen** — das ist kein Mangel, sondern der Sinn eines Secrets.
+
+| Name in GitHub | Wofuer | Woher der Wert kommt |
+|---|---|---|
+| `DB_HOST` | Datenbankserver | Hostpoint-Kundencenter → Datenbanken |
+| `DB_NAME` | Name der Datenbank | Hostpoint-Kundencenter → Datenbanken |
+| `DB_USER` | Datenbankbenutzer | Hostpoint-Kundencenter → Datenbanken |
+| `DB_PASSWORD` | Passwort dazu | Hostpoint-Kundencenter; bei Verlust dort neu setzen |
+| `ANTHROPIC_API_KEY` | Diktat, Kundenrecherche, Planungsvorschlaege | console.anthropic.com; bei Verlust neu erzeugen, der alte laesst sich nicht anzeigen |
+| `HOSTPOINT_FTP_HOST` | Ziel des Deploys | Hostpoint-Kundencenter → FTP |
+| `HOSTPOINT_FTP_USER` | FTP-Benutzer | Hostpoint-Kundencenter → FTP |
+| `HOSTPOINT_FTP_PASSWORD` | Passwort dazu | Hostpoint-Kundencenter → FTP |
+
+**Wenn ein Wert je an eine falsche Stelle geraten ist** — in einen Commit, einen
+Chat, ein Bildschirmfoto: **neu erzeugen, nicht loeschen.** Loeschen hilft nicht,
+der alte Wert bleibt in der Git-Historie und in Zwischenspeichern stehen.
+
+### Lokal testen
+
+Wer auf dem eigenen Rechner gegen die echte Datenbank oder die Anthropic-API
+testen will, braucht die Werte lokal. Dafuer ist in `.gitignore` der Dateiname
+`secrets.local.php` reserviert — Git nimmt ihn nie mit. Die Datei existiert
+noch nicht und `db.php` liest sie heute auch nicht; das waere eine eigene,
+bewusst zu entscheidende Aenderung.
+
+### Ein bekanntes Restrisiko
+
+Der Anthropic-Schluessel steht nach dem Deploy im Klartext in `ai.php` auf dem
+Server. Solange PHP laeuft, sieht ihn niemand — der Server fuehrt die Datei aus
+und liefert nur das Ergebnis. Faellt PHP aus, liefern Webserver den Quelltext
+mitunter unveraendert aus, und dann stuende der Schluessel im Browser. Das ist
+unwahrscheinlich, aber es ist kein theoretischer Fall. Festgehalten, damit es
+eine bewusste Inkaufnahme bleibt und keine Ueberraschung.
