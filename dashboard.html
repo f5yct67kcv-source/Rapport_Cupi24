@@ -993,7 +993,9 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
    WICHTIG: ausgeblendet ist nicht kaputt. Wer einen Menuepunkt vermisst,
    haelt die Anwendung fuer unvollstaendig -- darum steht im Fuss der
    Seitenleiste, wo diese Bereiche geblieben sind. */
-.nur-desktop { display: block; }
+/* Kein display im Normalfall -- das Element behaelt seine eigene Anzeigeart
+   (Kacheln bleiben Kacheln, Knoepfe bleiben Flex). Nur die Mobilregel weiter
+   unten blendet aus. Dasselbe Muster wie .nur-breit. */
 .mobil-hinweis { display: none; }
 
 /* Abgleich als Karten statt Tabelle. Die Tabelle ist 1062 px breit; auf
@@ -1009,6 +1011,13 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
 .ag-karte .zeiten { font-size: 13px; color: var(--ink-3); margin-top: 5px; }
 .ag-karte .zeiten b { color: var(--ink-1); font-weight: 620; }
 .ag-karte .marken { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+/* Tagesueberschrift zwischen den Karten -- dieselbe Rolle wie die Gruppenzeile
+   in der Tabelle (ENT-058). */
+.pk-tag { display: flex; align-items: baseline; gap: 8px; padding: 12px 14px 7px;
+  background: var(--surface-2, transparent); border-bottom: 1px solid var(--line-soft); }
+.pk-tag .wd { font-size: 10.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); }
+.pk-tag b { font-size: 14px; font-weight: 680; }
+.pk-tag .note { font-size: 11.5px; color: var(--ink-3); }
 .opl-tag { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 10px; overflow: hidden; box-shadow: var(--sh-1); }
 .opl-tag .kopf { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border-bottom: 1px solid var(--line-soft); background: var(--surface-2); font-size: 13px; }
 .opl-tag .kopf .sp { flex: 1; }
@@ -1650,6 +1659,15 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
             <input class="inp" type="search" id="pQ" placeholder="Kunde, Ort, Bezeichnung oder Mitarbeitende …" oninput="renderPlanung()">
           </div>
           <div class="sp" style="flex:1"></div>
+          <!-- Herkunft der Zeile (ENT-058). Ein Einsatz entsteht entweder frei --
+               eine Baustelle, ein Anlass -- oder aus einem Objekt samt seiner
+               Masterschichten. Das sind zwei verschiedene Arbeiten, und wer
+               die eine sucht, wird von der anderen zugedeckt. -->
+          <select class="inp" id="pHerkunft" style="width:auto" onchange="renderPlanung()" aria-label="Einsätze oder Objektschichten">
+            <option value="">Einsätze und Objektschichten</option>
+            <option value="einsatz">Nur Einsätze</option>
+            <option value="objekt">Nur Objektschichten</option>
+          </select>
           <select class="inp" id="pStatus" style="width:auto" onchange="renderPlanung()">
             <option value="">Jeder Status</option>
             <option value="geplant">Nur geplant</option>
@@ -3119,7 +3137,7 @@ function go(view) {
   // schon im Begrüssungs-Container, ein zweiter daneben wäre doppelt (ENT-038).
   $('btnSprechen').style.display = view === 'uebersicht' ? 'none' : '';
   if (view !== 'planung') weiteAnsicht(false);
-  if (view === 'planung' && MOBIL() && pTab === 'uebersicht') goTab('tag');
+  if (view === 'planung' && MOBIL() && pTab === 'uebersicht') goTab('einsaetze');
   if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
   if (view === 'betrieb') ladeBetrieb();
   // Die Administrationsgruppe klappt auf, wenn eine ihrer Seiten offen ist --
@@ -3880,11 +3898,17 @@ function pFiltered() {
   const q = ($('pQ').value || '').toLowerCase().trim();
   const { von, bis } = pZeitraum();
   const st = $('pStatus').value;
+  const herkunft = $('pHerkunft') ? $('pHerkunft').value : '';
   const unbegrenzt = !von && !bis;
   return einsaetze.filter(e => {
     const d = tagVon(e);
     if (von && d < von) return false;
     if (bis && d > bis) return false;
+    // Objektschicht = aus einem Objekt entstanden. Massgeblich ist objekt_id,
+    // nicht die Einsatzart: ein freier Verkehrsdienst und eine Objektschicht
+    // koennen dieselbe Einsatzart tragen.
+    if (herkunft === 'objekt' && !e.objekt_id) return false;
+    if (herkunft === 'einsatz' && e.objekt_id) return false;
     if (st === 'offen') { if (!fehlend(e)) return false; }
     else if (st && e.status !== st) return false;
     if (!q) return true;
@@ -3911,13 +3935,19 @@ function renderPlKpi() {
     check: '<path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><polyline points="22 4 12 14.01 9 11.01"/>'
   };
   const cards = [
-    { i: ic.cal,   l: 'Kommende Einsätze', v: nf(kommend.length), f: '<span>ab heute, ohne abgesagte</span>' },
-    { i: ic.week,  l: 'Nächste 7 Tage',    v: nf(woche.length),   f: '<span>bis ' + dmy(bis7) + '</span>' },
-    { i: ic.gap,   l: 'Offene Stellen',    v: nf(offen),          f: offen ? '<span class="delta down">nicht besetzt</span>' : '<span class="delta up">alles besetzt</span>' },
-    { i: ic.check, l: 'Nicht bestätigt',   v: nf(unbestaetigt),   f: '<span>Status „geplant“</span>' }
+    // Auf dem Handy bleibt nur die eine Zahl stehen, die zum Handeln zwingt:
+    // was noch nicht besetzt ist (ENT-058). Die drei anderen sind Kontext --
+    // nützlich am Schreibtisch, auf 390 px vier Bildschirmhöhen weit weg von
+    // der eigentlichen Liste.
+    { i: ic.cal,   l: 'Kommende Einsätze', k: 'nur-desktop', v: nf(kommend.length), f: '<span>ab heute, ohne abgesagte</span>' },
+    { i: ic.week,  l: 'Nächste 7 Tage',    k: 'nur-desktop', v: nf(woche.length),   f: '<span>bis ' + dmy(bis7) + '</span>' },
+    // "Stellen" waren nie Stellen im Sinne von Anstellungen -- gemeint sind
+    // unbesetzte Schichten. Der Projektinhaber hat die Benennung korrigiert.
+    { i: ic.gap,   l: 'Offene Schichten',  k: '',            v: nf(offen),          f: offen ? '<span class="delta down">nicht besetzt</span>' : '<span class="delta up">alles besetzt</span>' },
+    { i: ic.check, l: 'Nicht bestätigt',   k: 'nur-desktop', v: nf(unbestaetigt),   f: '<span>Status „geplant“</span>' }
   ];
   $('plKpi').innerHTML = cards.map(c => `
-    <div class="kpi">
+    <div class="kpi ${c.k}">
       <div class="kpi-top"><svg class="i i-sm" viewBox="0 0 24 24">${c.i}</svg><span>${c.l}</span></div>
       <div class="kpi-val">${c.v}</div>
       <div class="kpi-foot">${c.f}</div>
@@ -3937,7 +3967,7 @@ function renderPlanung() {
   if ($('view-planung').classList.contains('on') && $('pv-einsaetze').classList.contains('on')) {
     const offen = d.reduce((s, e) => s + fehlend(e), 0);
     $('pgCrumb').textContent = `${nf(d.length)} von ${nf(einsaetze.length)} Einsätzen`
-      + (offen ? ` · ${nf(offen)} offene ${offen === 1 ? 'Stelle' : 'Stellen'}` : '');
+      + (offen ? ` · ${nf(offen)} offene ${offen === 1 ? 'Schicht' : 'Schichten'}` : '');
   }
   if (!d.length) {
     $('plTable').innerHTML = einsaetze.length
@@ -3983,7 +4013,48 @@ function renderPlanung() {
       </tr>`;
   }).join('');
 
-  $('plTable').innerHTML = `<table><thead><tr>
+  // Auf dem Handy dieselben Einsaetze als Karten (ENT-058). Die Optik stammt
+  // aus dem Tagesplan -- der Projektinhaber fand sie dort besser, und die
+  // Einsatzliste ist der Ort, an dem sie gebraucht wird. Die Tagesueberschrift
+  // bleibt: ohne sie verliert eine Kartenliste ueber mehrere Tage die
+  // Orientierung.
+  let letzterTagK = '';
+  const karten = d.map(e => {
+    const tag = tagVon(e);
+    let kopf = '';
+    if (tag !== letzterTagK) {
+      letzterTagK = tag;
+      const amTag = d.filter(x => tagVon(x) === tag);
+      const offenTag = amTag.reduce((s, x) => s + fehlend(x), 0);
+      kopf = `<div class="pk-tag">
+        <span class="wd">${WD[new Date(tag + 'T12:00:00').getDay()]}</span>
+        <b>${dmy(tag)}</b>
+        ${tag === heute ? '<span class="chip chip-a">heute</span>' : ''}
+        <span class="sp" style="flex:1"></span>
+        <span class="note">${amTag.length} ${amTag.length === 1 ? 'Einsatz' : 'Einsätze'}${offenTag ? ` · ${offenTag} offen` : ''}</span>
+      </div>`;
+    }
+    const zug = e.mitarbeiter || [];
+    const fehlt = fehlend(e);
+    const st = EN_STATUS[e.status] || EN_STATUS.geplant;
+    return kopf + `<div class="ag-karte click" onclick="openEinsatz(${Number(e.id)})">
+      <div class="kopf">
+        <b>${enSchloss(e)}${esc(hm(e.von))}–${esc(hm(e.bis))}${ueberNacht(e) ? ' <span class="ag-plan">bis Folgetag</span>' : ''}</b>
+        <span class="chip ${e.status === 'abgesagt' ? 'chip-n' : (fehlt ? 'chip-w' : 'chip-p')}">${zug.length}/${nf(e.bedarf)}</span>
+      </div>
+      <div class="wer">${esc(e.kunde_name)}${e.titel ? ` · ${esc(e.titel)}` : ''}</div>
+      <div class="zeiten">${esc(e.ort)}${e.strasse ? ` · ${esc(e.strasse)}` : ''}</div>
+      <div class="marken">
+        <span class="chip ${st[1]}">${st[0]}</span>
+        ${zug.slice(0, 3).map(m => `<span class="nm">${esc(fullName(m) || m.name)}</span>`).join('')}
+        ${zug.length > 3 ? `<span class="nm">+${zug.length - 3}</span>` : ''}
+        ${fehlt ? `<span class="nm off">${fehlt} offen</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  $('plTable').innerHTML = `<div class="nur-schmal">${karten}</div>`
+    + `<table class="nur-breit"><thead><tr>
       <th>Zeit</th><th>Kunde</th><th>Arbeitsort</th><th>Einsatzart</th>
       <th class="num">Besetzung</th><th>Zugeteilt</th><th>Status</th>
     </tr></thead><tbody>${zeilen}</tbody></table>`;
@@ -4253,7 +4324,10 @@ function askDeleteEinsatz() {
 const MOBIL = () => window.innerWidth <= 620;
 
 function goTab(t) {
-  if (t === 'uebersicht' && MOBIL()) { t = 'tag'; }
+  // Seit ENT-058 traegt die Einsatzliste die Kartenoptik und den
+  // Herkunftsfilter -- sie ist damit die bessere mobile Startseite als der
+  // Tagesplan, den sie inhaltlich ohnehin weitgehend doppelt.
+  if (t === 'uebersicht' && MOBIL()) { t = 'einsaetze'; }
   pTab = t;
   document.querySelectorAll('#view-planung .ptab').forEach(v => v.classList.remove('on'));
   document.querySelectorAll('#view-planung .tab').forEach(b => b.classList.remove('on'));
