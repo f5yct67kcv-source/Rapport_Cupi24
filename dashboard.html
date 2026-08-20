@@ -3761,6 +3761,14 @@ function mdDienstplaene() {
   const summeBonus = z.reduce((a, x) => a + (x.bonusMin || 0), 0);
   const luecken = z.filter(x => x.feiertagLuecke);
 
+  // Getrennt nach Sparte (ENT-063): Die eine Zahl addierte bisher GAV-Zeit und
+  // Nicht-GAV-Zeit. Fuer die Anzeige geht das noch; fuer die 210-Stunden-
+  // Schwelle nach Art. 14 Ziff. 3 und die Ferienentschaedigung nicht -- die
+  // duerfen nur GAV-Stunden zaehlen. Die Zahl steht darum ab jetzt getrennt da,
+  // bevor jemand darauf rechnet.
+  const nettoGav = z.filter(x => x.gav !== false).reduce((a, x) => a + x.nettoMin, 0);
+  const nettoRein = summeNetto - nettoGav;
+
   $('mdSummen').innerHTML = `<div class="md-summen">
     <div class="md-kachel"><div class="lbl">Geleistete Zeit</div><div class="val">${esc(mdStd(summeNetto))}</div>
       <div class="lbl" style="margin-top:4px;text-transform:none;letter-spacing:0">${nf(z.length)} ${z.length === 1 ? 'Schicht' : 'Schichten'}</div></div>
@@ -3768,7 +3776,11 @@ function mdDienstplaene() {
       <div class="lbl" style="margin-top:4px;text-transform:none;letter-spacing:0">Nacht und Sonntag, ohne Feiertage</div></div>
     <div class="md-kachel total"><div class="lbl">Total mit Zeitbonus</div><div class="val">${esc(mdStd(summeNetto + summeBonus))}</div>
       <div class="lbl" style="margin-top:4px;text-transform:none;letter-spacing:0">${esc(monat)}</div></div>
-  </div>`;
+  </div>` + (nettoRein > 0 ? `<div class="ki-hint web" id="mdSparten" style="margin-bottom:12px">
+    <span><b>Davon ${esc(mdStd(nettoGav))} Sicherheit (GAV)</b> und ${esc(mdStd(nettoRein))} Reinigung.
+    Zeitbonus, 210-Stunden-Schwelle und Ferienentschädigung bemessen sich <b>nur auf den
+    Sicherheitsstunden</b> — für die Reinigung gilt der GAV für private Sicherheitsdienstleistungen
+    nicht (ENT-061).</span></div>` : '');
 
   $('mdTable').innerHTML = `<table class="md-tab-liste"><thead><tr>
       <th class="nowrap">Datum</th><th>Einsatz</th><th>Kunde</th>

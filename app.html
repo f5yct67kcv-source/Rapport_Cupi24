@@ -389,6 +389,11 @@ const W = {
     ohneRegelwerk: 'Für diesen Zeitraum ist kein Regelwerk hinterlegt — der Zeitbonus wird bewusst nicht gerechnet.',
     pauseBezahlt: 'bezahlte Pause',
     reinigung: 'Reinigung — kein Zeitbonus',
+    davon: 'Davon:',
+    spGav: 'Sicherheit (GAV)',
+    spRein: 'Reinigung',
+    spGemischt: 'Der Zeitbonus und alles Weitere aus dem GAV wird nur auf den Sicherheitsstunden gerechnet. Die Reinigungsstunden zählen als Arbeitszeit, aber nach anderen Regeln.',
+    spNurRein: 'In diesem Monat sind es ausschliesslich Reinigungsstunden — der GAV für private Sicherheitsdienstleistungen gilt dafür nicht.',
     reinigungHinweis: 'Für Reinigungseinsätze gilt der GAV für private Sicherheitsdienstleistungen nicht. Die geleistete Zeit zählt selbstverständlich, aber es wird kein Zeitbonus für Nacht- und Sonntagsarbeit gerechnet. Was für die Reinigung gilt, sagt dir die Einsatzleitung.',
     persNr: 'Personalnummer', geburtsdatum: 'Geburtsdatum', adresse: 'Adresse',
     telefon: 'Telefon', mobil: 'Mobil', email: 'E-Mail', anmeldename: 'Anmeldename',
@@ -974,6 +979,16 @@ function zeichneStunden() {
   const bonus = z.reduce((a, x) => a + (x.bonusMin || 0), 0);
   const std = min => `${Math.floor(min / 60)}:${String(Math.round(min % 60)).padStart(2, '0')}`;
 
+  // Getrennt nach Sparte (ENT-063). Bis hierher stand eine einzige Zahl da,
+  // die GAV-Zeit und Nicht-GAV-Zeit addierte. Solange nur Zeit ANGEZEIGT
+  // wird, ist das ertraeglich -- sobald darauf gerechnet wird, ist es falsch:
+  // Die 210-Stunden-Schwelle nach Art. 14 Ziff. 3 und die Ferienentschaedigung
+  // duerfen nur GAV-Stunden zaehlen. Sechzig Stunden Reinigung wuerden eine
+  // Sicherheitskraft sonst kuenstlich ueber die Schwelle heben.
+  const nettoGav = z.filter(x => x.gav !== false).reduce((a, x) => a + x.nettoMin, 0);
+  const nettoRein = netto - nettoGav;
+  const gemischt = nettoRein > 0 && nettoGav > 0;
+
   box.innerHTML = blaettern + `
     <div class="zahlen" id="stdZahlen">
       <div class="zahl"><b>${esc(std(netto))}</b><span>${esc(w('geleistet'))}</span></div>
@@ -985,6 +1000,10 @@ function zeichneStunden() {
       </div>
       <div class="zahl"><b>${esc(std(netto + bonus))}</b><span>${esc(w('gesamt'))}</span></div>
     </div>
+    ${nettoRein > 0 ? `<div class="offen-hinweis" id="stdSparten">
+      <b>${esc(w('davon'))}</b> ${esc(std(nettoGav))} ${esc(w('spGav'))} · ${esc(std(nettoRein))} ${esc(w('spRein'))}<br>
+      ${esc(gemischt ? w('spGemischt') : w('spNurRein'))}
+    </div>` : ''}
     ${offenZeile}
     <div class="karte" id="stdListe"><div class="karte-bd" style="padding:0">
       ${z.map(x => `<div style="padding:11px 14px;border-bottom:1px solid var(--line-soft)">
