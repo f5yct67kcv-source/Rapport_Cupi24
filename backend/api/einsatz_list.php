@@ -16,7 +16,8 @@ $eingegrenzt = preg_match('/^\d{4}-\d{2}-\d{2}$/', $von) && preg_match('/^\d{4}-
 
 $sql = 'SELECT id, kunde_id, kunde_name, objekt_id, masterschicht_id, titel, strasse, ort,
                einsatzart, sparte, datum, von, bis, bedarf, status, bemerkung, erstellt_am,
-               ist_status, ist_von, ist_bis, ist_bemerkung, abgeglichen_am
+               ist_status, ist_von, ist_bis, ist_pause_von, ist_pause_min,
+               ist_pause_bezahlt_ma, ist_pause_bezahlt_kunde, ist_bemerkung, abgeglichen_am
         FROM einsaetze';
 $args = [];
 if ($eingegrenzt) {
@@ -32,7 +33,8 @@ $einsaetze = $stmt->fetchAll();
 // Zuteilungen in einem Zug holen und zuordnen -- eine Abfrage je Einsatz waere
 // bei einem Monatsplan schnell dreistellig.
 $zsql = 'SELECT z.einsatz_id, z.mitarbeiter_id, z.zusage, m.personalnummer,
-                z.ist_status, z.ist_von, z.ist_bis, z.ist_pause_min, z.ist_bemerkung, z.abgeglichen_am,
+                z.ist_status, z.ist_von, z.ist_bis, z.ist_pause_von, z.ist_pause_min,
+                z.ist_pause_bezahlt_ma, z.ist_pause_bezahlt_kunde, z.ist_bemerkung, z.abgeglichen_am,
                 m.name, m.vorname, m.nachname
          FROM einsatz_zuteilung z
          JOIN mitarbeiter m ON m.id = z.mitarbeiter_id';
@@ -57,7 +59,12 @@ foreach ($zstmt->fetchAll() as $z) {
         'ist_status' => $z['ist_status'],
         'ist_von' => $z['ist_von'],
         'ist_bis' => $z['ist_bis'],
+        'ist_pause_von' => $z['ist_pause_von'],
         'ist_pause_min' => $z['ist_pause_min'] === null ? null : (int)$z['ist_pause_min'],
+        // null bleibt null: 'noch nicht entschieden' ist etwas anderes als
+        // 'nein' (GAV-AUS-004). Ein Cast auf int wuerde beides zu 0 machen.
+        'ist_pause_bezahlt_ma' => $z['ist_pause_bezahlt_ma'] === null ? null : (int)$z['ist_pause_bezahlt_ma'],
+        'ist_pause_bezahlt_kunde' => $z['ist_pause_bezahlt_kunde'] === null ? null : (int)$z['ist_pause_bezahlt_kunde'],
         'ist_bemerkung' => $z['ist_bemerkung'],
         'abgeglichen_am' => $z['abgeglichen_am'],
     ];

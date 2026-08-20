@@ -58,13 +58,17 @@ try {
 
     $person = $pdo->prepare(
         'UPDATE einsatz_zuteilung
-         SET ist_status = ?, ist_von = ?, ist_bis = ?, ist_pause_min = ?, ist_bemerkung = ?,
+         SET ist_status = ?, ist_von = ?, ist_bis = ?,
+             ist_pause_von = ?, ist_pause_min = ?,
+             ist_pause_bezahlt_ma = ?, ist_pause_bezahlt_kunde = ?, ist_bemerkung = ?,
              abgeglichen_von = ?, abgeglichen_am = ?
          WHERE einsatz_id = ? AND mitarbeiter_id = ?'
     );
     $schicht = $pdo->prepare(
         'UPDATE einsaetze
-         SET ist_status = ?, ist_von = ?, ist_bis = ?, ist_bemerkung = ?,
+         SET ist_status = ?, ist_von = ?, ist_bis = ?,
+             ist_pause_von = ?, ist_pause_min = ?,
+             ist_pause_bezahlt_ma = ?, ist_pause_bezahlt_kunde = ?, ist_bemerkung = ?,
              abgeglichen_von = ?, abgeglichen_am = ?
          WHERE id = ?'
     );
@@ -91,18 +95,32 @@ try {
         if (!$ohneZeit && isset($z['ist_pause_min']) && $z['ist_pause_min'] !== '') {
             $pause = max(0, min(1440, (int)$z['ist_pause_min']));
         }
+        // Pausenbeginn plus Dauer (ENT-046) -- das Ende ergibt sich daraus und
+        // wird bewusst nicht gespeichert, damit es nur eine Wahrheit gibt.
+        $pauseVon = $ohneZeit ? null : $zeit($z['ist_pause_von'] ?? '');
+        // Drei Zustaende, nicht zwei: null = noch nicht entschieden, 0 = nein,
+        // 1 = ja. Das Zusammenfallen von 'nicht gefragt' und 'nein' waere bei
+        // GAV-AUS-004 genau der Fehler, den das Register verhindern soll.
+        $jaNein = function ($wert): ?int {
+            if ($wert === null || $wert === '' || $wert === 'offen') { return null; }
+            return in_array($wert, [1, '1', true, 'ja', 'true'], true) ? 1 : 0;
+        };
+        $bezahltMa    = $ohneZeit ? null : $jaNein($z['ist_pause_bezahlt_ma'] ?? null);
+        $bezahltKunde = $ohneZeit ? null : $jaNein($z['ist_pause_bezahlt_kunde'] ?? null);
         $bemerkung = trim((string)($z['ist_bemerkung'] ?? ''));
         $bemerkung = $bemerkung !== '' ? $bemerkung : null;
 
         $maId = (int)($z['mitarbeiter_id'] ?? 0);
         if ($maId > 0) {
-            $person->execute([$status, $von, $bis, $pause, $bemerkung,
+            $person->execute([$status, $von, $bis, $pauseVon, $pause,
+                $bezahltMa, $bezahltKunde, $bemerkung,
                 $offen ? null : $wer, $offen ? null : $jetzt, $einsatzId, $maId]);
             $geschrieben += $person->rowCount() > 0 ? 1 : 0;
             continue;
         }
         // Ohne Mitarbeitenden ist die Zeile die unbesetzte Schicht selbst.
-        $schicht->execute([$status, $von, $bis, $bemerkung,
+        $schicht->execute([$status, $von, $bis, $pauseVon, $pause,
+            $bezahltMa, $bezahltKunde, $bemerkung,
             $offen ? null : $wer, $offen ? null : $jetzt, $einsatzId]);
         $geschrieben += $schicht->rowCount() > 0 ? 1 : 0;
     }

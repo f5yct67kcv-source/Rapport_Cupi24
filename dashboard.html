@@ -607,6 +607,19 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ag-tab .stift:hover { background: var(--line-soft); color: var(--ink); }
 .ag-plan { font-size: 11.5px; color: var(--ink-3); }
 
+/* Pause: Beginn und Dauer sitzen in EINER Spalte, wie in der Referenzlösung.
+   Getrennte Spalten hätten den Kopf "Pause / Dauer" auseinandergerissen. */
+.ag-tab .ag-pause { white-space: nowrap; }
+.ag-tab .inp.pv { width: 78px; }
+.ag-tab .ag-pause .tr { color: var(--ink-3); font-size: 11.5px; margin: 0 3px; }
+/* Vorgeschlagene, noch nicht bestätigte Pausendauer -- dasselbe Muster wie
+   beim Diktat (ENT-015): sichtbar markiert, damit niemand einen Vorschlag
+   für eine Feststellung hält. */
+.ag-tab .inp.vorschlag { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent); }
+.ag-soll { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; color: var(--warn); }
+.zone.warn { border-color: var(--warn-line); background: var(--warn-soft); }
+.zone.warn .zone-hd, .zone.warn .zone-note { color: var(--warn); }
+
 /* Festgeschriebene Zeile: sichtbar, aber erkennbar nicht mehr im Zugriff --
    Text gedaempft (ausser dem Status-Chip, der seine Farbe selbst setzt und
    damit lesbar bleibt), Hintergrund abgesetzt. */
@@ -6116,7 +6129,9 @@ function agZeilenBauen() {
       zeilen.push(Object.assign({}, basis, {
         mitarbeiter_id: 0, wer: '', personalnummer: '', zusage: '',
         ist_status: e.ist_status || 'offen', ist_von: e.ist_von, ist_bis: e.ist_bis,
-        ist_pause_min: null, ist_bemerkung: e.ist_bemerkung, abgeglichen_am: e.abgeglichen_am,
+        ist_pause_von: e.ist_pause_von, ist_pause_min: e.ist_pause_min,
+        ist_pause_bezahlt_ma: e.ist_pause_bezahlt_ma, ist_pause_bezahlt_kunde: e.ist_pause_bezahlt_kunde,
+        ist_bemerkung: e.ist_bemerkung, abgeglichen_am: e.abgeglichen_am,
       }));
       return;
     }
@@ -6125,7 +6140,9 @@ function agZeilenBauen() {
       wer: [m.vorname, m.nachname].filter(Boolean).join(' ') || m.name,
       personalnummer: m.personalnummer || '', zusage: m.zusage,
       ist_status: m.ist_status || 'offen', ist_von: m.ist_von, ist_bis: m.ist_bis,
-      ist_pause_min: m.ist_pause_min, ist_bemerkung: m.ist_bemerkung,
+      ist_pause_von: m.ist_pause_von, ist_pause_min: m.ist_pause_min,
+      ist_pause_bezahlt_ma: m.ist_pause_bezahlt_ma, ist_pause_bezahlt_kunde: m.ist_pause_bezahlt_kunde,
+      ist_bemerkung: m.ist_bemerkung,
       abgeglichen_am: m.abgeglichen_am,
     })));
   });
@@ -6156,12 +6173,60 @@ function agGefiltert() {
 // diese Zeit als Arbeitszeit im Sinne des GAV gilt, sagt sie NICHT.
 function agDauer(von, bis, pauseMin) {
   if (!von || !bis) return '';
-  const min = t => Number(String(t).slice(0, 2)) * 60 + Number(String(t).slice(3, 5));
-  let d = min(bis) - min(von);
-  if (d < 0) d += 1440;
+  let d = agRohMin(von, bis);
+  if (d === null) return '';
   d -= Number(pauseMin || 0);
   if (d < 0) return '';
   return `${String(Math.floor(d / 60)).padStart(2, '0')}:${String(d % 60).padStart(2, '0')}`;
+}
+
+// Rohzeit in Minuten: bis minus von, über Mitternacht hinweg. Ohne Pausenabzug
+// -- die Pausenpflicht bemisst sich an der Zeit VOR dem Abzug, sonst wäre die
+// Rechnung zirkulär (die Pause würde ihre eigene Pflicht wegkürzen).
+function agRohMin(von, bis) {
+  if (!von || !bis) return null;
+  const min = t => Number(String(t).slice(0, 2)) * 60 + Number(String(t).slice(3, 5));
+  let d = min(bis) - min(von);
+  if (d < 0) d += 1440;
+  return d;
+}
+
+// ── Pausenpflicht nach Art. 13 Ziff. 1 GAV ────────────────────────────────
+// WÖRTLICH aus dem Vertrag, keine eigene Auslegung: 15 Min. bei mehr als
+// fünfeinhalb Stunden, 30 Min. bei mehr als sieben, 60 Min. bei mehr als neun.
+// Die Zahlen selbst sind eindeutig. Offen -- und darum im Auslegungsregister
+// als GAV-AUS-007 vermerkt -- ist ausschliesslich, WORAUF sie angewendet
+// werden: Rohzeit oder bewertete Zeit, und was bei mehreren getrennten
+// Einsätzen desselben Tages als "ununterbrochen" gilt. Hier gilt die engste
+// Lesart: Rohzeit der einzelnen Schicht (ENT-046, Wahl des Projektinhabers).
+//
+// Aus diesem Wert wird NICHTS berechnet: kein Lohn, keine bewertete Zeit,
+// keine Rechnung. Er ist ein Vorschlag, den ein Mensch bestätigt.
+const AG_PAUSE_REGEL = [
+  { abMin: 9 * 60, pause: 60, text: 'mehr als 9 Std.' },
+  { abMin: 7 * 60, pause: 30, text: 'mehr als 7 Std.' },
+  { abMin: 5.5 * 60, pause: 15, text: 'mehr als 5½ Std.' },
+];
+function agPauseSoll(von, bis) {
+  const roh = agRohMin(von, bis);
+  if (roh === null) return null;
+  const treffer = AG_PAUSE_REGEL.find(r => roh > r.abMin);
+  return treffer ? { min: treffer.pause, weil: treffer.text } : { min: 0, weil: null };
+}
+
+// Kurzhinweis neben dem Feld. Sagt nur, was der Vertrag verlangt und was
+// erfasst ist -- er behauptet NICHT, dass die Schicht damit zulässig war.
+function agSollHinweis(soll, wert, ohne) {
+  if (ohne || !soll || !soll.min) return '';
+  const ist = wert === '' || wert === null || wert === undefined ? 0 : Number(wert);
+  return ist < soll.min ? `Soll ${soll.min}′` : '';
+}
+function agPauseTitel(soll, vorgeschlagen) {
+  if (!soll || !soll.min) return 'Pausendauer in Minuten';
+  const basis = `Art. 13 Ziff. 1 GAV: ${soll.min} Minuten bei ${soll.weil} ununterbrochener Arbeitszeit.`;
+  return vorgeschlagen
+    ? `${basis} Vorgeschlagen, noch nicht gespeichert — bitte gegen den Rapport prüfen.`
+    : basis;
 }
 
 function renderAbgleich() {
@@ -6192,7 +6257,7 @@ function renderAbgleich() {
   $('agTable').innerHTML = `<table class="ag-tab"><thead><tr>
       <th><input type="checkbox" class="haken" id="agAlle" ${alleGewaehlt ? 'checked' : ''} onchange="agAlleUm(this.checked)" aria-label="Alle auswählen"></th>
       <th>Planung</th><th>Mitarbeitende</th><th class="nowrap">Datum</th>
-      <th>von</th><th>bis</th><th>Pause</th><th>Dauer</th>
+      <th>von</th><th>bis</th><th class="nowrap">Pause / Dauer</th><th>Netto</th>
       <th>Status</th><th>Bearbeiten</th>
     </tr></thead><tbody>` + agZeilen.map(z => {
     const k = agKey(z);
@@ -6207,7 +6272,14 @@ function renderAbgleich() {
     // dass es so lief wie geplant. Gespeichert wird trotzdem erst auf Klick.
     const vVon = erst ? hm(z.von) : (z.ist_von ? hm(z.ist_von) : '');
     const vBis = erst ? hm(z.bis) : (z.ist_bis ? hm(z.ist_bis) : '');
-    const vPause = z.ist_pause_min === null || z.ist_pause_min === undefined ? '' : z.ist_pause_min;
+    // Pausendauer: erfasst, sonst -- beim ersten Mal -- der Sollwert aus
+    // Art. 13 Ziff. 1. Wie bei den Zeiten eine Vorbelegung nach ENT-015:
+    // vorgeschlagen, sichtbar markiert, gespeichert erst auf Klick.
+    const soll = agPauseSoll(vVon, vBis);
+    const erfasst = z.ist_pause_min !== null && z.ist_pause_min !== undefined;
+    const vPause = erfasst ? z.ist_pause_min : (erst && soll && soll.min ? soll.min : '');
+    const vorgeschlagen = !erfasst && vPause !== '';
+    const vPauseVon = z.ist_pause_von ? hm(z.ist_pause_von) : '';
     // Gesperrt oder ohne Anwesenheit: in beiden Fällen sind die Zeitfelder tot.
     const ohne = zu || z.ist_status === 'abwesend' || z.ist_status === 'ausgefallen';
     return `
@@ -6221,7 +6293,13 @@ function renderAbgleich() {
         <td class="nowrap">${dmy(z.datum)}<div class="ag-plan">${hm(z.von)}–${hm(z.bis)}</div></td>
         <td><input class="inp" type="time" value="${esc(vVon)}"${ohne ? ' disabled' : ''} data-ag="von" data-k="${esc(k)}" aria-label="Tatsächlich von"></td>
         <td><input class="inp" type="time" value="${esc(vBis)}"${ohne ? ' disabled' : ''} data-ag="bis" data-k="${esc(k)}" aria-label="Tatsächlich bis"></td>
-        <td><input class="inp pause" type="number" min="0" max="600" step="5" value="${esc(String(vPause))}"${ohne ? ' disabled' : ''} data-ag="pause" data-k="${esc(k)}" aria-label="Pause in Minuten"></td>
+        <td class="nowrap ag-pause">
+          <input class="inp pv" type="time" value="${esc(vPauseVon)}"${ohne ? ' disabled' : ''} data-ag="pausevon" data-k="${esc(k)}" aria-label="Pause ab" title="Pause ab (Beginn)">
+          <span class="tr">/</span>
+          <input class="inp pause${vorgeschlagen ? ' vorschlag' : ''}" type="number" min="0" max="600" step="5" value="${esc(String(vPause))}"${ohne ? ' disabled' : ''} data-ag="pause" data-k="${esc(k)}" aria-label="Pausendauer in Minuten" title="${esc(agPauseTitel(soll, vorgeschlagen))}">
+          <span class="tr">min</span>
+          <span class="ag-soll" data-soll="${esc(k)}">${esc(agSollHinweis(soll, vPause, ohne))}</span>
+        </td>
         <td class="nowrap" data-dauer="${esc(k)}">${ohne && !zu ? '–' : esc(agDauer(vVon, vBis, vPause))}</td>
         <td class="nowrap"><span class="chip ${st[1]}">${esc(zu && z.ist_status === 'anwesend' ? 'Abgeglichen' : st[0])}${zu ? SCHLOSS_ZU : ''}</span></td>
         <td><button class="stift" onclick="openAbgleich('${esc(k)}')" title="${zu ? 'Festgeschrieben — zum Ändern Sperre aufheben' : 'Details'}" aria-label="Bearbeiten">${stiftSvg}</button></td>
@@ -6230,7 +6308,12 @@ function renderAbgleich() {
 
   // Dauer live nachführen, sobald jemand eine Zeit ändert.
   document.querySelectorAll('#agTable [data-ag]').forEach(el => {
-    el.addEventListener('input', () => agDauerNachfuehren(el.dataset.k));
+    el.addEventListener('input', () => {
+      // Wer die vorgeschlagene Pause anfasst, hat sie geprüft -- ab da ist sie
+      // eine Eingabe und nicht mehr ein Vorschlag.
+      if (el.dataset.ag === 'pause') el.classList.remove('vorschlag');
+      agDauerNachfuehren(el.dataset.k);
+    });
   });
   agSammelLeiste();
 }
@@ -6238,7 +6321,14 @@ function renderAbgleich() {
 function agDauerNachfuehren(k) {
   const f = a => document.querySelector(`#agTable [data-ag="${a}"][data-k="${CSS.escape(k)}"]`);
   const feld = document.querySelector(`#agTable [data-dauer="${CSS.escape(k)}"]`);
-  if (feld) feld.textContent = agDauer(f('von').value, f('bis').value, f('pause').value) || '';
+  const von = f('von'), bis = f('bis'), pause = f('pause');
+  if (!von || !bis || !pause) return;
+  if (feld) feld.textContent = agDauer(von.value, bis.value, pause.value) || '';
+  // Sollpause hängt an den Zeiten -- ändert sich eine, ändert sich der Hinweis.
+  const soll = agPauseSoll(von.value, bis.value);
+  const hinweis = document.querySelector(`#agTable [data-soll="${CSS.escape(k)}"]`);
+  if (hinweis) hinweis.textContent = agSollHinweis(soll, pause.value, pause.disabled);
+  pause.title = agPauseTitel(soll, pause.classList.contains('vorschlag'));
 }
 
 // ── Auswahl und Sammelleiste ──────────────────────────────────────────────
@@ -6332,7 +6422,8 @@ function agSammelSpeichern(status) {
       'Sperre aufheben',
       () => agSenden(zu.map(z => ({
         einsatz_id: z.einsatz_id, mitarbeiter_id: z.mitarbeiter_id, ist_status: 'offen',
-        ist_von: '', ist_bis: '', ist_pause_min: '', ist_bemerkung: z.ist_bemerkung || '',
+        ist_von: '', ist_bis: '', ist_pause_von: '', ist_pause_min: '',
+        ist_pause_bezahlt_ma: '', ist_pause_bezahlt_kunde: '', ist_bemerkung: z.ist_bemerkung || '',
       })), `${nf(zu.length)} ${zu.length === 1 ? 'Sperre' : 'Sperren'} aufgehoben.`));
     return;
   }
@@ -6344,7 +6435,13 @@ function agSammelSpeichern(status) {
       einsatz_id: z.einsatz_id, mitarbeiter_id: z.mitarbeiter_id,
       ist_status: status,
       ist_von: f('von') ? f('von').value : '', ist_bis: f('bis') ? f('bis').value : '',
+      ist_pause_von: f('pausevon') ? f('pausevon').value : '',
       ist_pause_min: f('pause') ? f('pause').value : '',
+      // Die Bezahlt-Kennzeichnung wird im Sammelabgleich NICHT gesetzt: sie ist
+      // eine Einzelfallfeststellung nach Art. 13 Ziff. 2 und darf nicht über
+      // zwanzig Zeilen hinweg mitlaufen (GAV-AUS-004). Bestehende Werte bleiben.
+      ist_pause_bezahlt_ma: z.ist_pause_bezahlt_ma ?? '',
+      ist_pause_bezahlt_kunde: z.ist_pause_bezahlt_kunde ?? '',
       ist_bemerkung: z.ist_bemerkung || '',
     };
   });
@@ -6396,11 +6493,28 @@ function openAbgleich(k) {
       <div class="f wide"><label for="agdStatus">Was ist passiert?</label>
         <select class="inp" id="agdStatus" onchange="agdStatusUm()"${sperr}>${opt}</select></div>
       <div class="f"><label for="agdVon">Tatsächlich von</label>
-        <input class="inp" id="agdVon" type="time"${sperr} value="${esc(erst ? hm(z.von) : (z.ist_von ? hm(z.ist_von) : ''))}"></div>
+        <input class="inp" id="agdVon" type="time"${sperr} oninput="agdPauseHinweis()" value="${esc(erst ? hm(z.von) : (z.ist_von ? hm(z.ist_von) : ''))}"></div>
       <div class="f"><label for="agdBis">Tatsächlich bis</label>
-        <input class="inp" id="agdBis" type="time"${sperr} value="${esc(erst ? hm(z.bis) : (z.ist_bis ? hm(z.ist_bis) : ''))}"></div>
+        <input class="inp" id="agdBis" type="time"${sperr} oninput="agdPauseHinweis()" value="${esc(erst ? hm(z.bis) : (z.ist_bis ? hm(z.ist_bis) : ''))}"></div>
+      <div class="f"><label for="agdPauseVon">Pause ab</label>
+        <input class="inp" id="agdPauseVon" type="time"${sperr} value="${esc(z.ist_pause_von ? hm(z.ist_pause_von) : '')}"></div>
       <div class="f"><label for="agdPause">Pause (Minuten)</label>
-        <input class="inp" id="agdPause" type="number" min="0" max="600" step="5"${sperr} value="${esc(String(z.ist_pause_min ?? ''))}"></div>
+        <input class="inp" id="agdPause" type="number" min="0" max="600" step="5"${sperr} oninput="agdPauseHinweis()" value="${esc(String(z.ist_pause_min ?? ''))}"></div>
+      <div class="f wide" id="agdPauseGav"></div>
+      <div class="f wide"><label>Pause bezahlt</label>
+        <div class="wahl-reihe">
+          <label for="agdBezMa" style="font-weight:500">
+            <input type="checkbox" id="agdBezMa"${sperr} ${Number(z.ist_pause_bezahlt_ma) === 1 ? 'checked' : ''}>
+            Mitarbeitende
+          </label>
+          <label for="agdBezKunde" style="font-weight:500">
+            <input type="checkbox" id="agdBezKunde"${sperr} ${Number(z.ist_pause_bezahlt_kunde) === 1 ? 'checked' : ''}>
+            Kunde
+          </label>
+          ${z.ist_pause_bezahlt_ma === null || z.ist_pause_bezahlt_ma === undefined
+            ? '<span class="ag-plan">noch nicht festgestellt</span>' : ''}
+        </div>
+      </div>
       <div class="f wide"><label for="agdBemerkung">Abweichung / Bemerkung</label>
         <textarea class="inp" id="agdBemerkung" rows="2" style="min-height:60px"${sperr} placeholder="z. B. andere Besetzung als geplant">${esc(z.ist_bemerkung || '')}</textarea></div>
     </div>
@@ -6427,7 +6541,36 @@ function openAbgleich(k) {
 function agdStatusUm() {
   const s = $('agdStatus').value;
   const ohne = s === 'abwesend' || s === 'ausgefallen' || s === 'offen';
-  ['agdVon', 'agdBis', 'agdPause'].forEach(id => { $(id).closest('.f').style.display = ohne ? 'none' : ''; });
+  ['agdVon', 'agdBis', 'agdPauseVon', 'agdPause'].forEach(id => { $(id).closest('.f').style.display = ohne ? 'none' : ''; });
+  ['agdPauseGav', 'agdBezMa'].forEach(id => {
+    const f = $(id).closest('.f') || $(id);
+    if (f) f.style.display = ohne ? 'none' : '';
+  });
+  agdPauseHinweis();
+}
+
+// Zeigt in der Schublade wörtlich, was Art. 13 verlangt -- und markiert, wenn
+// die erfasste Pause darunter liegt. Ein Hinweis, keine Sperre: der Abgleich
+// hält fest, was war, und darf die Wirklichkeit nicht beschönigen. Wer weniger
+// Pause einträgt, als der Vertrag verlangt, dokumentiert damit genau den Fall,
+// den die Einsatzleitung sehen muss.
+function agdPauseHinweis() {
+  const box = $('agdPauseGav');
+  if (!box) return;
+  const soll = agPauseSoll($('agdVon').value, $('agdBis').value);
+  if (!soll || !soll.min) { box.innerHTML = ''; return; }
+  const ist = Number($('agdPause').value || 0);
+  const knapp = ist < soll.min;
+  box.innerHTML = `<div class="zone${knapp ? ' warn' : ''}" style="margin:0">
+    <div class="zone-hd">Art. 13 Ziff. 1 GAV: ${nf(soll.min)} Minuten</div>
+    <div class="zone-note">
+      Bei ${esc(soll.weil)} ununterbrochener Arbeitszeit verlangt der GAV mindestens
+      ${nf(soll.min)} Minuten Pause. Erfasst${ist ? ` sind ${nf(ist)}` : ': keine'}.
+      ${knapp ? '<b>Das liegt darunter.</b> Der Abgleich hält trotzdem fest, was tatsächlich war — die Abweichung gehört zur Einsatzleitung, nicht wegkorrigiert.' : ''}
+      <br><br>Bemessen auf der Rohzeit dieser einen Schicht. Ob mehrere Einsätze
+      desselben Tages zusammenzuzählen sind und ob der Zeitbonus mitzählt, ist
+      offen (GAV-AUS-007) — dieser Hinweis ist darum <b>kein</b> Nachweis der Einhaltung.
+    </div></div>`;
 }
 
 // Doppelbestätigung: erst dieser Knopf, dann die Rückfrage. Aufgehoben wird
@@ -6448,7 +6591,12 @@ function agdSpeichern() {
     einsatz_id: agTarget.einsatz_id, mitarbeiter_id: agTarget.mitarbeiter_id,
     ist_status: status,
     ist_von: $('agdVon').value, ist_bis: $('agdBis').value,
+    ist_pause_von: $('agdPauseVon').value,
     ist_pause_min: $('agdPause').value,
+    // Hier wird die Feststellung nach Art. 13 Ziff. 2 bewusst getroffen --
+    // anders als im Sammelabgleich, wo sie unangetastet bleibt (GAV-AUS-004).
+    ist_pause_bezahlt_ma: $('agdBezMa').checked ? 1 : 0,
+    ist_pause_bezahlt_kunde: $('agdBezKunde').checked ? 1 : 0,
     ist_bemerkung: $('agdBemerkung').value.trim(),
   };
   if (status === 'anwesend' && (!zeile.ist_von || !zeile.ist_bis)) {
@@ -6462,12 +6610,18 @@ function agdSpeichern() {
 function agCsv() {
   if (!agZeilen.length) { toast('Keine Daten zum Exportieren.'); return; }
   const hdr = ['Datum', 'Objekt/Bezeichnung', 'Kunde', 'Ort', 'Sparte', 'Mitarbeitende', 'Personalnummer',
-    'Geplant von', 'Geplant bis', 'Ist von', 'Ist bis', 'Pause_Min', 'Dauer', 'Status', 'Bemerkung'];
+    'Geplant von', 'Geplant bis', 'Ist von', 'Ist bis', 'Pause_ab', 'Pause_Min',
+    'Pause_bezahlt_MA', 'Pause_bezahlt_Kunde', 'Netto', 'Status', 'Bemerkung'];
   const cell = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
   const rows = agZeilen.map(z => [z.datum, z.titel || z.einsatzart, z.kunde_name, z.ort,
     z.sparte === 'reinigung' ? 'Reinigung' : 'Sicherheit', z.wer, z.personalnummer,
     hm(z.von), hm(z.bis), z.ist_von ? hm(z.ist_von) : '', z.ist_bis ? hm(z.ist_bis) : '',
-    z.ist_pause_min ?? '', agDauer(z.ist_von ? hm(z.ist_von) : '', z.ist_bis ? hm(z.ist_bis) : '', z.ist_pause_min),
+    z.ist_pause_von ? hm(z.ist_pause_von) : '', z.ist_pause_min ?? '',
+    // Leer heisst "noch nicht festgestellt" und ist nicht dasselbe wie "nein"
+    // -- diese Unterscheidung muss auch im Export erhalten bleiben.
+    z.ist_pause_bezahlt_ma === null || z.ist_pause_bezahlt_ma === undefined ? '' : (Number(z.ist_pause_bezahlt_ma) === 1 ? 'ja' : 'nein'),
+    z.ist_pause_bezahlt_kunde === null || z.ist_pause_bezahlt_kunde === undefined ? '' : (Number(z.ist_pause_bezahlt_kunde) === 1 ? 'ja' : 'nein'),
+    agDauer(z.ist_von ? hm(z.ist_von) : '', z.ist_bis ? hm(z.ist_bis) : '', z.ist_pause_min),
     (AG_STATUS[z.ist_status || 'offen'] || AG_STATUS.offen)[0], z.ist_bemerkung || ''].map(cell).join(';'));
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['﻿' + [hdr.map(cell).join(';'), ...rows].join('\r\n')], { type: 'text/csv;charset=utf-8' }));

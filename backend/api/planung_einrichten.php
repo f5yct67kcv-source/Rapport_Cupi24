@@ -157,6 +157,13 @@ CREATE TABLE IF NOT EXISTS einsaetze (
   ist_status VARCHAR(20) NOT NULL DEFAULT 'offen',
   ist_von TIME NULL,
   ist_bis TIME NULL,
+  ist_pause_von TIME NULL,
+  ist_pause_min INT NULL,
+  -- NULL heisst ausdruecklich 'noch nicht entschieden' und ist NICHT dasselbe
+  -- wie 0/nein (GAV-AUS-004, ENT-046). Eine Vorbelegung waere eine
+  -- stillschweigende GAV-Auslegung.
+  ist_pause_bezahlt_ma TINYINT NULL,
+  ist_pause_bezahlt_kunde TINYINT NULL,
   ist_bemerkung TEXT NULL,
   abgeglichen_von INT NULL,
   abgeglichen_am DATETIME NULL,
@@ -183,7 +190,10 @@ CREATE TABLE IF NOT EXISTS einsatz_zuteilung (
   ist_status VARCHAR(20) NOT NULL DEFAULT 'offen',
   ist_von TIME NULL,
   ist_bis TIME NULL,
+  ist_pause_von TIME NULL,
   ist_pause_min INT NULL,
+  ist_pause_bezahlt_ma TINYINT NULL,
+  ist_pause_bezahlt_kunde TINYINT NULL,
   ist_bemerkung TEXT NULL,
   abgeglichen_von INT NULL,
   abgeglichen_am DATETIME NULL,
@@ -294,7 +304,16 @@ $spalten = [
     ['einsaetze', 'ist_status',      "ALTER TABLE einsaetze ADD COLUMN ist_status VARCHAR(20) NOT NULL DEFAULT 'offen' AFTER status"],
     ['einsaetze', 'ist_von',         'ALTER TABLE einsaetze ADD COLUMN ist_von TIME NULL AFTER ist_status'],
     ['einsaetze', 'ist_bis',         'ALTER TABLE einsaetze ADD COLUMN ist_bis TIME NULL AFTER ist_von'],
-    ['einsaetze', 'ist_bemerkung',   'ALTER TABLE einsaetze ADD COLUMN ist_bemerkung TEXT NULL AFTER ist_bis'],
+    // Pause je Zeile (ENT-046): Beginn plus Dauer, wie in der Referenzloesung.
+    // Das Ende ergibt sich rechnerisch und wird nicht gespeichert.
+    ['einsaetze', 'ist_pause_von',   'ALTER TABLE einsaetze ADD COLUMN ist_pause_von TIME NULL AFTER ist_bis'],
+    ['einsaetze', 'ist_pause_min',   'ALTER TABLE einsaetze ADD COLUMN ist_pause_min INT NULL AFTER ist_pause_von'],
+    // TINYINT NULL, nicht NOT NULL DEFAULT 0: NULL heisst 'noch nicht
+    // entschieden', 0 heisst 'geprueft und nein'. Der Unterschied ist bei
+    // GAV-AUS-004 wesentlich -- eine Vorbelegung waere eine Auslegung.
+    ['einsaetze', 'ist_pause_bezahlt_ma',     'ALTER TABLE einsaetze ADD COLUMN ist_pause_bezahlt_ma TINYINT NULL AFTER ist_pause_min'],
+    ['einsaetze', 'ist_pause_bezahlt_kunde',  'ALTER TABLE einsaetze ADD COLUMN ist_pause_bezahlt_kunde TINYINT NULL AFTER ist_pause_bezahlt_ma'],
+    ['einsaetze', 'ist_bemerkung',   'ALTER TABLE einsaetze ADD COLUMN ist_bemerkung TEXT NULL AFTER ist_pause_bezahlt_kunde'],
     ['einsaetze', 'abgeglichen_von', 'ALTER TABLE einsaetze ADD COLUMN abgeglichen_von INT NULL AFTER ist_bemerkung'],
     ['einsaetze', 'abgeglichen_am',  'ALTER TABLE einsaetze ADD COLUMN abgeglichen_am DATETIME NULL AFTER abgeglichen_von'],
     // Der Abgleich laeuft je Person, nicht je Schicht: eine Zeile ist eine
@@ -306,8 +325,11 @@ $spalten = [
     ['einsatz_zuteilung', 'ist_status',      "ALTER TABLE einsatz_zuteilung ADD COLUMN ist_status VARCHAR(20) NOT NULL DEFAULT 'offen' AFTER zusage"],
     ['einsatz_zuteilung', 'ist_von',         'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_von TIME NULL AFTER ist_status'],
     ['einsatz_zuteilung', 'ist_bis',         'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_bis TIME NULL AFTER ist_von'],
-    ['einsatz_zuteilung', 'ist_pause_min',   'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_pause_min INT NULL AFTER ist_bis'],
-    ['einsatz_zuteilung', 'ist_bemerkung',   'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_bemerkung TEXT NULL AFTER ist_pause_min'],
+    ['einsatz_zuteilung', 'ist_pause_von',   'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_pause_von TIME NULL AFTER ist_bis'],
+    ['einsatz_zuteilung', 'ist_pause_min',   'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_pause_min INT NULL AFTER ist_pause_von'],
+    ['einsatz_zuteilung', 'ist_pause_bezahlt_ma',    'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_pause_bezahlt_ma TINYINT NULL AFTER ist_pause_min'],
+    ['einsatz_zuteilung', 'ist_pause_bezahlt_kunde', 'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_pause_bezahlt_kunde TINYINT NULL AFTER ist_pause_bezahlt_ma'],
+    ['einsatz_zuteilung', 'ist_bemerkung',   'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_bemerkung TEXT NULL AFTER ist_pause_bezahlt_kunde'],
     ['einsatz_zuteilung', 'abgeglichen_von', 'ALTER TABLE einsatz_zuteilung ADD COLUMN abgeglichen_von INT NULL AFTER ist_bemerkung'],
     ['einsatz_zuteilung', 'abgeglichen_am',  'ALTER TABLE einsatz_zuteilung ADD COLUMN abgeglichen_am DATETIME NULL AFTER abgeglichen_von'],
 ];
