@@ -186,6 +186,22 @@ svg.i-sm { width: 17px; height: 17px; }
 .dl dd { font-size: 15px; font-weight: 550; padding: 11px 0; border-bottom: 1px solid var(--line-soft); word-break: break-word; }
 .dl dt:last-of-type, .dl dd:last-of-type { border-bottom: none; }
 
+/* Antippbare Zeile, die eine Unterseite oeffnet (ENT-051). Sieht aus wie ein
+   Eintrag, verhaelt sich wie ein Knopf -- darum ein <button>, kein <div> mit
+   onclick: nur so ist sie mit der Tastatur und mit Vorlesehilfen erreichbar. */
+.nav-zeile {
+  display: flex; align-items: center; gap: 13px; width: 100%;
+  padding: 16px; background: none; border: none; font: inherit;
+  text-align: left; color: inherit; cursor: pointer; min-height: 60px;
+}
+.nav-zeile:active { background: var(--line-soft); }
+.nav-zeile .txt { flex: 1; min-width: 0; }
+.nav-zeile .txt b { display: block; font-size: 15px; font-weight: 650; letter-spacing: -.1px; }
+.nav-zeile .txt span { display: block; font-size: 13px; color: var(--ink-3); margin-top: 2px; }
+.nav-zeile .chev { flex: none; width: 18px; height: 18px; stroke: var(--ink-3); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.seiten-kopf { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.seiten-kopf h2 { font-size: 19px; font-weight: 700; letter-spacing: -.3px; }
+
 /* ── Blatt von unten (Schichtdetail, Passwort) */
 .abdunkeln { position: fixed; inset: 0; z-index: 60; background: rgba(16,18,22,.45); opacity: 0; pointer-events: none; transition: opacity .2s; }
 .abdunkeln.on { opacity: 1; pointer-events: auto; }
@@ -350,6 +366,8 @@ const W = {
     neuesPasswort: 'Neues Passwort', mind6: 'mindestens 6 Zeichen',
     passwortOk: 'Passwort geändert.', abmelden: 'Abmelden',
     zumCockpit: 'Zum Cockpit',
+    stundenZeile: 'Abgeglichene Schichten, Monat für Monat',
+    zurueckZumProfil: 'Zurück zum Profil',
     speichern: 'Speichern', abbrechen: 'Abbrechen', schliessen: 'Schliessen',
     datenHinweis: 'Änderungen an deinen Daten macht die Verwaltung.',
     netzfehler: 'Keine Verbindung. Bitte nochmals versuchen.',
@@ -746,6 +764,7 @@ function zeichneProfil() {
   const p = profil || {};
   const zeile = (k, v) => v ? `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>` : '';
   $('v-profil').innerHTML = `
+    <div id="pr-haupt">
     <div class="karte"><div class="karte-bd" style="display:flex;align-items:center;gap:14px">
       <div class="kreis" style="width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700">${esc(initialen(vollerName(p) || (ich && ich.name)))}</div>
       <div style="min-width:0">
@@ -753,9 +772,6 @@ function zeichneProfil() {
         <div style="font-size:13px;color:var(--ink-3)">${esc(w('anmeldename'))}: ${esc(p.name || (ich && ich.name) || '–')}</div>
       </div>
     </div></div>
-
-    <div class="titel">${esc(w('meineStunden'))}</div>
-    <div id="stdBereich"></div>
 
     <div class="karte"><div class="karte-bd"><dl class="dl">
       ${zeile(w('persNr'), p.personalnummer)}
@@ -768,12 +784,56 @@ function zeichneProfil() {
     <p style="font-size:13px;color:var(--ink-3);margin-top:14px">${esc(w('datenHinweis'))}</p>
     </div></div>
 
+    <div class="karte"><button class="nav-zeile" id="zeileStunden" onclick="stdSeiteAuf()">
+      <span class="txt">
+        <b>${esc(w('meineStunden'))}</b>
+        <span>${esc(w('stundenZeile'))}</span>
+      </span>
+      <svg class="chev" viewBox="0 0 24 24"><polyline points="9 5 16 12 9 19"/></svg>
+    </button></div>
+
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
       <button class="btn btn-plain btn-wide" onclick="passwortBlatt()">${esc(w('passwortAendern'))}</button>
       ${p.ist_admin ? `<a class="btn btn-plain btn-wide" href="dashboard.html" title="Zur Verwaltung">${esc(w('zumCockpit'))}</a>` : ''}
       <button class="btn btn-plain btn-wide" style="color:var(--neg)" onclick="abmelden()">${esc(w('abmelden'))}</button>
+    </div>
+    </div>
+
+    <div id="pr-stunden" style="display:none">
+      <div class="seiten-kopf">
+        <button class="btn btn-plain" onclick="stdSeiteZu()" style="min-height:40px;padding:0 12px" aria-label="${esc(w('zurueckZumProfil'))}" title="${esc(w('zurueckZumProfil'))}">
+          <svg class="i i-sm" viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
+        </button>
+        <h2>${esc(w('meineStunden'))}</h2>
+      </div>
+      <div id="stdBereich"></div>
     </div>`;
+}
+
+// ══════════════════════════════════════════ UNTERSEITE MEINE STUNDEN (ENT-051)
+// Die Personalien stehen im Profil im Vordergrund, die Stunden liegen eine
+// Ebene tiefer. Zwei Gruende, warum das nicht nur Geschmack ist:
+//
+// 1. Die Zahlen werden erst geladen, wenn jemand sie sehen will. Vorher steht
+//    im Profil nur die Zeile -- KEINE Zahl. Das ist Absicht: Seit ENT-049 darf
+//    eine Stundensumme nie ohne den Hinweis erscheinen, dass sie keine
+//    Lohnabrechnung ist. Eine "Vorschau" in der Zeile wuerde genau das tun.
+// 2. Beim Verlassen des Profils faellt die Unterseite von selbst zusammen,
+//    weil zeichneProfil() neu zeichnet. Kein Zustand, der haengen bleibt.
+function stdSeiteAuf() {
+  const h = $('pr-haupt'), u = $('pr-stunden');
+  if (!h || !u) return;
+  h.style.display = 'none';
+  u.style.display = '';
+  window.scrollTo(0, 0);
   zeichneStunden();
+}
+function stdSeiteZu() {
+  const h = $('pr-haupt'), u = $('pr-stunden');
+  if (!h || !u) return;
+  u.style.display = 'none';
+  h.style.display = '';
+  window.scrollTo(0, 0);
 }
 
 // ══════════════════════════════════════════ MEINE STUNDEN (ENT-049)
