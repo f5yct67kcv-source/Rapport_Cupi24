@@ -217,6 +217,10 @@ select.inp { padding-right: 30px; background-image: linear-gradient(45deg, trans
 .side-brand .wm { color: var(--shell-txt-hi); font-size: 15px; font-weight: 700; letter-spacing: -.2px; line-height: 1.15; }
 .side-brand .sub { color: #656B78; font-size: 10px; letter-spacing: .8px; text-transform: uppercase; }
 
+.side-kopf { display: none; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--shell-line); flex: none; }
+.side-kopf .titel { font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: #5C626E; }
 .side-nav { padding: 14px 12px; flex: 1; overflow-y: auto; }
 .nav-lbl { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #5C626E; padding: 0 8px; margin: 4px 0 8px; }
 .nav-item {
@@ -1064,11 +1068,11 @@ html[data-thema="dunkel"] .thema-schalter .i-mond  { opacity: 1; }
    nicht: iOS ignoriert user-scalable=no. touch-action nimmt der Geste die
    Grundlage, ohne das Scrollen anzutasten. */
 html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
-
-/* Kein display im Normalfall -- das Element behaelt seine eigene Anzeigeart
-   (Kacheln bleiben Kacheln, Knoepfe bleiben Flex). Nur die Mobilregel weiter
-   unten blendet aus. Dasselbe Muster wie .nur-breit. */
-.mobil-hinweis { display: none; }
+/* Sperrt den Hintergrund, solange das Aufklappmenue offen ist (ENT-067).
+   Greift nur dort, wo es ein Aufklappmenue gibt. */
+@media (max-width: 900px) {
+  html.menue-offen, html.menue-offen body { overflow: hidden; }
+}
 
 /* Abgleich als Karten statt Tabelle. Die Tabelle ist 1062 px breit; auf
    einem 390-px-Bildschirm sieht man ein Drittel einer Zeile und schiebt den
@@ -1146,7 +1150,6 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
   .nur-breit { display: none; }
   .nur-schmal { display: block; }
   .nur-desktop { display: none !important; }
-  .mobil-hinweis { display: block; }
   .opl-leiste .wo { display: none; }
   .opl-zahlen { flex: 1 1 100%; gap: 12px; overflow-x: auto; }
   /* Container verschieben ist eine Zeigergeraet-Aufgabe -- auf dem Telefon
@@ -1198,14 +1201,45 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
      als Menue unter der Kopfzeile auf (ENT-059). Ein seitliches Panel nimmt
      auf dem Handy die halbe Breite und laesst den Inhalt daneben verkuemmern;
      ein Aufklappmenue ist das, was man dort erwartet. */
+  /* Vollbild statt Aufklappstreifen (ENT-067). Ein halbhohes Menue laesst den
+     Inhalt darunter durchscheinen und mitscrollen -- man weiss dann nicht
+     mehr, was man gerade bedient. Die Kopfzeile bleibt stehen, damit der
+     Burger erreichbar bleibt; darunter gehoert die Flaeche dem Menue.
+     Nicht .side selbst scrollt, sondern .side-nav -- so bleibt der Fuss mit
+     Benutzer und Abmelden immer unten am Bildschirmrand. */
   .side {
-    top: var(--top-h); left: 0; right: 0; bottom: auto; width: auto;
-    max-height: calc(100dvh - var(--top-h)); overflow-y: auto;
-    border-bottom: 1px solid var(--shell-line); box-shadow: var(--sh-3);
+    top: var(--top-h); left: 0; right: 0; bottom: 0; width: auto;
+    height: calc(100dvh - var(--top-h)); max-height: none; overflow: hidden;
+    display: flex; flex-direction: column;
+    border-bottom: none; box-shadow: var(--sh-3);
     transform: translateY(-10px); opacity: 0; visibility: hidden;
     transition: transform .18s cubic-bezier(.32,.72,0,1), opacity .18s, visibility .18s;
   }
   .side.on { transform: none; opacity: 1; visibility: visible; }
+  .side-kopf { display: flex; }
+  .side-nav { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 14px 24px;
+    -webkit-overflow-scrolling: touch; }
+
+  /* Groessere Schrift. Auf dem Desktop steht die Leiste dauerhaft da und darf
+     zurueckhaltend sein; auf dem Handy ist sie fuer die Dauer der Bedienung
+     der ganze Bildschirm -- da ist 13.5 px zu klein zum Zielen und zum Lesen. */
+  .side-nav .nav-item { font-size: 17px; font-weight: 600; padding: 14px 12px; gap: 14px; min-height: 52px; }
+  .side-nav .nav-lbl { font-size: 11.5px; letter-spacing: 1.4px; margin: 14px 0 8px; }
+  .side-nav .nav-lbl:first-child { margin-top: 0; }
+  .side-nav .nav-kind { font-size: 15.5px; padding: 11px 12px 11px 46px; min-height: 46px; }
+  .side-foot .nav-item { font-size: 16px; padding: 13px 12px; min-height: 50px; }
+
+  /* Benutzerblock nach unten rechts (ENT-067). row-reverse setzt den Anfang
+     der Zeile an den rechten Rand -- Name und Rolle stehen damit rechts,
+     der Kreis mit dem Anfangsbuchstaben aussen daneben. */
+  .side-foot { display: flex; flex-direction: column; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+  .side-foot .side-user {
+    order: 99; margin-top: 8px; padding-top: 12px;
+    border-top: 1px solid var(--shell-line);
+    flex-direction: row-reverse; justify-content: flex-start; text-align: right;
+  }
+  .side-foot .side-user .who b { font-size: 15px; }
+  .side-foot .side-user .who span { font-size: 12.5px; }
   /* Der Markenkopf ist im Aufklappmenue doppelt -- die Kopfzeile sagt bereits,
      wo man ist. */
   .side-brand { display: none; }
@@ -1312,6 +1346,20 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
       </div>
     </div>
 
+    <!-- Kopfzeile des Aufklappmenues, nur auf dem Handy (ENT-067). Sie traegt
+         den Hell/Dunkel-Schalter oben rechts -- dort, wo er auf dem Desktop
+         auch sitzt. Als Zeile in der Liste (so stand er seit ENT-059) sah er
+         aus wie ein Menuepunkt und verhielt sich nicht wie einer. -->
+    <div class="side-kopf nur-schublade">
+      <span class="titel">Menü</span>
+      <button class="thema-schalter" id="btnThemaMob" onclick="themaUm()" role="switch" aria-checked="false" title="Hell oder dunkel" aria-label="Zwischen heller und dunkler Darstellung wechseln">
+        <span class="knopf">
+          <svg class="i-sonne" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="4.2" y1="4.2" x2="5.9" y2="5.9"/><line x1="18.1" y1="18.1" x2="19.8" y2="19.8"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.2" y1="19.8" x2="5.9" y2="18.1"/><line x1="18.1" y1="5.9" x2="19.8" y2="4.2"/></svg>
+          <svg class="i-mond" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>
+        </span>
+      </button>
+    </div>
+
     <nav class="side-nav">
       <div class="nav-lbl">Betrieb</div>
       <button class="nav-item on" id="nav-uebersicht" title="Übersicht" onclick="go('uebersicht')">
@@ -1378,13 +1426,6 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
         </div>
       </div>
 
-      <!-- Ausgeblendet ist nicht kaputt (ENT-057): Wer Kunden, Objekte oder
-           die Administration sucht, soll lesen, wo sie sind -- nicht raten,
-           ob die Anwendung defekt ist. -->
-      <div class="mobil-hinweis" style="margin-top:18px;padding:11px 12px;border-radius:var(--r-sm);background:var(--shell-hi);color:var(--shell-txt);font-size:12px;line-height:1.5">
-        Kunden, Objekte und die Administration werden am Desktop gepflegt —
-        dort ist Platz für Adressen, Masterschichten und Wegstrecken.
-      </div>
     </nav>
 
     <div class="side-foot">
@@ -1394,13 +1435,6 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
           <span class="update-punkt" id="updatePunkt"></span>
         </span>
         <span class="lbl" id="navEinrichtungLbl">Einrichtung</span>
-      </button>
-      <!-- Hell/Dunkel wandert auf dem Handy hierher (ENT-059): In einer
-           Kopfzeile mit vier Knoepfen war er einer zu viel, und gebraucht wird
-           er selten -- einmal eingestellt, bleibt es so. -->
-      <button class="nav-item nur-schublade" id="nav-thema" onclick="themaUm()">
-        <svg class="i" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>
-        <span class="lbl" id="navThemaLbl">Dunkle Darstellung</span>
       </button>
       <div class="side-user">
         <div class="avatar" id="uAvatar">–</div>
@@ -3352,15 +3386,15 @@ function themaSetzen(w) {
   const dunkel = w === 'dunkel';
   document.documentElement.setAttribute('data-thema', dunkel ? 'dunkel' : 'hell');
   localStorage.setItem('rv3_thema', dunkel ? 'dunkel' : 'hell');
-  const b = $('btnThema');
-  if (b) {
+  // Zwei Schalter, ein Zustand: einer in der Kopfzeile (Desktop), einer im
+  // Aufklappmenue (Handy, ENT-067). Immer beide setzen -- der jeweils
+  // verborgene wird beim Breitenwechsel sichtbar und stuende sonst falsch da.
+  ['btnThema', 'btnThemaMob'].forEach(id => {
+    const b = $(id);
+    if (!b) { return; }
     b.setAttribute('aria-checked', dunkel ? 'true' : 'false');
     b.title = dunkel ? 'Auf helle Darstellung wechseln' : 'Auf dunkle Darstellung wechseln';
-  }
-  // Derselbe Zustand, zweite Stelle: der Eintrag im Menue benennt, wohin der
-  // Klick fuehrt -- nicht, wo man gerade steht.
-  const nb = $('navThemaLbl');
-  if (nb) { nb.textContent = dunkel ? 'Helle Darstellung' : 'Dunkle Darstellung'; }
+  });
   // Die Farbe der Systemleiste am Telefon mitziehen.
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', dunkel ? '#0B0D11' : '#16181D');
@@ -3382,7 +3416,10 @@ function go(view) {
   const nav = $('nav-' + view); if (nav) nav.classList.add('on');
   $('pgTitle').textContent = TITLES[view][0];
   $('pgCrumb').textContent = TITLES[view][1];
-  $('side').classList.remove('on');
+  // Ueber toggleSide schliessen, nicht die Klasse von Hand entfernen: seit
+  // ENT-067 haengt die Scroll-Sperre des Hintergrunds daran. Wer hier abkuerzt,
+  // laesst eine Seite zurueck, die sich nicht mehr scrollen laesst.
+  toggleSide(false);
   if (view !== 'uebersicht' && dashEntwurf) dashBearbeitenAbbrechen();
   // Das Anpassen ergibt nur auf der Übersicht einen Sinn -- der Knopf
   // verschwindet sonst, statt auf eine unsichtbare Ansicht zu wirken.
@@ -3451,12 +3488,32 @@ function go(view) {
   }
   history.replaceState(null, '', '#' + view);
 }
+// Scrollposition, die vor dem Oeffnen des Aufklappmenues galt (ENT-067).
+let seitenScroll = 0;
+
 function toggleSide(auf) {
   const s = $('side');
   const offen = auf === undefined ? !s.classList.contains('on') : !!auf;
   s.classList.toggle('on', offen);
   const b = $('btnBurger');
   if (b) { b.setAttribute('aria-expanded', offen ? 'true' : 'false'); }
+  // Der Hintergrund darf nicht mitscrollen, solange das Menue offen ist
+  // (ENT-067). Sonst wandert beim Wischen der Inhalt unter dem Menue davon,
+  // und nach dem Schliessen steht man woanders als vorher.
+  //
+  // Die Klasse sitzt am <html>, weil iOS Safari ein overflow:hidden allein am
+  // <body> ueberstimmt. Gemessen und nicht angenommen: overflow:hidden auf dem
+  // scrollenden Element setzt die Scrollposition sofort auf 0 -- nach dem
+  // Schliessen stuende man ohne Zutun wieder ganz oben. Sie wird darum vorher
+  // gemerkt und danach zurueckgesetzt.
+  const wurz = document.documentElement;
+  if (offen) {
+    if (!wurz.classList.contains('menue-offen')) { seitenScroll = window.scrollY; }
+    wurz.classList.add('menue-offen');
+  } else if (wurz.classList.contains('menue-offen')) {
+    wurz.classList.remove('menue-offen');
+    window.scrollTo(0, seitenScroll);
+  }
 }
 
 // Ein Aufklappmenue, das offen bleibt, wenn man danebentippt, fuehlt sich
