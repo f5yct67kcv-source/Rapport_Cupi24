@@ -130,7 +130,10 @@ ein. `Alt` beim Ziehen hält das Einrasten an.
 
 Auswählen zeigt Selektor und Masse. Verschieben, Abstand, Grösse, Schrift und
 Reihenfolge arbeiten mit den Pfeiltasten, `Shift` macht grössere Schritte, `Alt`
-schaltet beim Abstand von innen auf aussen. Beim Schrift-Werkzeug ändern `↑` und
+schaltet beim Abstand von innen auf aussen. Der Innenabstand wirkt symmetrisch
+und nie negativ, der Aussenabstand gerichtet — der Pfeil zeigt, wohin das
+Element soll — und darf ins Minus gehen, damit sich auch ein Block nach oben
+ziehen lässt, der oben keinen eigenen Abstand hat. Beim Schrift-Werkzeug ändern `↑` und
 `↓` die Schriftgrösse, `←` und `→` die Schriftstärke. Dazu Text ändern,
 Duplizieren, Ausblenden, Farbe, Messen, freie Platzhalter-Rechtecke für noch
 nicht existierende Elemente und Notizen an einzelnen Elementen.

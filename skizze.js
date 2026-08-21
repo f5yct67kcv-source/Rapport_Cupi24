@@ -14,7 +14,7 @@
   var WERKZEUGE = [
     { id: 'auswahl',      name: 'Auswählen',   hinweis: 'Element anklicken' },
     { id: 'verschieben',  name: 'Verschieben', hinweis: 'ziehen rastet ein, Alt hält es an' },
-    { id: 'abstand',      name: 'Abstand',     hinweis: '← → ↑ ↓ · Alt = aussen' },
+    { id: 'abstand',      name: 'Abstand',     hinweis: '← → ↑ ↓ innen · Alt = aussen, auch negativ' },
     { id: 'groesse',      name: 'Grösse',      hinweis: '← → Breite, ↑ ↓ Höhe' },
     { id: 'schrift',      name: 'Schrift',     hinweis: '↑ ↓ Grösse, ← → Stärke' },
     { id: 'text',         name: 'Text',        hinweis: 'anklicken und tippen' },
@@ -486,8 +486,8 @@
     var text = w ? w.hinweis : '';
     if (/^(groesse|abstand|verschieben)$/.test(id)) text += ' · Shift = 10 px';
     if (id === 'schrift') text += ' · Shift = 4 px';
-    if (MEHRFACH.test(id)) text += ' · Shift+Klick wählt mehrere, G Container, H Linie';
-    if (id === 'farbe') text = 'Klick = Fläche, Shift+Klick = Schrift · G Container, H Linie';
+    if (MEHRFACH.test(id)) text += ' · mehrere: Shift+Klick, G, H';
+    if (id === 'farbe') text = 'Klick = Fläche, Shift+Klick = Schrift · mehrere: G, H';
     wurzel.getElementById('hinweis').textContent = text;
     wurzel.getElementById('farben').classList.toggle('an', id === 'farbe');
     document.body.style.cursor = (id === 'platzhalter' || id === 'messen') ? 'crosshair' : '';
@@ -840,21 +840,26 @@
 
     if (werkzeug === 'abstand') {
       var aussen = e.altKey;
-      var seite = richtung[0] ? 'Inline' : 'Block';
-      var eig = (aussen ? 'margin' : 'padding') + seite;
-      var lese = richtung[0] ? (aussen ? 'marginLeft' : 'paddingLeft')
-                             : (aussen ? 'marginTop' : 'paddingTop');
+      /* Innen wirkt symmetrisch: links und rechts, oder oben und unten.
+         Aussen wirkt gerichtet -- der Pfeil zeigt, wohin das Element soll -- und
+         darf ins Minus gehen. Sonst laesst sich ein Block, der oben gar keinen
+         eigenen Abstand hat, nur nach unten schieben und nie nach oben. */
+      var eig = aussen ? (richtung[0] ? 'marginLeft' : 'marginTop')
+                       : 'padding' + (richtung[0] ? 'Inline' : 'Block');
+      var lese = aussen ? eig : (richtung[0] ? 'paddingLeft' : 'paddingTop');
       var alteA = [], neueA = [];
       auswahl.forEach(function (el) { friereGeschwisterEin(el); });
       auswahl.forEach(function (el) {
         merkeStil(el, eig);
         var vorA = px(el, lese);
-        var neuA = Math.max(0, vorA + delta * schritt);
+        var neuA = vorA + delta * schritt;
+        if (!aussen) neuA = Math.max(0, neuA);
         el.style[eig] = neuA + 'px';
         alteA.push(vorA); neueA.push(neuA);
       });
       notiereGebuendelt(auswahl.slice(), aussen ? 'margin' : 'padding',
-        richtung[0] ? 'links und rechts' : 'oben und unten',
+        aussen ? (richtung[0] ? 'links' : 'oben')
+               : (richtung[0] ? 'links und rechts' : 'oben und unten'),
         spanne(alteA, 'px'), spanne(neueA, 'px'));
       aktualisiereAnzeige();
       return true;
