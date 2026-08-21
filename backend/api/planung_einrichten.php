@@ -325,6 +325,57 @@ CREATE TABLE IF NOT EXISTS kunden_kontaktweg (
   FOREIGN KEY (person_id) REFERENCES kunden_person(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+// Zwei-Faktor-Anmeldung fuer Verwaltungszugaenge (ENT-076).
+//
+// Das Geheimnis steht im Klartext, weil der Server damit rechnen muss --
+// verschluesseln waere Selbsttaeuschung, solange der Schluessel daneben
+// laege. Es ist genau so schutzwuerdig wie die Passwort-Hashes und faellt
+// unter dieselbe Frage wie OP-58: Wer an die Datenbank kommt, kommt an
+// beides.
+//
+// aktiv = 0 heisst: eingerichtet, aber noch nicht bestaetigt. Erst wenn
+// jemand einen gueltigen Code eingegeben hat, wird daraus 1. Sonst sperrt
+// sich aus, wer den Schluessel falsch abgetippt hat.
+'zwei_faktor' => "CREATE TABLE zwei_faktor (
+  mitarbeiter_id INT PRIMARY KEY,
+  geheimnis VARCHAR(64) NOT NULL,
+  aktiv TINYINT(1) NOT NULL DEFAULT 0,
+  eingerichtet_am DATETIME DEFAULT CURRENT_TIMESTAMP,
+  bestaetigt_am DATETIME NULL,
+  letztes_fenster BIGINT NULL,
+  FOREIGN KEY (mitarbeiter_id) REFERENCES mitarbeiter(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Notfallcodes. GEHASHT, nicht im Klartext -- sie sind ein zweiter Weg
+// hinein und damit so schutzwuerdig wie ein Passwort. Bcrypt und nicht
+// etwas Schnelleres: Ein achtstelliger Code aus 31 Zeichen liesse sich
+// sonst aus einer gestohlenen Datenbank durchprobieren.
+'zwei_faktor_codes' => "CREATE TABLE zwei_faktor_codes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  mitarbeiter_id INT NOT NULL,
+  code_hash VARCHAR(255) NOT NULL,
+  erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
+  benutzt_am DATETIME NULL,
+  KEY idx_person (mitarbeiter_id, benutzt_am),
+  FOREIGN KEY (mitarbeiter_id) REFERENCES mitarbeiter(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Vertrauenswuerdige Geraete (14 Tage, Entscheid des Projektinhabers).
+// Auch hier nur der Hash: Der Wert im Browser ist ein Schluessel, der den
+// zweiten Faktor ersetzt -- im Klartext gespeichert waere er ein zweites
+// Passwort in der Datenbank.
+'zwei_faktor_geraete' => "CREATE TABLE zwei_faktor_geraete (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  mitarbeiter_id INT NOT NULL,
+  merkmal_hash CHAR(64) NOT NULL,
+  bezeichnung VARCHAR(120) NULL,
+  erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
+  letzte_nutzung DATETIME NULL,
+  UNIQUE KEY uq_merkmal (merkmal_hash),
+  KEY idx_person (mitarbeiter_id),
+  FOREIGN KEY (mitarbeiter_id) REFERENCES mitarbeiter(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 // Kurzzeitgedaechtnis der Anmeldebremse (ENT-075).
 //
 // Bewusst KEIN dauerhaftes Protokoll: Es wird nach einem Tag geleert und

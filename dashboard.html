@@ -1524,7 +1524,22 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
       </div>
       <div class="f">
         <label for="gPass">Passwort</label>
-        <input class="inp" type="password" id="gPass" autocomplete="current-password">
+        <input class="inp" type="password" id="gPass" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <!-- Zweiter Faktor (ENT-076). Erscheint erst, wenn der Server ihn
+           verlangt -- wer keine Zwei-Faktor-Anmeldung eingeschaltet hat,
+           sieht dieses Feld nie. -->
+      <div id="gate2fa" style="display:none">
+        <div class="f">
+          <label for="gCode">Code aus der Authenticator-App</label>
+          <input class="inp" type="text" id="gCode" inputmode="numeric" autocomplete="one-time-code"
+                 placeholder="6 Ziffern — oder ein Notfallcode"
+                 onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <label class="check" style="margin-bottom:12px;display:block">
+          <input type="checkbox" id="gMerken"> <span id="gMerkenText">diesem Gerät vertrauen</span>
+        </label>
       </div>
       <button class="btn btn-primary btn-wide" id="gBtn" onclick="doLogin()">Anmelden</button>
     </div>
@@ -2372,6 +2387,18 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
            falsche Ort: Sie beschreiben nicht ein Objekt, sondern den Betrieb,
            und sie sind die Messgrundlage fuer den gesamten Auslagenersatz. -->
       <section class="view" id="view-betrieb">
+        <!-- Zwei-Faktor-Anmeldung (ENT-076). Steht hier und nicht bei den
+             Mitarbeitenden: Es geht um den EIGENEN Zugang, nicht um fremde.
+             Nur fuer Verwaltungszugaenge -- so entschieden, weil daran die
+             ganze Personalakte haengt. -->
+        <div class="card" style="margin-bottom:16px" id="zfKarte">
+          <div class="card-hd"><h3>Mein Zugang: Zwei-Faktor-Anmeldung</h3></div>
+          <div class="card-bd">
+            <div class="msg-err" id="zfErr" style="display:none"></div>
+            <div id="zfInhalt"><div style="color:var(--ink-3)">Wird geladen …</div></div>
+          </div>
+        </div>
+
         <div class="card" style="margin-bottom:16px">
           <div class="card-hd"><h3>Anstellungsorte</h3></div>
           <div class="card-bd">
@@ -3153,8 +3180,29 @@ function doLogin() {
   err.style.display = 'none';
   if (!name || !pass) { err.textContent = 'Name und Passwort erforderlich.'; err.style.display = ''; return; }
   const btn = $('gBtn'); btn.disabled = true; btn.textContent = 'Anmelden …';
-  api('login.php', { method: 'POST', body: { name, password: pass } }).then(({ ok, data }) => {
+
+  const body = { name, password: pass };
+  // Das gemerkte Geraet gehoert zum LOGIN-NAMEN, nicht zum Browser: An
+  // einem geteilten Rechner soll das Merkmal des einen nicht den zweiten
+  // Faktor des anderen ersetzen.
+  const gemerkt = localStorage.getItem('rv3_geraet_' + name);
+  if (gemerkt) { body.geraet = gemerkt; }
+  if ($('gate2fa').style.display !== 'none') {
+    body.code = ($('gCode').value || '').trim();
+    body.geraet_merken = $('gMerken').checked;
+  }
+
+  api('login.php', { method: 'POST', body }).then(({ ok, data }) => {
     btn.disabled = false; btn.textContent = 'Anmelden';
+
+    // Der Server verlangt den zweiten Faktor: Feld einblenden und stehen
+    // bleiben. Das ist KEIN Fehler -- darum kein rotes Band.
+    if (data && data.status === 'zweifaktor') {
+      $('gate2fa').style.display = '';
+      $('gMerkenText').textContent = `diesem Gerät ${data.geraet_tage || 14} Tage vertrauen`;
+      $('gCode').focus();
+      return;
+    }
     if (!ok || data.status !== 'ok') {
       err.textContent = data.message || 'Anmeldung fehlgeschlagen.'; err.style.display = ''; return;
     }
@@ -3162,6 +3210,8 @@ function doLogin() {
     me = { name: data.name, ist_admin: data.ist_admin };
     localStorage.setItem('rv3_token', token);
     localStorage.setItem('rv3_user', JSON.stringify(me));
+    // Merkmal des vertrauenswuerdigen Geraets aufbewahren, falls eines kam.
+    if (data.geraet) { localStorage.setItem('rv3_geraet_' + name, data.geraet); }
     enter();
   });
 }
@@ -3741,7 +3791,7 @@ function go(view) {
   if (view !== 'planung') weiteAnsicht(false);
   if (view === 'planung' && MOBIL() && pTab === 'uebersicht') goTab('einsaetze');
   if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
-  if (view === 'betrieb') ladeBetrieb();
+  if (view === 'betrieb') { ladeBetrieb(); zfLaden(); }
   // Die Administrationsgruppe klappt auf, wenn eine ihrer Seiten offen ist --
   // und der Elternpunkt wird mitmarkiert, sonst sieht die Seitenleiste aus,
   // als waere man nirgends (dasselbe Muster wie bei den Kunden, ENT-039).
@@ -5985,6 +6035,167 @@ function ladeBetrieb() {
   anTarget = null;
   $('anErr').style.display = 'none';
   return ladeAnstellungsorte().then(() => { anListeZeichnen(); anFormularLeeren(); });
+}
+
+// ══════════════════════════════════════════ ZWEI-FAKTOR-ANMELDUNG (ENT-076)
+// Freiwillig und nur fuer Verwaltungszugaenge. Der Ablauf hat drei Schritte
+// und darf an keinem davon jemanden aussperren:
+//   1. Schluessel anzeigen -- noch ist nichts scharf.
+//   2. Einen Code eingeben, der aus diesem Schluessel entsteht. ERST DANN
+//      wird es scharf. Wer falsch abgetippt hat, merkt es hier und nicht
+//      beim naechsten Anmelden.
+//   3. Notfallcodes zeigen -- einmal, im Klartext, zum Ausdrucken.
+let zfStand = null;
+
+function zfLaden() {
+  api('zweifaktor_status.php').then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { zfFehler('Der Stand liess sich nicht laden.'); return; }
+    zfStand = data;
+    zfZeichnen();
+  });
+}
+
+function zfFehler(text) {
+  const e = $('zfErr');
+  e.textContent = text || '';
+  e.style.display = text ? '' : 'none';
+}
+
+function zfZeichnen(zusatz) {
+  const d = zfStand || {};
+  if (!d.moeglich) {
+    $('zfInhalt').innerHTML = '<div style="color:var(--ink-3)">Die Zwei-Faktor-Anmeldung '
+      + 'gibt es nur für Verwaltungszugänge.</div>';
+    return;
+  }
+  if (!d.eingerichtet) {
+    $('zfInhalt').innerHTML = `<div class="ki-hint web on"><span><b>Noch nicht einsatzbereit.</b>
+      Die Tabellen dafür fehlen in der Datenbank — einmal „Einrichtung“ in der Seitenleiste
+      ausführen, dann erscheint hier der Einschalter.</span></div>`;
+    return;
+  }
+  if (zusatz) { $('zfInhalt').innerHTML = zusatz; return; }
+
+  if (!d.an) {
+    $('zfInhalt').innerHTML = `
+      <p style="margin:0 0 12px;font-size:13.5px;line-height:1.6">
+        Beim Anmelden wird zusätzlich zum Passwort eine sechsstellige Zahl aus einer
+        Authenticator-App verlangt. Ein gestohlenes Passwort allein genügt dann nicht mehr.
+        <b>Am Verwaltungszugang hängt die vollständige Personalakte aller Mitarbeitenden</b> —
+        deshalb gibt es das hier und nicht in der Mitarbeiter-App.
+      </p>
+      <button class="btn btn-primary" onclick="zfStarten()">Einrichten</button>`;
+    return;
+  }
+
+  const g = (d.geraete || []).map(x => `
+    <tr><td>${esc(x.bezeichnung || 'Unbekannt')}</td>
+        <td class="nowrap">${x.letzte_nutzung ? dmy(x.letzte_nutzung) : '–'}</td>
+        <td class="nowrap"><button class="btn btn-plain btn-sm"
+            onclick="zfGeraetWeg(${Number(x.id)})">vergessen</button></td></tr>`).join('');
+
+  // "Keine gemerkten Geraete" ist etwas anderes als "noch nicht geladen".
+  $('zfInhalt').innerHTML = `
+    <div class="ki-hint on" style="margin-bottom:14px"><span><b>Eingeschaltet.</b>
+      Beim Anmelden wird der Code aus der Authenticator-App verlangt.</span></div>
+    <dl class="ku-detail-info" style="margin-bottom:16px">
+      <dt>Notfallcodes übrig</dt>
+      <dd>${Number(d.notfallcodes_offen)} von 10${Number(d.notfallcodes_offen) <= 2
+        ? ' <span class="chip chip-w">werden knapp</span>' : ''}</dd>
+    </dl>
+    <div class="zone">
+      <div class="zone-hd">Gemerkte Geräte (${Number(d.geraet_tage)} Tage)</div>
+      <div class="zone-note">Auf diesen Geräten wird der Code nicht mehr verlangt.
+        Ist eines abhandengekommen, hier vergessen lassen.</div>
+      ${g ? `<table style="width:100%"><tbody>${g}</tbody></table>
+             <button class="btn btn-plain btn-sm" style="margin-top:10px"
+                     onclick="zfGeraetWeg(0)">Alle vergessen</button>`
+          : '<div style="color:var(--ink-3);font-size:13px">— keine gemerkt —</div>'}
+    </div>
+    <div class="zone danger">
+      <div class="zone-hd">Zwei-Faktor-Anmeldung abschalten</div>
+      <div class="zone-note">Danach genügt wieder das Passwort allein. Zur Sicherheit
+        wird dein Passwort verlangt — nicht nur diese offene Sitzung.</div>
+      <div class="inp-row">
+        <input class="inp" id="zfAusPw" type="password" placeholder="dein Passwort" autocomplete="current-password">
+        <button class="btn btn-danger" onclick="zfAus()">Abschalten</button>
+      </div>
+    </div>`;
+}
+
+function zfStarten() {
+  zfFehler('');
+  api('zweifaktor_start.php', { method: 'POST', body: {} }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { zfFehler(data.message || 'Einrichten fehlgeschlagen.'); return; }
+    zfZeichnen(`
+      <p style="margin:0 0 10px;font-size:13.5px;line-height:1.6">
+        <b>1.</b> In der Authenticator-App „Konto hinzufügen“ → „Schlüssel manuell eingeben“
+        wählen und diesen Schlüssel eintippen:
+      </p>
+      <div style="font-family:ui-monospace,monospace;font-size:16px;letter-spacing:1px;
+                  padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-sm);
+                  margin-bottom:14px;word-break:break-all">${esc(data.geheimnis)}</div>
+      <p style="margin:0 0 10px;font-size:13.5px">
+        <b>2.</b> Den sechsstelligen Code eingeben, den die App danach anzeigt:</p>
+      <div class="inp-row" style="margin-bottom:12px">
+        <input class="inp" id="zfCode" inputmode="numeric" placeholder="6 Ziffern"
+               onkeydown="if(event.key==='Enter')zfBestaetigen()">
+        <button class="btn btn-primary" onclick="zfBestaetigen()">Bestätigen</button>
+      </div>
+      <p style="margin:0;font-size:12.5px;color:var(--ink-3)">
+        Noch ist nichts scharf geschaltet. Erst wenn der Code stimmt, wird die
+        Zwei-Faktor-Anmeldung eingeschaltet — so sperrt sich niemand aus, der
+        den Schlüssel falsch abgetippt hat.
+      </p>
+      <button class="btn btn-plain btn-sm" style="margin-top:12px" onclick="zfLaden()">Abbrechen</button>`);
+    const f = $('zfCode'); if (f) { f.focus(); }
+  });
+}
+
+function zfBestaetigen() {
+  zfFehler('');
+  const code = ($('zfCode').value || '').trim();
+  api('zweifaktor_bestaetigen.php', { method: 'POST', body: { code } }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { zfFehler(data.message || 'Der Code stimmt nicht.'); return; }
+    // Die Notfallcodes gibt es GENAU HIER einmal. Danach stehen sie nur noch
+    // gehasht in der Datenbank -- sie lassen sich nicht wieder hervorholen.
+    const liste = (data.notfallcodes || []).map(c =>
+      `<div style="font-family:ui-monospace,monospace;font-size:15px;padding:4px 0">${esc(c)}</div>`).join('');
+    zfZeichnen(`
+      <div class="ki-hint on" style="margin-bottom:14px"><span><b>Eingeschaltet.</b>
+        Ab jetzt wird beim Anmelden zusätzlich der Code verlangt.</span></div>
+      <div class="zone danger">
+        <div class="zone-hd">Notfallcodes — jetzt ausdrucken oder abschreiben</div>
+        <div class="zone-note">Jeder gilt genau einmal und ersetzt den Code aus der App.
+          <b>Das ist das einzige Mal, dass sie zu sehen sind.</b> Ohne sie und ohne Handy
+          kommst du nur noch über die Datenbank bei Hostpoint wieder hinein.</div>
+        <div style="columns:2;margin:10px 0 4px">${liste}</div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="zfLaden()">
+        Ich habe sie sicher verwahrt</button>`);
+  });
+}
+
+function zfAus() {
+  zfFehler('');
+  const passwort = $('zfAusPw').value || '';
+  if (!passwort) { zfFehler('Bitte das Passwort eingeben.'); return; }
+  askConfirm('Zwei-Faktor-Anmeldung abschalten?',
+    'Danach genügt wieder das Passwort allein. Gemerkte Geräte und Notfallcodes werden gelöscht.',
+    'Abschalten',
+    () => api('zweifaktor_aus.php', { method: 'POST', body: { passwort } }).then(({ ok, data }) => {
+      if (!ok || data.status !== 'ok') { zfFehler(data.message || 'Fehlgeschlagen.'); return; }
+      toast('Zwei-Faktor-Anmeldung abgeschaltet.');
+      zfLaden();
+    }));
+}
+
+function zfGeraetWeg(id) {
+  api('zweifaktor_geraet_weg.php', { method: 'POST', body: { id } }).then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') { zfFehler(data.message || 'Fehlgeschlagen.'); return; }
+    toast(id ? 'Gerät vergessen.' : 'Alle Geräte vergessen.');
+    zfLaden();
+  });
 }
 
 function anFormularLeeren() {

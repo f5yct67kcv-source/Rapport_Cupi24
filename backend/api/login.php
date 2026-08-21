@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
 require __DIR__ . '/../anmeldung.php';
+require __DIR__ . '/../zweifaktor.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['status' => 'error', 'message' => 'nur POST'], 405);
@@ -10,6 +11,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = json_decode(file_get_contents('php://input'), true) ?? [];
 $name = trim((string)($input['name'] ?? ''));
 $password = (string)($input['password'] ?? '');
+// Zweiter Faktor (ENT-076). Beides freiwillig: Wer keine Zwei-Faktor-
+// Anmeldung eingeschaltet hat, merkt von diesen Zeilen nichts.
+$code   = (string)($input['code'] ?? '');
+$geraet = (string)($input['geraet'] ?? '');
+$geraetMerken = !empty($input['geraet_merken']);
 
 if ($name === '' || $password === '') {
     json_response(['status' => 'error', 'message' => 'Name und Passwort erforderlich'], 400);
@@ -36,6 +42,33 @@ $user = $stmt->fetch();
 if (!$user || !password_verify($password, $user['password_hash'])) {
     anmeld_fehlversuch(db(), $name, $adresse);
     json_response(['status' => 'error', 'message' => 'Name oder Passwort falsch'], 401);
+}
+
+// ── Zweiter Faktor, falls eingeschaltet (ENT-076) ─────────────────────
+// AB HIER ist das Passwort richtig. Die Fehlversuche werden aber noch NICHT
+// zurueckgesetzt: Ein sechsstelliger Code liesse sich sonst unbegrenzt
+// durchprobieren, weil jeder Versuch die Zaehlung loeschen wuerde.
+$person = (int)$user['id'];
+if (zf_ist_an(db(), $person)) {
+    $vertraut = $geraet !== '' && zf_geraet_gilt(db(), $person, $geraet);
+    if (!$vertraut) {
+        if ($code === '') {
+            // Kein Fehlversuch: Es wurde ja noch nichts geraten. Sonst
+            // koennte jemand fremde Zugaenge allein durch Anmeldeversuche
+            // aussperren.
+            json_response(['status' => 'zweifaktor',
+                'message' => 'Bitte den sechsstelligen Code aus der Authenticator-App eingeben.',
+                'geraet_tage' => ZF_GERAET_TAGE], 200);
+        }
+        // Erst der Zeitcode, dann die Notfallcodes -- der Normalfall zuerst.
+        $gut = zf_code_einloesen(db(), $person, $code, time())
+            || zf_notfallcode_einloesen(db(), $person, $code);
+        if (!$gut) {
+            anmeld_fehlversuch(db(), $name, $adresse);
+            json_response(['status' => 'error',
+                'message' => 'Der Code stimmt nicht.'], 401);
+        }
+    }
 }
 
 // Geschafft -- die Fehlversuche dieses Namens sind erledigt.
@@ -65,4 +98,24 @@ if (hat_spalte(db(), 'sessions', 'letzte_nutzung')) {
 }
 $stmt->execute([$token, $user['id']]);
 
-json_response(['status' => 'ok', 'token' => $token, 'name' => $name, 'ist_admin' => (bool)$user['ist_admin']]);
+// Geraet merken, wenn gewuenscht und die Zwei-Faktor-Anmeldung an ist.
+// Ohne zweiten Faktor waere ein gemerktes Geraet sinnlos -- es wuerde
+// nichts ersetzen.
+$geraetWert = '';
+if ($geraetMerken && zf_ist_an(db(), $person)) {
+    // Nur eine grobe Bezeichnung, damit man in der Liste erkennt, welches
+    // Geraet gemeint ist. Die volle Browserkennung waere ein Merkmal mehr,
+    // als fuer diesen Zweck noetig ist.
+    $kennung = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+    $bez = 'Unbekanntes Gerät';
+    foreach ([['iPhone', 'iPhone'], ['iPad', 'iPad'], ['Android', 'Android-Gerät'],
+              ['Macintosh', 'Mac'], ['Windows', 'Windows-Rechner'], ['Linux', 'Linux-Rechner']] as [$suche, $klar]) {
+        if (str_contains($kennung, $suche)) { $bez = $klar; break; }
+    }
+    $geraetWert = zf_geraet_merken(db(), $person, $bez);
+    if (random_int(1, 20) === 1) { zf_geraete_aufraeumen(db()); }
+}
+
+json_response(['status' => 'ok', 'token' => $token, 'name' => $name,
+    'ist_admin' => (bool)$user['ist_admin'],
+    'geraet' => $geraetWert]);
