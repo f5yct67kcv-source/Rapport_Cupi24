@@ -1130,6 +1130,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 .ma-janein label { display: inline-flex; align-items: center; gap: 8px;
   font-size: 13px; font-weight: 550; cursor: pointer; }
 .ma-regel { margin-bottom: 14px; }
+.md-marken { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* Tageskopf im Tagesplan (ENT-068) -- als Klassen statt Inline-Stil, damit
    sich die Groesse mobil anheben laesst, ohne den Desktop anzutasten. */
@@ -2227,7 +2228,10 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             <button class="tab" id="mdtab-dienstplaene" onclick="mdGoTab('dienstplaene')">Dienstpläne</button>
           </div>
           <div class="md-tab on" id="md-uebersicht">
-            <div class="card"><div class="card-bd" id="mdInfo"></div></div>
+            <!-- Kein Karten-Rahmen mehr drumherum: Seit ENT-072 stellt die
+                 Uebersicht selbst Abschnitts-Karten, und eine Karte in einer
+                 Karte gibt nur einen doppelten Rand. -->
+            <div id="mdInfo"></div>
           </div>
           <div class="md-tab" id="md-dienstplaene">
             <div class="bar-tools bar-eng">
@@ -4104,7 +4108,8 @@ function exportCSV() {
 function renderMitarbeiter() {
   const q = ($('mQ').value || '').toLowerCase().trim();
   const d = mitarbeiter.filter(m => !q ||
-    [m.name, m.vorname, m.nachname, m.ort, m.personalnummer, m.email].some(f => String(f || '').toLowerCase().includes(q)));
+    [m.name, m.vorname, m.nachname, m.plz, m.ort, m.personalnummer, m.email,
+     maListenName('funktion', m.funktion_id)].some(f => String(f || '').toLowerCase().includes(q)));
   if (!d.length) {
     $('maTable').innerHTML = mitarbeiter.length
       ? EMPTY('Keine Treffer', 'Für diese Suche gibt es keine Mitarbeitenden.')
@@ -4112,27 +4117,76 @@ function renderMitarbeiter() {
     return;
   }
   $('maTable').innerHTML = `<table><thead><tr>
-      <th>Pers-Nr.</th><th>Anrede</th><th>Vorname</th><th>Nachname</th><th>Anschrift</th>
-      <th>Ort</th><th>Telefon</th><th>Mobil</th><th>E-Mail</th><th>Rolle</th>
+      <th>Pers-Nr.</th><th>Vorname</th><th>Nachname</th><th>Funktion</th><th>Anschrift</th>
+      <th>Ort</th><th>Telefon</th><th>Mobil</th><th>E-Mail</th><th>Berechtigt</th><th>Rolle</th>
     </tr></thead><tbody>` + d.map(m => `
       <tr class="click" onclick="openMaDetail('${esc(m.name)}')">
         <td class="num nowrap">${dash(m.personalnummer)}</td>
-        <td class="nowrap">${dash(m.anrede)}</td>
         <td class="nowrap">${dash(m.vorname)}</td>
         <td class="strong nowrap">${dash(m.nachname)}<div class="sec">${esc(m.name)}</div></td>
-        <td>${dash(m.strasse)}</td>
-        <td class="nowrap">${dash(m.ort)}</td>
+        <td class="nowrap">${dash(maListenName('funktion', m.funktion_id))}</td>
+        <td>${dash([m.strasse, m.hausnummer].filter(Boolean).join(' '))}</td>
+        <td class="nowrap">${dash([m.plz, m.ort].filter(Boolean).join(' '))}</td>
         <td class="nowrap num">${dash(m.telefon)}</td>
         <td class="nowrap num">${dash(m.mobil)}</td>
         <td>${dash(m.email)}</td>
+        <td class="nowrap">${maBerechtigungen(m)}</td>
         <td>${Number(m.ist_admin) ? '<span class="chip chip-a">Admin</span>' : '<span class="chip chip-n">Mitarbeit.</span>'}</td>
       </tr>`).join('') + `</tbody></table>`;
+}
+
+// Name statt Id -- aus derselben Liste, die auch die Auswahlfelder fuellt.
+function maListenName(art, id) {
+  if (!id) { return ''; }
+  const e = (mbListen[art] || []).find(x => Number(x.id) === Number(id));
+  return e ? e.bezeichnung : '';
+}
+
+// Was jemand ueberhaupt leisten darf, steht in der Liste -- nicht erst in der
+// Akte. Wer einteilt, muss es beim Planen sehen und nicht nachschlagen
+// muessen. Der Zuschlag nach Art. 19 GAV entsteht dagegen am angeordneten
+// Einsatz und nicht an der Person; hier steht nur die Berechtigung.
+function maBerechtigungen(m) {
+  const teile = [];
+  if (m.fachausweis) { teile.push(`<span class="chip chip-a">FA ${esc(m.fachausweis)}</span>`); }
+  // Die Kurzformen kommen aus MB_ABSCHNITTE, nicht aus einer zweiten Wortliste.
+  MB_ABSCHNITTE.forEach(a => (a.janein || []).forEach(([f, lang, kurz]) => {
+    if (Number(m[f])) { teile.push(`<span class="chip chip-n">${esc(kurz || lang)}</span>`); }
+  }));
+  return teile.length ? teile.join(' ') : '<span style="color:var(--ink-3)">–</span>';
 }
 
 // ── Mitarbeiter-Detailseite mit Dienstplänen (ENT-048) ────────────────────
 // Drilldown aus der Liste, gleiches Muster wie bei Kunden (ENT-040).
 let mdName = null;    // Login-Name der offenen Person
 let mdTab = 'uebersicht';
+
+// Der vollstaendige Datensatz der geoeffneten Person (ENT-072). Seit die
+// Sammelabfrage nur noch die Listenfelder traegt, reicht mitarbeiter[] fuer
+// die Detailseite nicht mehr: Geburtsdatum, AHV-Nummer und Bewilligungen
+// stehen dort nicht drin. Wuerde die Seite weiter daraus lesen, zeigte sie
+// ueberall "–" -- und "nicht geladen" saehe aus wie "nicht erfasst".
+let maAkte = null;
+
+// EIN Lader fuer Detailseite und Bearbeitungsflaeche. Zwei Lader waeren zwei
+// Staende derselben Person; einer zeigte dann noch den Wert, den der andere
+// gerade ueberschrieben hat.
+function maAkteLaden(name) {
+  // Die Anstellungsorte kommen mit: ohne sie stuende im Feld "Standort"
+  // "noch keine erfasst", obwohl es nur nicht geladen war.
+  return Promise.all([
+    api('mitarbeiter_dossier.php?name=' + encodeURIComponent(name)),
+    anstellungsorte.length ? Promise.resolve() : ladeAnstellungsorte(),
+  ]).then(([{ ok, data }]) => {
+    if (!ok || data.status !== 'ok') {
+      maAkte = null;
+      throw new Error(data && data.message ? data.message : 'Der Datensatz liess sich nicht laden.');
+    }
+    maAkte = data.mitarbeiter;
+    maEingerichtet = data.eingerichtet !== false;
+    return maAkte;
+  });
+}
 
 function maGoTab(t) {
   document.querySelectorAll('#view-mitarbeiter .ma-tab').forEach(v => v.classList.remove('on'));
@@ -4143,9 +4197,12 @@ function maGoTab(t) {
 }
 function openMaDetail(name) {
   mdName = name;
+  maAkte = null;
   if (!$('mdMonat').value) { $('mdMonat').value = isoTag().slice(0, 7); }
   maGoTab('detail');
   mdGoTab(mdTab);
+  maAkteLaden(name).then(() => renderMaDetail())
+    .catch(e => { $('mdInfo').innerHTML = `<div class="msg-err">${esc(e.message)}</div>`; });
 }
 function mdGoTab(t) {
   mdTab = t;
@@ -4209,21 +4266,114 @@ function renderMaDetail() {
   $('mdSub').textContent = `${p.personalnummer ? 'Pers-Nr. ' + p.personalnummer + ' · ' : ''}${p.name}`
     + (Number(p.ist_admin) ? ' · Verwaltung' : '');
 
-  if (mdTab === 'uebersicht') {
-    const leer = '<span style="color:var(--ink-3)">–</span>';
-    $('mdInfo').innerHTML = `
-      <dl class="ku-detail-info">
-        <dt>Anrede</dt><dd>${dash(p.anrede)}</dd>
-        <dt>Anschrift</dt><dd>${[p.strasse, p.ort].filter(Boolean).map(esc).join('<br>') || leer}</dd>
-        <dt>Geburtsdatum</dt><dd>${p.geburtsdatum ? dmy(p.geburtsdatum) : leer}</dd>
-        <dt>Telefon</dt><dd>${dash(p.telefon)}</dd>
-        <dt>Mobil</dt><dd>${dash(p.mobil)}</dd>
-        <dt>E-Mail</dt><dd>${dash(p.email)}</dd>
-        <dt>Rolle</dt><dd>${Number(p.ist_admin) ? 'Verwaltung (Admin)' : 'Mitarbeitende'}</dd>
-      </dl>`;
+  if (mdTab === 'uebersicht') { mdUebersicht(); return; }
+  mdDienstplaene();
+}
+
+// Leseansicht der Akte. Sie wird aus MB_ABSCHNITTE erzeugt und nicht noch
+// einmal von Hand geschrieben: Reihenfolge und Beschriftung gaebe es sonst
+// zweimal, und beim naechsten neuen Feld waere eine der beiden Stellen
+// vergessen.
+// Felder, die man getrennt EINGIBT, aber zusammen LIEST. Die Eingabe bleibt
+// feldweise, weil auch feldweise gespeichert wird -- nur die Leseansicht
+// fasst zusammen: Eine Adresse liest man als Adresse und nicht als fuenf
+// untereinanderstehende Zeilen, und ein Ausweis gehoert mit seiner
+// Gueltigkeit in EINE Zeile.
+const MD_ZUSAMMEN = {
+  strasse:                { mit: ['hausnummer'],             label: 'Strasse' },
+  plz:                    { mit: ['ort'],                    label: 'PLZ und Ort' },
+  fachausweis:            { mit: ['fachausweis_am'],         label: 'Eidg. Fachausweis',  vor: 'erworben ' },
+  aufenthaltsbewilligung: { mit: ['aufenthalt_gueltig_bis'], label: 'Ausweiskategorie',   vor: 'gültig bis ' },
+  arbeitsbewilligung:     { mit: ['arbeit_gueltig_bis'],     label: 'Arbeitsbewilligung', vor: 'gültig bis ' },
+  dienstausweis_nr:       { mit: ['dienstausweis_gueltig_bis'], label: 'Dienstausweis',   vor: 'gültig bis ' },
+  telefon:                { mit: ['telefon_geschaeft'],      label: 'Telefon',            vor: 'geschäftlich ' },
+  mobil:                  { mit: ['mobil_geschaeft'],        label: 'Mobil',              vor: 'geschäftlich ' },
+};
+
+function mdUebersicht() {
+  if (!maAkte) {
+    $('mdInfo').innerHTML = '<div style="color:var(--ink-3)">Wird geladen …</div>';
     return;
   }
-  mdDienstplaene();
+  const m = maAkte;
+  const heute = isoTag();
+
+  // Ein abgelaufener Ausweis ist keine Nebensache: Damit darf niemand
+  // eingeteilt werden. Ein bald ablaufender auch nicht mehr lange.
+  const frist = (feld, wert) => {
+    if (!/gueltig_bis$/.test(feld) || !wert) { return ''; }
+    const tag = String(wert).slice(0, 10);
+    if (tag < heute) { return ' <span class="chip chip-x">abgelaufen</span>'; }
+    const in60 = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
+    return tag <= in60 ? ' <span class="chip chip-w">läuft bald ab</span>' : '';
+  };
+
+  // Ein Feld als Text, ohne Beschriftung. null heisst "steht nichts drin".
+  const text = ([f, , typ, quelle]) => {
+    const roh = m[f];
+    if (typ === 'd') { return roh ? dmy(roh) : null; }
+    if (typ === 'a' && quelle && !Array.isArray(quelle)) {
+      const liste = quelle === 'anstellungsort' ? anstellungsorte : (mbListen[quelle] || []);
+      const e = liste.find(x => Number(x.id) === Number(roh));
+      return e ? e.bezeichnung : null;
+    }
+    return (roh === null || roh === undefined || String(roh).trim() === '') ? null : String(roh);
+  };
+
+  const karten = MB_ABSCHNITTE.map(a => {
+    const felder = a.felder || [];
+    const erledigt = new Set();
+    let zeilen = felder.map((eintrag, i) => {
+      const f = eintrag[0];
+      if (erledigt.has(f)) { return ''; }
+      const zus = MD_ZUSAMMEN[f];
+      if (!zus) {
+        const w = text(eintrag);
+        return w === null ? '' : `<dt>${esc(eintrag[1])}</dt><dd>${esc(w)}${frist(f, m[f])}</dd>`;
+      }
+      // Zusammengefasste Zeile: erst der Hauptwert, dann die Beisatz-Felder.
+      const haupt = text(eintrag);
+      const teile = [];
+      let anhang = '';
+      zus.mit.forEach(g => {
+        erledigt.add(g);
+        const e2 = felder.find(x => x[0] === g);
+        if (!e2) { return; }
+        const w2 = text(e2);
+        if (w2 === null) { return; }
+        teile.push((zus.vor || '') + w2);
+        anhang += frist(g, m[g]);
+      });
+      if (haupt === null && !teile.length) { return ''; }
+      const wert = [haupt, teile.join(' · ')].filter(Boolean).join(zus.vor ? ' · ' : ' ');
+      return `<dt>${esc(zus.label)}</dt><dd>${esc(wert)}${anhang}</dd>`;
+    }).join('');
+    // Ja/Nein NUR bei "ja", und als eine Zeile mit Marken. Ein "nein" bei
+    // jeder Berechtigung fuellt die Seite mit Nichtinformation.
+    const marken = (a.janein || []).filter(([f]) => Number(m[f]))
+      .map(([, lang, kurz]) => `<span class="chip chip-n">${esc(kurz || lang)}</span>`);
+    if (marken.length) {
+      zeilen += `<dt>Berechtigt für</dt><dd class="md-marken">${marken.join(' ')}</dd>`;
+    }
+    if (a.konto) {
+      zeilen += `<dt>Rolle</dt><dd>${Number(m.ist_admin) ? 'Verwaltung (Admin)' : 'Mitarbeitende'}</dd>`
+             + `<dt>Angelegt am</dt><dd>${m.erstellt_am ? dmy(m.erstellt_am) : '–'}</dd>`;
+    }
+    if (!zeilen) { return ''; }              // Leere Abschnitte fallen weg
+    return `<div class="card"><div class="card-hd"><h3>${esc(a.titel)}</h3></div>
+      <div class="card-bd"><dl class="ku-detail-info">${zeilen}</dl></div></div>`;
+  }).join('');
+
+  // "Nichts erfasst" und "Felder fehlen in der Datenbank" sind zwei
+  // verschiedene Aussagen und duerfen nicht gleich aussehen.
+  const hinweis = !maEingerichtet
+    ? `<div class="ki-hint web on ma-regel"><span><b>Die Felder aus ENT-072 sind in dieser
+       Datenbank noch nicht angelegt.</b> Was hier fehlt, ist deshalb nicht zwingend leer
+       erfasst. Einmal „Einrichtung“ in der Seitenleiste ausführen.</span></div>` : '';
+
+  $('mdInfo').innerHTML = hinweis + (karten
+    ? `<div class="ma-karten">${karten}</div>`
+    : EMPTY('Noch nichts erfasst', 'Über „Bearbeiten“ lassen sich die Angaben zu dieser Person eintragen.'));
 }
 
 function mdDienstplaene() {
@@ -7711,7 +7861,7 @@ function createMa() {
 // Deaktivierung sind mitgezogen und stehen dort in der Karte "Zugang".
 
 function resetMaPw() {
-  const name = mbDaten && mbDaten.name;
+  const name = maAkte && maAkte.name;
   if (!name) return;
   const password = $('maPw').value;
   if (password.length < 6) { toast('Passwort mindestens 6 Zeichen.'); return; }
@@ -7723,7 +7873,7 @@ function resetMaPw() {
 }
 
 function askRemoveMa() {
-  const name = mbDaten && mbDaten.name;
+  const name = maAkte && maAkte.name;
   if (!name) return;
   askConfirm('Mitarbeitenden entfernen?',
     `„${name}“ wird deaktiviert und überall abgemeldet. Erfasste Rapporte bleiben erhalten.`,
@@ -7732,7 +7882,7 @@ function askRemoveMa() {
       if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
       // Zurueck in die Liste, nicht auf die Detailseite: die Person ist dort
       // nicht mehr, und eine leere Detailseite sieht aus wie ein Fehler.
-      mbDaten = null; mbAend = {};
+      maAkte = null; mbAend = {};
       Promise.all([loadMitarbeiter(), loadStats()])
         .then(() => { maGoTab('liste'); toast('Mitarbeitender entfernt.'); });
     }));
@@ -8452,9 +8602,13 @@ const MB_ABSCHNITTE = [
     ['basisausbildung_am', 'Basisausbildung absolviert am', 'd', null, null, true],
     ['diensthund_bewilligung_bis', 'Diensthundeführer-Bewilligung gültig bis', 'd'],
     ['waffe_bewilligung_bis',      'Waffentragbewilligung gültig bis',        'd'],
+  // Drittes Feld = Kurzform. In der Eingabe braucht es den ganzen Satz, damit
+  // ein Kaestchen eindeutig ist; in Liste und Leseansicht steht dieselbe
+  // Berechtigung als Marke, und "Darf mit Diensthund eingesetzt werden: ja"
+  // waere dort eine Zeile, die sich selbst wiederholt.
   ], janein: [
-    ['diensthundefuehrer',   'Darf mit Diensthund eingesetzt werden'],
-    ['waffentragberechtigt', 'Darf mit Schusswaffe eingesetzt werden'],
+    ['diensthundefuehrer',   'Darf mit Diensthund eingesetzt werden',  'Diensthund'],
+    ['waffentragberechtigt', 'Darf mit Schusswaffe eingesetzt werden', 'Schusswaffe'],
   ]},
   // Reihenfolge ist hier keine Geschmacksfrage: In einem zweispaltigen Raster
   // steht jedes "gültig bis" nur dann neben seinem Ausweis, wenn davor eine
@@ -8481,7 +8635,6 @@ const MB_ABSCHNITTE = [
   ]},
 ];
 
-let mbDaten = null;      // der geladene Datensatz
 let mbAend  = {};        // aus dem Diktat uebernommen, noch nicht gespeichert
 let mbListen = {};       // pflegbare Listen aus der Antwort
 
@@ -8496,6 +8649,11 @@ function mbAlleFelder() {
 
 // Einstieg: von der Detailseite aus -- oder aus dem Diktat, dann mit den
 // erkannten Werten, die vorgelegt und blau markiert werden.
+//
+// Geladen wird ueber maAkteLaden(): Detailseite und Bearbeitungsflaeche
+// arbeiten auf DEMSELBEN Datensatz. Zwei eigene Lader waeren zwei Staende
+// derselben Person, und einer zeigte dann noch den Wert, den der andere
+// gerade ueberschrieben hat.
 function mbOeffnen(name, aenderungen) {
   mbAend = aenderungen || {};
   // Seit ENT-072 sind PLZ und Ort zwei Felder. Kommt aus dem Diktat ein
@@ -8514,25 +8672,14 @@ function mbOeffnen(name, aenderungen) {
   $('mbHinweise').innerHTML = '';
   $('mbKarten').innerHTML = '<div class="card"><div class="card-bd">Wird geladen …</div></div>';
   maGoTab('bearbeiten');
-  // Die Anstellungsorte kommen mit: ohne sie stuende im Feld "Standort"
-  // "noch keine erfasst", obwohl es nur nicht geladen war.
-  Promise.all([
-    api('mitarbeiter_dossier.php?name=' + encodeURIComponent(name)),
-    anstellungsorte.length ? Promise.resolve() : ladeAnstellungsorte(),
-  ]).then(([{ ok, data }]) => {
-    if (!ok || data.status !== 'ok') {
-      mbFehler(data && data.message ? data.message : 'Der Datensatz liess sich nicht laden.');
-      $('mbKarten').innerHTML = '';
-      return;
-    }
-    mbDaten = data.mitarbeiter;
-    maEingerichtet = data.eingerichtet !== false;
-    mbZeichnen();
-  });
+  // Kommt man von der Detailseite, liegt die Akte schon vor -- dann wird sie
+  // nicht ein zweites Mal geholt. Aus dem Diktat heraus liegt sie nicht vor.
+  (maAkte && maAkte.name === name ? Promise.resolve(maAkte) : maAkteLaden(name))
+    .then(() => mbZeichnen())
+    .catch(e => { mbFehler(e.message); $('mbKarten').innerHTML = ''; });
 }
 
 function mbAbbrechen() {
-  mbDaten = null;
   mbAend = {};
   maGoTab('detail');
   mdGoTab(mdTab);
@@ -8565,7 +8712,7 @@ function mbAuswahl(feld, quelle, wert) {
 }
 
 function mbZeichnen() {
-  const m = mbDaten || {};
+  const m = maAkte || {};
   $('mbName').textContent = fullName(m) || m.name || '–';
   $('mbSub').textContent = [m.personalnummer ? 'Pers-Nr. ' + m.personalnummer : '', m.name,
     m.ist_admin ? 'Verwaltung (Admin)' : 'Mitarbeitende(r)'].filter(Boolean).join(' · ');
@@ -8618,7 +8765,7 @@ function mbZeichnen() {
 // Sprache, Ablaufdatum, Passwort und Abmeldung gehoeren zur selben Frage --
 // wer kommt hier womit rein.
 function mbKonto() {
-  const m = mbDaten || {};
+  const m = maAkte || {};
   const selbst = m.name === (me && me.name);
   return `
     <dl class="dl" style="margin-top:6px">
@@ -8646,7 +8793,7 @@ function mbKonto() {
 // Hinweise, die aus dem GAV folgen. Sie SAGEN etwas, sie setzen nichts --
 // ein automatisch gefuelltes Ausbildungsdatum waere eine Behauptung.
 function mbHinweise() {
-  const m = mbDaten || {};
+  const m = maAkte || {};
   const teile = [];
   if (!maEingerichtet) {
     // Ohne die Spalten aus ENT-072 gibt es die meisten Felder in der Daten-
@@ -8678,8 +8825,8 @@ function mbHinweise() {
 }
 
 function mbSpeichern() {
-  if (!mbDaten) { return; }
-  const body = { name: mbDaten.name };
+  if (!maAkte) { return; }
+  const body = { name: maAkte.name };
   mbAlleFelder().forEach(f => {
     const el = $('mb_' + f);
     if (!el) { return; }
@@ -8698,7 +8845,12 @@ function mbSpeichern() {
       return;
     }
     toast('Angaben gespeichert.');
-    loadMitarbeiter().then(() => { mbAbbrechen(); });
+    // Erst die Akte neu holen, dann zurueck: Der Server formt Werte um
+    // (AHV-Nummer, PLZ/Ort-Trennung, geprueftes Pensum). Wer stattdessen den
+    // abgeschickten Stand stehen liesse, saehe auf der Detailseite etwas
+    // anderes als in der Datenbank.
+    Promise.all([maAkteLaden(body.name).catch(() => null), loadMitarbeiter()])
+      .then(() => { mbAbbrechen(); });
   });
 }
 
