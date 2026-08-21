@@ -166,14 +166,21 @@
      Verschieben per transform kostet im Layout keinen Platz, im gebauten
      Ergebnis aber schon -- ohne den Zielrahmen ist nicht zu erkennen, ob etwas
      in dieselbe Zeile gehoert oder in eine neue. */
-  function merkeZiel(e) {
-    var el = (e._els || [])[0];
-    if (!el || !el.getBoundingClientRect) return;
+  function rahmen(el) {
     var r = el.getBoundingClientRect();
-    e.ziel = {
+    return {
       x: Math.round(r.left), y: Math.round(r.top + window.scrollY),
       w: Math.round(r.width), h: Math.round(r.height)
     };
+  }
+
+  function merkeZiel(e) {
+    var els = (e._els || []).filter(function (el) { return el && el.getBoundingClientRect; });
+    if (!els.length) return;
+    e.ziel = rahmen(els[0]);
+    /* Bei mehreren Elementen zaehlt jeder Rahmen: sonst ist nicht zu erkennen,
+       wo die anderen landen sollen. */
+    if (els.length > 1) e.ziele = els.map(rahmen);
   }
 
   function gleicheMenge(a, b) {
@@ -216,6 +223,7 @@
       if (e.form) d.form = e.form;
       if (e.text) d.text = e.text;
       if (e.ziel) d.ziel = e.ziel;
+      if (e.ziele) d.ziele = e.ziele;
       return d;
     });
   }
@@ -281,8 +289,9 @@
       if (e.vorher != null && e.nachher != null) zeilen.push('   ' + e.vorher + ' -> ' + e.nachher);
       else if (e.nachher != null) zeilen.push('   ' + e.nachher);
       if (e.form) zeilen.push('   Rechteck ' + e.form.w + ' x ' + e.form.h + ' bei ' + e.form.x + ',' + e.form.y);
-      if (e.ziel) zeilen.push('   steht danach bei ' + e.ziel.x + ',' + e.ziel.y +
-        ' und ist ' + e.ziel.w + ' x ' + e.ziel.h + ' px');
+      (e.ziele || (e.ziel ? [e.ziel] : [])).forEach(function (z) {
+        zeilen.push('   steht danach bei ' + z.x + ',' + z.y + ' und ist ' + z.w + ' x ' + z.h + ' px');
+      });
       zeilen.push('');
     });
     return zeilen.join('\n');
