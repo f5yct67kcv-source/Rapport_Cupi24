@@ -130,5 +130,9 @@ JSON. Nichts davon wird gespeichert: Neuladen setzt die Seite zurück.
 Der Code steht **inline in `dashboard.html`**, nicht als eigene Datei. Der
 Deploy-Workflow kopiert nur namentlich gelistete Dateien, und das Ändern des
 Workflows braucht das Recht `workflow`, das der GitHub-Login hier nicht hat.
-`skizze.js` liegt als lesbare Quelle daneben und wird nicht ausgeliefert:
-wer am Skizzenmodus etwas ändert, muss beide Stellen anfassen.
+`skizze.js` liegt als lesbare Quelle daneben und wird nicht ausgeliefert.
+Wer am Skizzenmodus etwas ändert, bearbeitet `skizze.js` und gleicht dann ab:
+
+```bash
+python3 skizze-einbetten.py
+```
