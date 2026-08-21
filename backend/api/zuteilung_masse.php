@@ -95,6 +95,7 @@ try {
     $gesetzt = 0; $schonDa = 0; $neueSchichten = 0;
     $konflikte = [];
     $gesperrt = [];
+    $abgeglichen = [];   // festgeschriebene Schichten, die uebersprungen wurden
 
     foreach ($tage as $s) {
         $datum = $s['datum'];
@@ -104,6 +105,18 @@ try {
 
         if ($einsatz && $einsatz['status'] === 'abgesagt') {
             continue;   // abgesagte Tage werden nicht wiederbelebt
+        }
+
+        // Eine abgeglichene Schicht ist festgeschrieben (ENT-045). Sie wird
+        // UEBERSPRUNGEN und gemeldet, nicht mit einem Abbruch quittiert:
+        // Wer 30 Tage auf einmal einteilt, soll nicht wegen eines einzigen
+        // bereits abgerechneten Tages von vorne anfangen muessen -- er muss
+        // aber erfahren, dass dieser Tag ausgelassen wurde. Eine
+        // stillschweigend uebersprungene Schicht saehe sonst aus wie eine
+        // eingeteilte.
+        if ($einsatz && einsatz_abgeglichen($pdo, (int)$einsatz['id'])) {
+            $abgeglichen[] = ['datum' => $datum, 'einsatz_id' => (int)$einsatz['id']];
+            continue;
         }
 
         $eVon = $einsatz ? substr((string)$einsatz['von'], 0, 5) : $s['von'];
@@ -174,6 +187,8 @@ try {
         'konflikte_gesamt' => count($konflikte),
         'gesperrt' => array_slice($gesperrt, 0, 30),
         'gesperrt_gesamt' => count($gesperrt),
+        'abgeglichen' => array_slice($abgeglichen, 0, 30),
+        'abgeglichen_gesamt' => count($abgeglichen),
         'schicht' => trim(($vorlage['kuerzel'] ? $vorlage['kuerzel'] . ' · ' : '') . $vorlage['name']),
         'personen' => array_values($namen),
         'von' => $von, 'bis' => $bis,

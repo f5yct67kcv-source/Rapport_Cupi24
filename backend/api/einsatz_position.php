@@ -15,6 +15,11 @@
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
 require_once __DIR__ . '/../rechte.php';
+// einsatz_sperre_pruefen() -- eine abgeglichene Schicht ist festgeschrieben
+// (ENT-045). Ohne diese Einbindung liesse sich der Plan einer Schicht
+// nachtraeglich umbauen, deren Ist-Zeiten jemand bereits geprueft und
+// bestaetigt hat.
+require_once __DIR__ . '/../planung.php';
 
 $user = require_session();
 require_recht($user, 'plan');
@@ -99,6 +104,24 @@ if (!$einsatzId) {
     json_response(['status' => 'error', 'message' => 'einsatz_id fehlt.'], 422);
 }
 $einsatz = einsatz_oder_ende($pdo, $einsatzId);
+
+// ── Festgeschriebene Schichten sind unveraenderlich (ENT-045) ──────────
+//
+// EINE Stelle fuer alle fuenf schreibenden Aktionen -- speichern, entfernen,
+// sperren, zuteilen, loesen. Vor der neuen Einsatzplan-Ansicht lief jede
+// Aenderung ueber einsatz_save.php oder einsatz_zuteilen.php, und beide
+// pruefen das seit ENT-045. Ueber die Positionen gab es diesen Weg noch
+// nicht: Damit liess sich der Plan einer bereits abgeglichenen Schicht
+// nachtraeglich umbauen -- Positionen verschieben, Personen zuteilen oder
+// loesen -- obwohl genau das die Grundlage einer Feststellung veraendert,
+// die jemand geprueft und bestaetigt hat.
+//
+// Die Pruefung gehoert hierher und nicht in die Oberflaeche: Eine Sperre,
+// die man am Browser vorbei umgehen kann, ist keine (planung.php, ENT-045).
+//
+// Das Lesen bleibt erlaubt -- eine festgeschriebene Schicht darf man
+// ansehen, nur nicht mehr aendern.
+einsatz_sperre_pruefen($pdo, $einsatzId);
 
 if ($aktion === 'speichern') {
     $id = (int)($in['id'] ?? 0);
