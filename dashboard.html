@@ -1314,6 +1314,31 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
     transition: transform .18s cubic-bezier(.32,.72,0,1), opacity .18s, visibility .18s;
   }
   .side.on { transform: none; opacity: 1; visibility: visible; }
+
+  /* Die Schublade folgt der hell/dunkel-Wahl (ENT-071).
+     Am Schreibtisch ist die Seitenleiste bewusst der dunkelste Bereich --
+     sie grenzt die Arbeitsfläche ab und steht dauerhaft daneben. Auf dem
+     Handy ist sie seit ENT-067 kein Streifen mehr, sondern der GANZE
+     Bildschirm: Ein schwarzes Vollbild mitten in der hellen Darstellung ist
+     dann kein Kontrast mehr, sondern ein Bruch.
+     Umgesetzt über die Farbmarken selbst statt über einzelne Regeln: Damit
+     ziehen alle Kinder (Einträge, Trennlinien, Marken, Benutzerblock) ohne
+     eigene Ausnahme mit -- und im Dunkelmodus bleibt alles dunkel, weil
+     --surface und --ink dort dunkle Werte tragen. */
+  .side {
+    --shell:        var(--surface);
+    --shell-hi:     var(--accent-soft);
+    --shell-line:   var(--line);
+    --shell-txt:    var(--ink-2);
+    --shell-txt-hi: var(--ink);
+  }
+  /* Zwei fest eingetragene Grauwerte, die von den Farbmarken nichts wissen.
+     Am Desktop sollen sie bleiben, wie sie sind -- darum nur hier.
+     --ink-2 und nicht --ink-3: gemessen kommt --ink-3 auf weissem Grund nur
+     auf rund 3:1 Kontrast, und das ist fuer 11px zu wenig. Sie bleiben
+     trotzdem deutlich zurueckhaltender als die Eintraege daneben, die
+     --ink tragen und fast doppelt so gross sind. */
+  .side .nav-lbl, .side-kopf .titel { color: var(--ink-2); }
   .side-kopf { display: flex; }
   .side-nav { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 14px 24px;
     -webkit-overflow-scrolling: touch; }
