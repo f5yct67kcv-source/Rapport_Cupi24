@@ -36,6 +36,7 @@
   var zaehler = 0;
   var host, wurzel, panel, liste, zielzeile, hover, umrisse, marke, ziehflaeche;
   var zieht = null;
+  var hilfsElemente = [];
 
   function erstes() { return auswahl[0] || null; }
 
@@ -222,6 +223,7 @@
 
   function stelleHer() {
     eintraege.forEach(machRueckgaengig);
+    loeseHilfsstile();
     document.querySelectorAll('[data-skizze-platzhalter]').forEach(function (p) { p.remove(); });
     eintraege = [];
     zaehler = 0;
@@ -235,6 +237,7 @@
     var e = eintraege.pop();
     if (!e) return;
     machRueckgaengig(e);
+    if (!eintraege.length) loeseHilfsstile();
     zeichneListe();
     sichere();
     zeichnePins();
@@ -501,6 +504,48 @@
     marke.style.top = Math.max(0, r.top - 20) + 'px';
   }
 
+  function aktualisiereAnzeige() {
+    zeichneAuswahl();
+    zeigeZiel();
+    if (auswahl.length === 1) zeigeHover(auswahl[0]);
+  }
+
+  /* Wird ein Flex-Kind auf eine feste Groesse gesetzt, verteilt sich der frei
+     werdende Platz auf die Geschwister -- die werden dann selbst breiter,
+     obwohl sie niemand angefasst hat. Darum vorher alle auf ihre aktuelle
+     Groesse festnageln. Steht nicht im Protokoll: das ist eine technische
+     Massnahme, kein Aenderungswunsch. */
+  function friereGeschwisterEin(el) {
+    var p = el.parentElement;
+    if (!p) return;
+    var stil = getComputedStyle(p);
+    if (!/flex/.test(stil.display)) return;
+    var quer = /column/.test(stil.flexDirection);
+    Array.prototype.forEach.call(p.children, function (k) {
+      if (k === el || istEigen(k) || auswahl.indexOf(k) >= 0) return;
+      var r = k.getBoundingClientRect();
+      merkeStil(k, 'flexGrow');
+      merkeStil(k, 'flexShrink');
+      merkeStil(k, 'flexBasis');
+      merkeStil(k, 'boxSizing');
+      k.style.boxSizing = 'border-box';
+      k.style.flexGrow = '0';
+      k.style.flexShrink = '0';
+      k.style.flexBasis = Math.round(quer ? r.height : r.width) + 'px';
+      if (hilfsElemente.indexOf(k) < 0) hilfsElemente.push(k);
+    });
+  }
+
+  /* Die eingefrorenen Geschwister haengen an keinem Protokolleintrag. Sind alle
+     Aenderungen zurueckgenommen, muessen sie trotzdem wieder loslassen. */
+  function loeseHilfsstile() {
+    hilfsElemente.forEach(function (el) {
+      var m = vorherStile.get(el);
+      if (m) Object.keys(m).forEach(function (k) { el.style[k] = m[k]; });
+    });
+    hilfsElemente = [];
+  }
+
   function zeichneListe() {
     if (!liste) return;
     if (!eintraege.length) {
@@ -650,7 +695,7 @@
       });
       notiereGebuendelt(auswahl.slice(), 'verschoben', '', 'ursprüngliche Position',
         (xs[0] >= 0 ? '+' : '') + xs[0] + ' px waagrecht, ' + (ys[0] >= 0 ? '+' : '') + ys[0] + ' px senkrecht');
-      zeichneAuswahl();
+      aktualisiereAnzeige();
       return true;
     }
 
@@ -661,6 +706,7 @@
       var lese = richtung[0] ? (aussen ? 'marginLeft' : 'paddingLeft')
                              : (aussen ? 'marginTop' : 'paddingTop');
       var altA = px(auswahl[0], lese), neuA = 0;
+      auswahl.forEach(function (el) { friereGeschwisterEin(el); });
       auswahl.forEach(function (el) {
         merkeStil(el, eig);
         neuA = Math.max(0, px(el, lese) + delta * schritt);
@@ -668,7 +714,7 @@
       });
       notiereGebuendelt(auswahl.slice(), aussen ? 'margin' : 'padding',
         richtung[0] ? 'links und rechts' : 'oben und unten', altA + 'px', neuA + 'px');
-      zeichneAuswahl();
+      aktualisiereAnzeige();
       return true;
     }
 
@@ -676,6 +722,7 @@
       var eigG = richtung[0] ? 'width' : 'height';
       var altG = Math.round(auswahl[0].getBoundingClientRect()[eigG]);
       var neuG = 0;
+      auswahl.forEach(function (el) { friereGeschwisterEin(el); });
       auswahl.forEach(function (el) {
         /* Vor jedem Eingriff messen: sobald das Element nicht mehr mitwaechst,
            faellt es sonst auf seine Eigenbreite zurueck und springt. */
@@ -711,7 +758,7 @@
       });
       notiereGebuendelt(auswahl.slice(), 'grösse', eigG === 'width' ? 'Breite' : 'Höhe',
         altG + 'px', neuG + 'px');
-      zeichneAuswahl();
+      aktualisiereAnzeige();
       return true;
     }
 
@@ -728,7 +775,7 @@
       var neu = Array.prototype.indexOf.call(p.children, el0);
       notiereGebuendelt([el0], 'umsortiert', 'Position im Container',
         'Stelle ' + (alt + 1), 'Stelle ' + (neu + 1));
-      zeichneAuswahl();
+      aktualisiereAnzeige();
       return true;
     }
 
