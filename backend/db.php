@@ -79,7 +79,23 @@ function require_session(): array {
         json_response(['status' => 'error', 'message' => 'ungueltige oder abgelaufene Sitzung'], 401);
     }
 
-    $admin   = (bool)$row['ist_admin'];
+    // Rollen dazuholen (ENT-077). Ab hier ist die Rollentabelle die
+    // Wahrheit: ist_admin wird daraus abgeleitet, nicht umgekehrt gelesen.
+    // Ohne die Tabelle -- Einrichtung noch nicht gelaufen -- faellt
+    // rechte_rollen() auf den alten Stand zurueck, damit niemand ueber
+    // Nacht ausgesperrt wird.
+    require_once __DIR__ . '/rechte.php';
+    $row['rollen']    = rechte_rollen($pdo, (int)$row['id'], (bool)$row['ist_admin']);
+    $row['ist_admin'] = in_array(ROLLE_VERWALTUNG, $row['rollen'], true);
+    $row['rechte']    = rechte_aus_rollen($row['rollen']);
+
+    // Die kurzen Sitzungsfristen aus ENT-075 galten bisher nur fuer Admins.
+    // Sie gehoeren aber an den Grund, aus dem sie kurz sind: Zugang zu
+    // fremden Personendaten. Eine Planerin sieht die halbe Personalakte --
+    // fuer sie gilt dieselbe Frist wie fuer die Verwaltung. Wer nur die
+    // eigenen Schichten sieht, behaelt die lange Frist, sonst waere die
+    // App im Einsatz eine Zumutung ohne Sicherheitsgewinn.
+    $admin   = $row['rechte'] !== [];
     $jetzt   = time();
     $geboren = strtotime((string)($row['erstellt_am'] ?? '')) ?: $jetzt;
     // Ohne Stempelspalte (Einrichtung noch nicht gelaufen) zaehlt nur das
@@ -151,6 +167,29 @@ set_exception_handler(function (Throwable $e): void {
 //
 // "function_exists" davor, weil planung_einrichten.php die Funktion bisher
 // selbst mitbrachte und in fremden Reihenfolgen eingebunden werden kann.
+// Gibt es die Tabelle? Gleiche Ueberlegung wie bei hat_spalte() darunter:
+// Solange die Einrichtung nicht gelaufen ist, fehlen neue Tabellen, und ein
+// Endpunkt soll dann eine leere Antwort geben statt eines Fehlers.
+//
+// Das Ergebnis wird gemerkt, weil seit dem Rollenmodell jede Anfrage danach
+// fragt. Das Einrichtungsskript legt Tabellen waehrend seines eigenen Laufs
+// an und fragt danach erneut -- es muss das Gedaechtnis darum umgehen
+// koennen, sonst hielte es eine gerade angelegte Tabelle fuer fehlend.
+if (!function_exists('hat_tabelle')) {
+    function hat_tabelle(PDO $pdo, string $tabelle, bool $ohneGedaechtnis = false): bool {
+        static $bekannt = [];
+        if ($ohneGedaechtnis || !array_key_exists($tabelle, $bekannt)) {
+            $s = $pdo->prepare(
+                'SELECT 1 FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?'
+            );
+            $s->execute([$tabelle]);
+            $bekannt[$tabelle] = (bool)$s->fetchColumn();
+        }
+        return $bekannt[$tabelle];
+    }
+}
+
 if (!function_exists('hat_spalte')) {
     // Das Ergebnis wird gemerkt: Seit ENT-075 fragt jede einzelne Anfrage
     // beim Pruefen der Sitzung danach, und information_schema ist keine

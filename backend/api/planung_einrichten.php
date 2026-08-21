@@ -31,13 +31,12 @@ $nurPruefen = $methode === 'GET';
 
 $pdo = db();
 
-function hat_tabelle(PDO $pdo, string $tabelle): bool {
-    $s = $pdo->prepare(
-        'SELECT 1 FROM information_schema.TABLES
-         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?'
-    );
-    $s->execute([$tabelle]);
-    return (bool)$s->fetchColumn();
+// hat_tabelle() und hat_spalte() stehen in db.php, damit alle Endpunkte
+// sie benutzen koennen. Hier wird immer OHNE Gedaechtnis gefragt: Dieses
+// Skript legt Tabellen im eigenen Lauf an und fragt danach erneut nach
+// ihnen -- ein gemerktes "gibt es nicht" waere hier falsch.
+function hat_tabelle_jetzt(PDO $pdo, string $tabelle): bool {
+    return hat_tabelle($pdo, $tabelle, true);
 }
 // hat_spalte() steht seit dem Ausbau des Mitarbeiterstamms in db.php,
 // damit auch andere Endpunkte sie benutzen koennen.
@@ -376,6 +375,50 @@ CREATE TABLE IF NOT EXISTS kunden_kontaktweg (
   FOREIGN KEY (mitarbeiter_id) REFERENCES mitarbeiter(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+// Rollen je Person (ENT-077). Mehrere Zeilen je Mitarbeitendem sind der
+// Zweck der Tabelle, nicht ein Nebeneffekt: Planung und Personal sind zwei
+// verschiedene Arbeiten, keine Stufen uebereinander.
+//
+// Die Rollennamen stehen als Text, nicht als Fremdschluessel auf eine
+// Rollentabelle -- es gibt bewusst keine frei anlegbaren Rollen. Was eine
+// Rolle darf, steht in backend/rechte.php und im Entscheidungsprotokoll.
+'mitarbeiter_rollen' => "CREATE TABLE mitarbeiter_rollen (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  mitarbeiter_id INT NOT NULL,
+  rolle VARCHAR(30) NOT NULL,
+  erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_person_rolle (mitarbeiter_id, rolle),
+  KEY idx_rolle (rolle),
+  FOREIGN KEY (mitarbeiter_id) REFERENCES mitarbeiter(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Logbuch der Aenderungen (ENT-077).
+//
+// KEIN Fremdschluessel auf mitarbeiter: Ein Verlauf muss den Datensatz
+// ueberleben, ueber den er berichtet. Mit ON DELETE CASCADE waere beim
+// Loeschen einer Person genau die Spur weg, die man dann sucht. Aus
+// demselben Grund steht der Name des Akteurs als Text daneben und nicht
+// nur seine ID.
+//
+// wert_alt/wert_neu bleiben NULL, wenn werte_verborgen gesetzt ist -- das
+// ist der Fall bei den vertraulichen Feldern: Man sieht, DASS jemand die
+// AHV-Nummer geaendert hat, aber die Nummer liegt nicht ein zweites Mal in
+// der Datenbank.
+'aenderungslog' => "CREATE TABLE aenderungslog (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  zeitpunkt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  akteur_id INT NOT NULL,
+  akteur_name VARCHAR(100) NOT NULL,
+  bereich VARCHAR(30) NOT NULL,
+  objekt_id INT NOT NULL,
+  feld VARCHAR(60) NOT NULL,
+  wert_alt TEXT NULL,
+  wert_neu TEXT NULL,
+  werte_verborgen TINYINT(1) NOT NULL DEFAULT 0,
+  KEY idx_objekt (bereich, objekt_id, zeitpunkt),
+  KEY idx_zeit (zeitpunkt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 // Kurzzeitgedaechtnis der Anmeldebremse (ENT-075).
 //
 // Bewusst KEIN dauerhaftes Protokoll: Es wird nach einem Tag geleert und
@@ -415,7 +458,7 @@ CREATE TABLE IF NOT EXISTS kunden_kontaktweg (
 ];
 
 foreach ($tabellen as $name => $sql) {
-    if (hat_tabelle($pdo, $name)) {
+    if (hat_tabelle_jetzt($pdo, $name)) {
         $schon[] = "Tabelle $name war bereits vorhanden";
         continue;
     }
@@ -610,7 +653,7 @@ $spalten = [
     ['einsatz_zuteilung', 'abgeglichen_am',  'ALTER TABLE einsatz_zuteilung ADD COLUMN abgeglichen_am DATETIME NULL AFTER abgeglichen_von'],
 ];
 foreach ($spalten as [$tabelle, $spalte, $sql]) {
-    if (!hat_tabelle($pdo, $tabelle) || hat_spalte($pdo, $tabelle, $spalte)) {
+    if (!hat_tabelle_jetzt($pdo, $tabelle) || hat_spalte($pdo, $tabelle, $spalte)) {
         continue;
     }
     if ($nurPruefen) { $getan[] = "Spalte $tabelle.$spalte fehlt noch"; continue; }
@@ -658,7 +701,7 @@ if (hat_spalte($pdo, 'kunden', 'kundennummer')) {
 // Die 19 km stammen aus der Angabe des Projektinhabers, nicht aus einer
 // eigenen Messung. Sie entscheiden nach Art. 18: unter 40 km ist im
 // Nebenanstellungsgebiet nichts geschuldet (Ziff. 3.2.5).
-if (hat_tabelle($pdo, 'anstellungsorte')) {
+if (hat_tabelle_jetzt($pdo, 'anstellungsorte')) {
     $anzahl = (int)$pdo->query('SELECT COUNT(*) FROM anstellungsorte')->fetchColumn();
     if ($anzahl === 0) {
         if ($nurPruefen) {
@@ -729,6 +772,37 @@ if ($nullDatumSpalten) {
     }
 }
 
+// ── 2b5. Rollen aus dem bisherigen "Admin ja/nein" ableiten (ENT-077).
+// Jedes heutige Admin-Konto wird zu "verwaltung", alle uebrigen zu
+// "mitarbeitend". NIEMAND verliert oder gewinnt dabei Rechte -- der Zustand
+// ist genau derselbe, nur anders aufgeschrieben.
+//
+// Laeuft nur ueber Personen OHNE Rolleneintrag und ist damit wiederholbar:
+// Wer spaeter von Hand eine andere Rolle bekommen hat, wird nicht wieder
+// ueberschrieben. Das ist wichtig, weil die Einrichtung jederzeit erneut
+// gedrueckt werden darf.
+if (hat_tabelle_jetzt($pdo, 'mitarbeiter_rollen')) {
+    $ohneRolle = $pdo->query(
+        'SELECT m.id, m.ist_admin FROM mitarbeiter m
+          WHERE NOT EXISTS (SELECT 1 FROM mitarbeiter_rollen r WHERE r.mitarbeiter_id = m.id)
+          ORDER BY m.id'
+    )->fetchAll();
+    if ($ohneRolle) {
+        $admins = count(array_filter($ohneRolle, fn($m) => (int)$m['ist_admin'] === 1));
+        if ($nurPruefen) {
+            $getan[] = count($ohneRolle) . ' Person(en) ohne Rolle — davon ' . $admins
+                . ' mit bisherigem Admin-Zugang';
+        } else {
+            $ein = $pdo->prepare('INSERT IGNORE INTO mitarbeiter_rollen (mitarbeiter_id, rolle) VALUES (?, ?)');
+            foreach ($ohneRolle as $m) {
+                $ein->execute([(int)$m['id'], (int)$m['ist_admin'] === 1 ? 'verwaltung' : 'mitarbeitend']);
+            }
+            $getan[] = count($ohneRolle) . ' Person(en) eine Rolle zugewiesen ('
+                . $admins . ' × Verwaltung, ' . (count($ohneRolle) - $admins) . ' × Mitarbeitend)';
+        }
+    }
+}
+
 // ── 2c. PLZ aus dem bisherigen Ort-Feld herausloesen (ENT-044). Bis hierher
 // stand beides zusammen in einer Spalte ("4632 Trimbach"). Getrennt wird nur,
 // wo das Muster eindeutig ist: vier Ziffern, Leerzeichen, Rest. Passt es
@@ -774,7 +848,7 @@ foreach ($verweise as [$tabelle, $spalte, $sql]) {
 // das Dashboard liest dafuer 'ausstehend', nicht 'status'.
 $fehlt = [];
 foreach (array_keys($tabellen) as $name) {
-    if (!hat_tabelle($pdo, $name)) {
+    if (!hat_tabelle_jetzt($pdo, $name)) {
         $fehlt[] = $name;
     }
 }
