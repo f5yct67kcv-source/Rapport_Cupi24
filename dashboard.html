@@ -1103,6 +1103,9 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 .tg-datum { font-size: 20px; font-weight: 700; letter-spacing: -.5px; }
 .tg-zahlen { text-align: right; }
 .tg-zahl { font-size: 20px; font-weight: 700; letter-spacing: -.5px; }
+/* "3 von 5", sobald ein Filter greift (ENT-069): die blosse gefilterte Zahl
+   sähe sonst aus wie der ganze Tag. */
+.tg-von { font-size: 12px; font-weight: 600; color: var(--ink-3); margin-left: 5px; letter-spacing: 0; }
 .tg-zahl-lbl { font-size: 11.5px; color: var(--ink-3); }
 .opl-tag { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 10px; overflow: hidden; box-shadow: var(--sh-1); }
 .opl-tag .kopf { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border-bottom: 1px solid var(--line-soft); background: var(--surface-2); font-size: 13px; }
@@ -1172,6 +1175,25 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
      Anzeigereihenfolge per "order": Reihenfolge im Quelltext und die Klick-
      ziele bleiben unveraendert. */
   #ptab-tag { order: -1; }
+  /* Reiter über die volle Breite ausrichten (ENT-069). Bisher standen die
+     drei linksbündig zusammengedrängt, rechts blieb ein leerer Streifen.
+     Jetzt: Tagesplan links, Objektplanung rechts aussen, Einsätze mittig
+     dazwischen -- gleiche Abstände, weil der Zwischenraum (.sp) die
+     Restbreite gleichmäßig aufteilt.
+     Der Feiertage-Knopf ist mobil ohnehin .nur-desktop, hier steht also
+     wirklich nichts weiter in der Reihe. */
+  #view-planung .tabs { justify-content: space-between; }
+  #view-planung .tabs > .sp { display: none; }
+  #view-planung .tab { flex: 1 1 0; text-align: center; padding-left: 4px; padding-right: 4px; }
+  /* Der linke und der rechte rücken an ihren Rand, statt ihre Zelle zu
+     zentrieren -- sonst stünde aussen wieder Luft.
+     Bewusst über die IDs und NICHT über :first-of-type/:last-of-type: Die
+     beiden Pseudoklassen folgen der Reihenfolge im Quelltext, der Tagesplan
+     steht dort aber weiterhin hinten und wird nur per "order" nach vorn
+     geholt. :first-of-type träfe damit den ausgeblendeten Übersichts-Reiter
+     und :last-of-type ausgerechnet den Tagesplan -- also genau verkehrt. */
+  #ptab-tag { text-align: left; }
+  #ptab-objektplan { text-align: right; }
 }
 
 @media (max-width: 620px) {
@@ -1237,6 +1259,10 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
      dabei in der Hoehe duenn -- "zu breit und zu schmal" zugleich. Eigene
      Groesse statt Streckung, mit spuerbar mehr Innenabstand. */
   #pv-tag .bar-tools .btn-primary { flex: 0 1 auto; width: auto; margin: 2px auto 0; padding: 13px 28px; font-size: 14.5px; }
+  /* Die zwei Filter stehen direkt oberhalb des Knopfs (ENT-069). Sie liegen
+     im Quelltext bereits davor; hier bekommen sie nur je eine eigene Zeile,
+     damit sie nicht mit den Tagesknoepfen in eine Reihe rutschen. */
+  #pv-tag #tgHerkunft, #pv-tag #tgStatus { flex: 1 1 100%; width: 100% !important; min-width: 0; }
   /* Der Tageskopf traegt jetzt die Rolle der Ueberschrift, die vorher das
      Datumsfeld hatte -- entsprechend groesser. */
   #pv-tag .tg-datum, #pv-tag .tg-zahl { font-size: 24px; }
@@ -1889,11 +1915,20 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
           <!-- Herkunft der Zeile (ENT-058). Ein Einsatz entsteht entweder frei --
                eine Baustelle, ein Anlass -- oder aus einem Objekt samt seiner
                Masterschichten. Das sind zwei verschiedene Arbeiten, und wer
-               die eine sucht, wird von der anderen zugedeckt. -->
-          <select class="inp" id="pHerkunft" style="width:auto" onchange="renderPlanung()" aria-label="Einsätze oder Objektschichten">
+               die eine sucht, wird von der anderen zugedeckt.
+               Seit ENT-069 steht die Sparte in derselben Auswahl, als eigene
+               Gruppe: Herkunft und Regelwerk sind zwei Dimensionen, aber ein
+               Feld. Man filtert nach der einen ODER der anderen. -->
+          <select class="inp" id="pHerkunft" style="width:auto" onchange="renderPlanung()" aria-label="Nach Herkunft oder Sparte filtern">
             <option value="">Einsätze und Objektschichten</option>
-            <option value="einsatz">Nur Einsätze</option>
-            <option value="objekt">Nur Objektschichten</option>
+            <optgroup label="Herkunft">
+              <option value="einsatz">Nur Einsätze</option>
+              <option value="objekt">Nur Objektschichten</option>
+            </optgroup>
+            <optgroup label="Sparte">
+              <option value="sicherheit">Nur Sicherheit</option>
+              <option value="reinigung">Nur Reinigung</option>
+            </optgroup>
           </select>
           <select class="inp" id="pStatus" style="width:auto" onchange="renderPlanung()">
             <option value="">Jeder Status</option>
@@ -1962,12 +1997,39 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             <button class="btn btn-quiet btn-sm" onclick="tgHeute()">Heute</button>
             <button class="btn btn-quiet btn-sm" onclick="tgSchieben(1)">Folgetag ›</button>
             <div class="sp" style="flex:1"></div>
-            <label class="check" style="font-size:12.5px"><input type="checkbox" id="tgNurOffen" onchange="renderTagesplan()"> nur unbesetzte</label>
+            <!-- Dieselben zwei Filter wie in der Einsatzliste (ENT-069). Sie
+                 ersetzen das frühere Kästchen „nur unbesetzte": dessen
+                 einzige Funktion steckt jetzt als „Nur unterbesetzt" im
+                 Statusfilter, wo sie neben den übrigen Zuständen steht statt
+                 als Sonderfall daneben.
+                 Die Regeln dahinter stehen in planHerkunftPasst() und
+                 planStatusPasst() -- gemeinsam mit der Einsatzliste, nicht
+                 als zweite Kopie. -->
+            <select class="inp" id="tgHerkunft" onchange="renderTagesplan()" aria-label="Nach Herkunft oder Sparte filtern">
+              <option value="">Einsätze und Objektschichten</option>
+              <optgroup label="Herkunft">
+                <option value="einsatz">Nur Einsätze</option>
+                <option value="objekt">Nur Objektschichten</option>
+              </optgroup>
+              <optgroup label="Sparte">
+                <option value="sicherheit">Nur Sicherheit</option>
+                <option value="reinigung">Nur Reinigung</option>
+              </optgroup>
+            </select>
+            <select class="inp" id="tgStatus" onchange="renderTagesplan()" aria-label="Nach Status filtern">
+              <option value="">Jeder Status</option>
+              <option value="geplant">Nur geplant</option>
+              <option value="bestaetigt">Nur bestätigt</option>
+              <option value="offen">Nur unterbesetzt</option>
+              <option value="abgesagt">Nur abgesagt</option>
+            </select>
             <!-- Der schnelle Weg (ENT-057). Auf dem Handy ist der Tagesplan die
                  Startseite der Planung -- wer dort eine Lücke sieht, soll den
                  Einsatz sofort erfassen können und nicht erst einen Reiter
                  weiterwandern. Auf dem Desktop schadet der Knopf nicht: die
-                 Lücke sieht man auch dort hier zuerst. -->
+                 Lücke sieht man auch dort hier zuerst.
+                 Steht bewusst NACH den beiden Filtern: der Projektinhaber
+                 wollte sie direkt oberhalb des Knopfs (ENT-069). -->
             <button class="btn btn-primary btn-sm" onclick="openEinsatzNeu()">
               <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Neuer Einsatz
@@ -4398,6 +4460,33 @@ function pSchnellSetzen() {
   if (bereich) { $('pVon').value = bereich[0]; $('pBis').value = bereich[1]; renderPlanung(); }
 }
 
+// Herkunfts- und Statusfilter, EINMAL. Seit ENT-069 gebrauchen sie die
+// Einsatzliste und der Tagesplan gemeinsam -- zwei Kopien derselben Regel
+// waeren zwei Regeln, die irgendwann auseinanderlaufen.
+//
+// Der Herkunftsfilter traegt zwei verschiedene Dimensionen, und das ist mit
+// Absicht sichtbar gemacht (die Auswahl gruppiert sie): "einsatz"/"objekt"
+// sagt, WOHER die Schicht stammt, "sicherheit"/"reinigung" sagt, WELCHES
+// REGELWERK gilt (ENT-037/ENT-061). Beides in einem Feld heisst: man filtert
+// entweder nach dem einen oder nach dem anderen, nicht nach beidem
+// gleichzeitig. Das war die Vorgabe des Projektinhabers ("die zwei
+// filterfelder") und ist im Tagesplan -- ein Tag, ueberschaubar viele
+// Zeilen -- vertretbar.
+function planHerkunftPasst(e, herkunft) {
+  // Objektschicht = aus einem Objekt entstanden. Massgeblich ist objekt_id,
+  // nicht die Einsatzart: ein freier Verkehrsdienst und eine Objektschicht
+  // koennen dieselbe Einsatzart tragen.
+  if (herkunft === 'objekt') { return !!e.objekt_id; }
+  if (herkunft === 'einsatz') { return !e.objekt_id; }
+  if (herkunft === 'sicherheit' || herkunft === 'reinigung') { return sparteVon(e) === herkunft; }
+  return true;
+}
+
+function planStatusPasst(e, st) {
+  if (st === 'offen') { return fehlend(e) > 0; }
+  return !st || e.status === st;
+}
+
 function pFiltered() {
   const q = ($('pQ').value || '').toLowerCase().trim();
   const { von, bis } = pZeitraum();
@@ -4408,13 +4497,8 @@ function pFiltered() {
     const d = tagVon(e);
     if (von && d < von) return false;
     if (bis && d > bis) return false;
-    // Objektschicht = aus einem Objekt entstanden. Massgeblich ist objekt_id,
-    // nicht die Einsatzart: ein freier Verkehrsdienst und eine Objektschicht
-    // koennen dieselbe Einsatzart tragen.
-    if (herkunft === 'objekt' && !e.objekt_id) return false;
-    if (herkunft === 'einsatz' && e.objekt_id) return false;
-    if (st === 'offen') { if (!fehlend(e)) return false; }
-    else if (st && e.status !== st) return false;
+    if (!planHerkunftPasst(e, herkunft)) return false;
+    if (!planStatusPasst(e, st)) return false;
     if (!q) return true;
     return [e.kunde_name, e.titel, e.ort, e.strasse, e.einsatzart, e.bemerkung]
       .concat((e.mitarbeiter || []).map(m => fullName(m) + ' ' + m.name))
@@ -7250,10 +7334,14 @@ function tgHeute() { $('tgD').value = isoTag(); renderTagesplan(); }
 function renderTagesplan() {
   const d = $('tgD').value || isoTag();
   if (!$('tgD').value) $('tgD').value = d;
-  const nurOffen = $('tgNurOffen').checked;
+  // Dieselben Filterregeln wie in der Einsatzliste (ENT-069) -- nicht
+  // nachgebaut, sondern dieselben Funktionen.
+  const herkunft = $('tgHerkunft') ? $('tgHerkunft').value : '';
+  const status = $('tgStatus') ? $('tgStatus').value : '';
+  const gefiltert = !!(herkunft || status);
 
-  let liste = einsaetze.filter(e => tagVon(e) === d);
-  if (nurOffen) liste = liste.filter(e => fehlend(e) > 0);
+  const amTag = einsaetze.filter(e => tagVon(e) === d);
+  let liste = amTag.filter(e => planHerkunftPasst(e, herkunft) && planStatusPasst(e, status));
   liste.sort((a, b) => String(a.von).localeCompare(String(b.von)) || String(a.kunde_name).localeCompare(String(b.kunde_name)));
 
   const f = feiertage[d];
@@ -7271,16 +7359,25 @@ function renderTagesplan() {
       ${f ? `<span class="chip chip-w">${esc(f.name)}${f.halbtags ? ` · ab ${hm(f.ab_zeit)}` : ''}</span>` : ''}
       <div style="flex:1"></div>
       <div class="tg-zahlen">
-        <div class="tg-zahl">${nf(liste.length)}</div>
+        <div class="tg-zahl">${gefiltert && liste.length !== amTag.length
+          ? `${nf(liste.length)}<span class="tg-von">von ${nf(amTag.length)}</span>`
+          : nf(liste.length)}</div>
         <div class="tg-zahl-lbl">${liste.length === 1 ? 'Einsatz' : 'Einsätze'}${liste.reduce((s, e) => s + fehlend(e), 0) ? ` · ${nf(liste.reduce((s, e) => s + fehlend(e), 0))} offen` : ''}</div>
       </div>
     </div>${f ? `<div class="legende">Feiertag markiert nach Arbeitsgesetz, Kanton SO. Über Zuschläge oder Entschädigung sagt das nichts aus.</div>` : ''}</div>`;
   $('tgKopf').innerHTML = kopfKarte;
 
   if (!liste.length) {
+    // Ein Filter, der alles ausblendet, darf NICHT wie "an diesem Tag ist
+    // nichts geplant" aussehen (ENT-069). Sonst hält der Planer einen vollen
+    // Tag für leer, weil er eine Auswahl von gestern vergessen hat -- dieselbe
+    // Fehlerklasse wie eine unbekannte Distanz, die wie "keine" aussieht.
     $('tgBody').innerHTML = `<div class="card"><div class="card-bd">` +
-      EMPTY(nurOffen ? 'Alles besetzt' : 'Nichts geplant',
-        nurOffen ? 'An diesem Tag gibt es keine unbesetzten Einsätze.' : 'Für diesen Tag ist kein Einsatz geplant.') +
+      (amTag.length
+        ? EMPTY('Kein Treffer',
+            `Für diesen Tag ${amTag.length === 1 ? 'ist ein Einsatz' : `sind ${nf(amTag.length)} Einsätze`} `
+            + `geplant, aber ${amTag.length === 1 ? 'er passt' : 'keiner davon passt'} zur gewählten Auswahl.`)
+        : EMPTY('Nichts geplant', 'Für diesen Tag ist kein Einsatz geplant.')) +
       `</div></div>`;
     return;
   }
