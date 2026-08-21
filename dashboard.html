@@ -6395,6 +6395,21 @@ function rvLaden() {
       ziel.innerHTML = EMPTY('Nicht geladen', 'Die Rollenübersicht liess sich nicht abrufen.');
       return;
     }
+    // Ohne die Rollentabelle stehen unten Rueckfallwerte, keine echten
+    // Rollen. Das muss dastehen: Sonst sieht eine nicht gelaufene
+    // Einrichtung genauso aus wie eine erledigte -- und man sucht den
+    // Fehler an der falschen Stelle. (Genau das ist am 21.08.2026
+    // passiert: Die Zwei-Faktor-Karte meldete fehlende Tabellen, diese
+    // Karte zeigte daneben eine saubere Rollenverteilung.)
+    if (data.rollen_eingerichtet === false) {
+      ziel.innerHTML = `<div class="ki-hint web on"><span><b>Noch nicht eingerichtet.</b>
+        Die Tabelle für die Rollen fehlt in der Datenbank — einmal unten links
+        „Einrichtung“ ausführen und dort auf <b>„Prüfen und einrichten“</b> klicken.
+        Bis dahin gilt für alle der bisherige Stand: Wer Admin war, darf alles,
+        alle anderen nichts. <b>Was unten steht, ist nur diese Notannahme und keine
+        vergebene Rolle.</b></span></div>`;
+      return;
+    }
     const leute = (data.mitarbeiter || []).filter(m => m.aktiv !== false && Number(m.aktiv) !== 0);
     // Nach Rolle gruppiert, nicht nach Person: Die Frage lautet "wer kommt
     // an die Personalakte", nicht "was darf Frau Muster".
