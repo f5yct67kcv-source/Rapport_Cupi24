@@ -30,6 +30,10 @@ jobs:
           cp backend/kunden.php dist/kunden.php
           cp backend/mitarbeiter.php dist/mitarbeiter.php
           cp backend/layout.php dist/layout.php
+          cp backend/anmeldung.php dist/anmeldung.php
+          # Schutzeinstellungen (ENT-075). Im Repository heisst die Datei
+          # bewusst ohne fuehrenden Punkt -- sonst uebersieht man sie.
+          cp htaccess-hostpoint dist/.htaccess
           cp backend/api/*.php dist/api/
           # setup.php / setup.html bewusst NICHT hier -- Ersteinrichtung ist ein
           # einmaliger manueller Upload, damit die Datei nicht bei jedem Push

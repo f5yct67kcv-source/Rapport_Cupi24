@@ -381,7 +381,7 @@ tr:hover td { background: var(--accent-light); }
       <div id="maChipList"></div>
       <div class="new-ma-row" style="flex-wrap:wrap">
         <input type="text" id="newMaInput" placeholder="Name..." style="min-width:120px">
-        <input type="password" id="newMaPassword" placeholder="Passwort (min. 6 Zeichen)" style="min-width:120px" onkeydown="if(event.key==='Enter')addMa()">
+        <input type="password" id="newMaPassword" placeholder="Passwort (mind. 12 Zeichen)" style="min-width:120px" onkeydown="if(event.key==='Enter')addMa()">
         <button class="btn btn-green btn-sm" onclick="addMa()" id="btn-add-ma">+ Hinzufügen</button>
       </div>
       <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
@@ -473,7 +473,7 @@ tr:hover td { background: var(--accent-light); }
     <div class="field">
       <label>Passwort</label>
       <div class="pw-wrap">
-        <input type="password" id="kiReviewPassword" placeholder="min. 6 Zeichen">
+        <input type="password" id="kiReviewPassword" placeholder="mind. 12 Zeichen">
         <button type="button" class="pw-toggle" onclick="togglePw('kiReviewPassword',this)">👁</button>
       </div>
     </div>
@@ -597,7 +597,7 @@ tr:hover td { background: var(--accent-light); }
     <div class="field" style="margin-bottom:10px">
       <label>Neues Passwort setzen</label>
       <div class="pw-wrap">
-        <input type="password" id="maResetPassword" placeholder="min. 6 Zeichen">
+        <input type="password" id="maResetPassword" placeholder="mind. 12 Zeichen">
         <button type="button" class="pw-toggle" onclick="togglePw('maResetPassword',this)">👁</button>
       </div>
     </div>
@@ -1178,7 +1178,7 @@ function confirmKiMaCreate(){
   const name = document.getElementById('kiReviewLoginName').value.trim();
   const password = document.getElementById('kiReviewPassword').value;
   if (!name) { errEl.textContent = 'Login-Name erforderlich.'; errEl.style.display = ''; return; }
-  if (password.length < 6) { errEl.textContent = 'Passwort mindestens 6 Zeichen.'; errEl.style.display = ''; return; }
+  if (password.length < 12) { errEl.textContent = 'Passwort mindestens 12 Zeichen.'; errEl.style.display = ''; return; }
   const body = {
     name, password,
     personalnummer: document.getElementById('kiReviewPersonalnummer').value.trim(),
@@ -1254,7 +1254,7 @@ function addMa(){
   const nameInp=document.getElementById('newMaInput'), passInp=document.getElementById('newMaPassword');
   const name=nameInp.value.trim(), password=passInp.value;
   if(!name){showToast(t('tName'));return;}
-  if(password.length<6){showToast('Passwort mindestens 6 Zeichen.');return;}
+  if(password.length<12){showToast('Passwort mindestens 12 Zeichen.');return;}
   apiCall('mitarbeiter_create.php',{method:'POST',body:{name,password}}).then(({ok,data})=>{
     if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
     nameInp.value='';passInp.value='';
@@ -1310,7 +1310,7 @@ function saveMaEdit(){
 function resetMaPassword(){
   if(!maDetailTarget) return;
   const password = document.getElementById('maResetPassword').value;
-  if(password.length<6){showToast('Passwort mindestens 6 Zeichen.');return;}
+  if(password.length<12){showToast('Passwort mindestens 12 Zeichen.');return;}
   apiCall('mitarbeiter_reset_password.php',{method:'POST',body:{name:maDetailTarget,password}}).then(({ok,data})=>{
     if(!ok||data.status!=='ok'){showToast(data.message||'Fehler.');return;}
     document.getElementById('maResetPassword').value='';

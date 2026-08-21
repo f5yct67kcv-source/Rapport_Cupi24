@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../anmeldung.php';   // passwort_pruefen (ENT-075)
 
 $user = require_session();
 if (!$user['ist_admin']) {
@@ -14,8 +15,12 @@ $input = json_decode(file_get_contents('php://input'), true) ?? [];
 $name = trim((string)($input['name'] ?? ''));
 $password = (string)($input['password'] ?? '');
 
-if ($name === '' || strlen($password) < 6) {
-    json_response(['status' => 'error', 'message' => 'Name erforderlich, Passwort mindestens 6 Zeichen'], 400);
+if ($name === '') {
+    json_response(['status' => 'error', 'message' => 'Name erforderlich'], 400);
+}
+$pwFehler = passwort_pruefen($password, $name);
+if ($pwFehler !== null) {
+    json_response(['status' => 'error', 'message' => $pwFehler], 400);
 }
 
 $hash = password_hash($password, PASSWORD_DEFAULT);
