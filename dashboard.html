@@ -1094,6 +1094,16 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 .pk-tag .wd { font-size: 10.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); }
 .pk-tag b { font-size: 14px; font-weight: 680; }
 .pk-tag .note { font-size: 11.5px; color: var(--ink-3); }
+
+/* Tageskopf im Tagesplan (ENT-068) -- als Klassen statt Inline-Stil, damit
+   sich die Groesse mobil anheben laesst, ohne den Desktop anzutasten. */
+.tg-kopfkarte-card { margin-bottom: 16px; }
+.tg-kopfkarte { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tg-wd { font-size: 11px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--ink-3); }
+.tg-datum { font-size: 20px; font-weight: 700; letter-spacing: -.5px; }
+.tg-zahlen { text-align: right; }
+.tg-zahl { font-size: 20px; font-weight: 700; letter-spacing: -.5px; }
+.tg-zahl-lbl { font-size: 11.5px; color: var(--ink-3); }
 .opl-tag { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 10px; overflow: hidden; box-shadow: var(--sh-1); }
 .opl-tag .kopf { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border-bottom: 1px solid var(--line-soft); background: var(--surface-2); font-size: 13px; }
 .opl-tag .kopf .sp { flex: 1; }
@@ -1155,6 +1165,13 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
   /* Container verschieben ist eine Zeigergeraet-Aufgabe -- auf dem Telefon
      bleibt die zuletzt gespeicherte Anordnung einfach stehen (ENT-031). */
   #btnDashBearbeiten, .dash-editleiste, .dash-werk { display: none !important; }
+  /* Tagesplan ganz nach aussen links (ENT-068). Ab hier ist "Übersicht"
+     bereits ausgeblendet (.nur-desktop); von den drei verbleibenden Reitern
+     ist der Tagesplan der, den die Startseite und die Ereignis-Kacheln
+     ansteuern -- er soll deshalb der erste sein, nicht der letzte. Reine
+     Anzeigereihenfolge per "order": Reihenfolge im Quelltext und die Klick-
+     ziele bleiben unveraendert. */
+  #ptab-tag { order: -1; }
 }
 
 @media (max-width: 620px) {
@@ -1189,6 +1206,41 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
   .opl-kopf .nm { font-size: 17px; }
   /* Reiterleiste darf für sich allein scrollen */
   .tabs { margin-left: -16px; margin-right: -16px; padding: 0 16px; }
+
+  /* Kopfzeile deutlicher (ENT-068). Auf dem Handy ist die Kopfzeile der
+     einzige Ort, der sagt, wo man ist -- 16 px Titel neben einer kaum
+     lesbaren 12-px-Unterzeile wirkte zusammengequetscht. Der Abstand rund um
+     Reiter und Werkzeugleisten steht weiter unten in dieser Datei: die naheliegende
+     Stelle hier wird von zwei spaeteren Regeln ueberstimmt (der dichten
+     Tabs-Regel fuer Planung/Objektplanung mit hoeherer Eigenspezifitaet, und
+     einem spaeteren .content im 900-px-Block) -- am Ende der Kaskade
+     gewinnt, nicht am naheliegenden Ort. */
+  .topbar h1 { font-size: 19px; font-weight: 720; letter-spacing: -.3px; }
+  .topbar .crumb { font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
+  .bar-tools { margin-bottom: 20px; }
+
+  /* Tagesplan: das Datumsfeld faellt weg, es ist an jedem Tag ohnehin auf
+     "heute" vorbelegt -- an seiner Stelle steht jetzt der Tageskopf, der das
+     Datum ohnehin schon zeigt (ENT-068). Vor/Zurueck bleiben ueber die
+     eigenen Knoepfe erreichbar, ein freier Sprung auf ein beliebiges Datum
+     ist auf dem Handy damit nicht mehr moeglich -- dafuer bleibt der Desktop.
+     Nur der Tageskopf wandert nach oben, die Liste bleibt unter der
+     Werkzeugleiste stehen -- sonst muesste man am Ende eines langen Tages
+     erst durch die ganze Liste scrollen, um "Folgetag" zu erreichen. */
+  #pv-tag #tgD { display: none; }
+  #pv-tag.ptab.on { display: flex; flex-direction: column; }
+  #pv-tag > .bar-tools { order: 2; }
+  #pv-tag > #tgKopf { order: 1; }
+  #pv-tag > #tgBody { order: 3; }
+  /* Der CTA-Knopf spannte sich als einziges Element seiner Zeile ueber die
+     volle Breite (".bar-tools .btn" wird per flex-grow gestreckt) und blieb
+     dabei in der Hoehe duenn -- "zu breit und zu schmal" zugleich. Eigene
+     Groesse statt Streckung, mit spuerbar mehr Innenabstand. */
+  #pv-tag .bar-tools .btn-primary { flex: 0 1 auto; width: auto; margin: 2px auto 0; padding: 13px 28px; font-size: 14.5px; }
+  /* Der Tageskopf traegt jetzt die Rolle der Ueberschrift, die vorher das
+     Datumsfeld hatte -- entsprechend groesser. */
+  #pv-tag .tg-datum, #pv-tag .tg-zahl { font-size: 24px; }
+  #pv-tag .tg-wd { font-size: 11.5px; }
 }
 
 /* ══════════════════════════════════════════ RESPONSIV */
@@ -1273,6 +1325,17 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
   .topbar .btn { padding: 8px; }
   .btn-sprechen .lbl { display: none; }
   .btn-sprechen { padding: 8px; }
+
+  /* Mehr Luft (ENT-068) -- bewusst hier ganz am Ende der Kaskade platziert,
+     nicht bei den uebrigen Kopfzeilen-Regeln weiter oben: Ein spaeterer
+     900-px-Block setzt .content dort erneut zurueck (gleiche Eigenspezifitaet,
+     letzte Regel gewinnt), und die dichte Tabs-Regel fuer Planung/Objekt-
+     planung/Kunden (".content", oben unter „Am Schreibtisch zaehlt …")
+     hat mit einer ID-Selektor-Kombination eine hoehere Eigenspezifitaet als
+     ein blosses ".tabs" -- ein einfaches ".tabs { margin-bottom: … }" haette
+     sie nie geschlagen, gleich wo es stuende. */
+  .content { padding: 22px 16px; }
+  #view-planung .tabs { margin-bottom: 22px; }
 }
 @media (max-width: 560px) {
   .g-kpi { grid-template-columns: 1fr; }
@@ -1910,6 +1973,12 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
               Neuer Einsatz
             </button>
           </div>
+          <!-- Der Tageskopf ist seit ENT-068 ein eigenes Element statt der
+               erste Baustein von #tgBody: nur so laesst er sich mobil VOR die
+               Werkzeugleiste stellen (an die Stelle des entfernten Datums-
+               felds), waehrend die Liste darunter stehen bleibt. Auf dem
+               Desktop aendert die Aufteilung nichts an der Reihenfolge. -->
+          <div id="tgKopf"></div>
           <div id="tgBody"></div>
         </div>
 
@@ -7189,22 +7258,27 @@ function renderTagesplan() {
 
   const f = feiertage[d];
   const wd = WD[new Date(d + 'T12:00:00').getDay()];
-  const kopfKarte = `<div class="card" style="margin-bottom:16px"><div class="card-bd" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  // Klassen statt Inline-Stil (ENT-068): so laesst sich die Ueberschrift auf
+  // dem Handy groesser stellen, ohne den Desktop anzutasten -- sie steht seit
+  // ENT-068 dort, wo bisher das Datumsfeld war, und traegt entsprechend mehr
+  // Gewicht als vorher.
+  const kopfKarte = `<div class="card tg-kopfkarte-card"><div class="card-bd tg-kopfkarte">
       <div>
-        <div style="font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-3)">${wd}</div>
-        <div style="font-size:20px;font-weight:700;letter-spacing:-.5px">${dmy(d)}</div>
+        <div class="tg-wd">${wd}</div>
+        <div class="tg-datum">${dmy(d)}</div>
       </div>
       ${d === isoTag() ? '<span class="chip chip-a">heute</span>' : ''}
       ${f ? `<span class="chip chip-w">${esc(f.name)}${f.halbtags ? ` · ab ${hm(f.ab_zeit)}` : ''}</span>` : ''}
       <div style="flex:1"></div>
-      <div style="text-align:right">
-        <div style="font-size:20px;font-weight:700;letter-spacing:-.5px">${nf(liste.length)}</div>
-        <div style="font-size:11.5px;color:var(--ink-3)">${liste.length === 1 ? 'Einsatz' : 'Einsätze'}${liste.reduce((s, e) => s + fehlend(e), 0) ? ` · ${nf(liste.reduce((s, e) => s + fehlend(e), 0))} offen` : ''}</div>
+      <div class="tg-zahlen">
+        <div class="tg-zahl">${nf(liste.length)}</div>
+        <div class="tg-zahl-lbl">${liste.length === 1 ? 'Einsatz' : 'Einsätze'}${liste.reduce((s, e) => s + fehlend(e), 0) ? ` · ${nf(liste.reduce((s, e) => s + fehlend(e), 0))} offen` : ''}</div>
       </div>
     </div>${f ? `<div class="legende">Feiertag markiert nach Arbeitsgesetz, Kanton SO. Über Zuschläge oder Entschädigung sagt das nichts aus.</div>` : ''}</div>`;
+  $('tgKopf').innerHTML = kopfKarte;
 
   if (!liste.length) {
-    $('tgBody').innerHTML = kopfKarte + `<div class="card"><div class="card-bd">` +
+    $('tgBody').innerHTML = `<div class="card"><div class="card-bd">` +
       EMPTY(nurOffen ? 'Alles besetzt' : 'Nichts geplant',
         nurOffen ? 'An diesem Tag gibt es keine unbesetzten Einsätze.' : 'Für diesen Tag ist kein Einsatz geplant.') +
       `</div></div>`;
@@ -7233,7 +7307,7 @@ function renderTagesplan() {
     </div>`;
   }).join('') + `</div></div>`;
 
-  $('tgBody').innerHTML = kopfKarte + tgKarten + `<div class="card nur-breit"><div class="card-bd flush"><div class="tw">
+  $('tgBody').innerHTML = tgKarten + `<div class="card nur-breit"><div class="card-bd flush"><div class="tw">
     <table><thead><tr>
       <th>Zeit</th><th>Kunde / Objekt</th><th>Arbeitsort</th><th class="num">Besetzung</th><th>Zugeteilt</th><th>Status</th>
     </tr></thead><tbody>` + liste.map(e => {
