@@ -118,16 +118,25 @@ Einschalten mit `Alt+S`, oder `?skizze=1` an die URL hängen. `Esc` beendet.
 Werkzeuge über die Zahlen `1` bis `9`, `Cmd+Z` nimmt den letzten Schritt zurück.
 
 Mehrere Elemente auf einmal: `Shift`+Klick nimmt eines dazu oder raus, `G` wählt
-alles auf derselben Ebene — alle Filter einer Leiste, alle Spalten einer Zeile.
-Die Änderung wirkt dann auf alle gleichzeitig und steht als ein Eintrag im
-Protokoll. Gilt für Verschieben, Abstand, Grösse, Farbe, Ausblenden und
-Duplizieren.
+alle Geschwister im selben Container, `H` alles, was optisch auf derselben
+waagrechten Linie sitzt — auch über Container hinweg, aber nur ähnlich hohe
+Elemente. Die Änderung wirkt dann auf alle gleichzeitig und steht als ein
+Eintrag im Protokoll. Gilt für Verschieben, Abstand, Grösse, Farbe, Ausblenden
+und Duplizieren.
 
-Auswählen zeigt Selektor und Masse. Verschieben, Abstand, Grösse und Reihenfolge
-arbeiten mit den Pfeiltasten, `Shift` macht Zehnerschritte, `Alt` schaltet beim
-Abstand von innen auf aussen. Dazu Text ändern, Duplizieren, Ausblenden, Farbe,
-Messen, freie Platzhalter-Rechtecke für noch nicht existierende Elemente und
-Notizen an einzelnen Elementen.
+Beim Ziehen erscheinen Ausrichtungshilfen: sobald eine Kante oder Mitte mit
+einem anderen Element fluchtet, zeigt eine Linie das an und das Element rastet
+ein. `Alt` beim Ziehen hält das Einrasten an.
+
+Auswählen zeigt Selektor und Masse. Verschieben, Abstand, Grösse, Schrift und
+Reihenfolge arbeiten mit den Pfeiltasten, `Shift` macht grössere Schritte, `Alt`
+schaltet beim Abstand von innen auf aussen. Beim Schrift-Werkzeug ändern `↑` und
+`↓` die Schriftgrösse, `←` und `→` die Schriftstärke. Dazu Text ändern,
+Duplizieren, Ausblenden, Farbe, Messen, freie Platzhalter-Rechtecke für noch
+nicht existierende Elemente und Notizen an einzelnen Elementen.
+
+Haben mehrere gewählte Elemente verschiedene Ausgangswerte, steht im Protokoll
+die Spanne (`11–15px → 13–17px`) statt eines Werts, den keines von ihnen hat.
 
 Jede Handlung landet im Protokoll mit Selektor und Alt-Neu-Wert. `Kopieren` legt
 das Protokoll als Text und JSON in die Zwischenablage, `Datei` speichert es als
