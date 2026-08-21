@@ -325,6 +325,26 @@ CREATE TABLE IF NOT EXISTS kunden_kontaktweg (
   FOREIGN KEY (person_id) REFERENCES kunden_person(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+// Anordnung der Container je Benutzer und Bereich (ENT-073).
+//
+// Bewusst EINE Tabelle fuer alle Bereiche statt je Bereich eine Spalte
+// irgendwo: Kommt ein weiterer anordenbarer Bereich dazu, braucht es keine
+// Migration mehr. Der Inhalt ist eine Anzeigeeinstellung und keine
+// Geschaeftsangabe -- geht sie verloren, steht die Standardanordnung da und
+// nichts ist kaputt.
+//
+// mitarbeiter_id kommt IMMER aus der Sitzung, nie aus der Anfrage. Sonst
+// koennte jemand die Ansicht eines anderen umstellen.
+'benutzer_layout' => "CREATE TABLE benutzer_layout (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  mitarbeiter_id INT NOT NULL,
+  bereich VARCHAR(40) NOT NULL,
+  layout TEXT NOT NULL,
+  geaendert_am DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_benutzer_bereich (mitarbeiter_id, bereich),
+  FOREIGN KEY (mitarbeiter_id) REFERENCES mitarbeiter(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 ];
 
 foreach ($tabellen as $name => $sql) {

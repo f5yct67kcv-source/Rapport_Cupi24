@@ -29,6 +29,7 @@ jobs:
           cp backend/planung.php dist/planung.php
           cp backend/kunden.php dist/kunden.php
           cp backend/mitarbeiter.php dist/mitarbeiter.php
+          cp backend/layout.php dist/layout.php
           cp backend/api/*.php dist/api/
           # setup.php / setup.html bewusst NICHT hier -- Ersteinrichtung ist ein
           # einmaliger manueller Upload, damit die Datei nicht bei jedem Push

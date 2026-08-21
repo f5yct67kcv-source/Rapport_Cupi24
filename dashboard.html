@@ -894,6 +894,13 @@ tbody tr.zu .i-schloss { color: var(--warn); }
    damit sich beliebige Reihenfolgen ergeben koennen -- ein starres 2:1-Raster
    liesse sich nach dem Umsortieren nicht mehr sinnvoll paaren. */
 .dash-flow { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
+/* Die Container der Mitarbeitendendetails bekommen keine gemeinsame
+   Zeilenhoehe: Eine kurze Karte soll nicht auf die Hoehe der laengsten
+   gezogen werden, nur weil sie danebensteht. */
+#mdFlow { align-items: flex-start; }
+/* Reiterzeile der Detailseite traegt rechts die Werkzeuge zum Anpassen. */
+.md-tabs { display: flex; align-items: center; gap: 4px; }
+.md-tabs .btn { margin-left: 4px; }
 .dash-item { position: relative; min-width: 0; }
 .dash-item.dw-voll   { flex: 1 1 100%; }
 .dash-item.dw-breit  { flex: 2 1 460px; }
@@ -1121,9 +1128,12 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
    warum. Der Innenabstand wird darum genullt -- ohne feste Pixelhoehe, damit
    die Felder auf dem Handy mit der groesseren Schrift mitwachsen. */
 .ma-karten input[type="date"]::-webkit-datetime-edit-fields-wrapper { padding: 0; }
-.ma-karten .card-hd h3, .ma-band .card-hd h3 { font-size: 12px; font-weight: 700;
-  letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); }
-.ma-karten .card-bd, .ma-band .card-bd { padding: 16px 18px 18px; }
+/* Uebersicht und Personaldossier sind zwei Reiter DERSELBEN Seite. Sie
+   muessen darum dieselbe Ueberschriftform tragen -- zwei Muster nebeneinander
+   wirken unruhig, ohne dass man sagen kann warum. */
+.ma-karten .card-hd h3, .ma-band .card-hd h3, #mdFlow .card-hd h3 { font-size: 12px;
+  font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); }
+.ma-karten .card-bd, .ma-band .card-bd, #mdFlow .card-bd { padding: 16px 18px 18px; }
 /* Das Pflichtband beim Anlegen steht ueber den Karten und ausserhalb des
    Spaltenrasters -- es soll aber wie eine von ihnen aussehen, nicht wie ein
    fremder Kasten. Darum dieselbe Ueberschrift und derselbe Innenabstand. */
@@ -1664,7 +1674,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
           <svg class="i-mond" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>
         </span>
       </button>
-      <button class="btn btn-plain btn-sm" onclick="dashBearbeitenStart()" id="btnDashBearbeiten" title="Übersicht anpassen">
+      <button class="btn btn-plain btn-sm" onclick="ordBearbeitenStart('uebersicht')" id="btnDashBearbeiten" title="Übersicht anpassen">
         <svg class="i i-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
         <span class="lbl">Bearbeiten</span>
       </button>
@@ -1675,13 +1685,13 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
         <svg class="i" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="dash-editleiste" id="dashEditleiste" style="display:none">
-        <button class="btn btn-plain btn-sm" onclick="dashZuruecksetzen()" title="Alle Container auf die Standardansicht zurücksetzen">
+        <button class="btn btn-plain btn-sm" onclick="ordZuruecksetzen()" title="Alle Container auf die Standardansicht zurücksetzen">
           <span class="lbl">Zurücksetzen</span>
         </button>
-        <button class="btn btn-plain btn-sm" onclick="dashBearbeitenAbbrechen()">
+        <button class="btn btn-plain btn-sm" onclick="ordBearbeitenAbbrechen()">
           <span class="lbl">Abbrechen</span>
         </button>
-        <button class="btn btn-primary btn-sm" onclick="dashBearbeitenSpeichern()">
+        <button class="btn btn-primary btn-sm" onclick="ordSpeichern()">
           <span class="lbl">Speichern</span>
         </button>
       </div>
@@ -1691,24 +1701,9 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 
       <!-- ─────────── ÜBERSICHT ─────────── -->
       <section class="view on" id="view-uebersicht">
-        <div class="dash-flow" id="dashFlow" ondragover="dashDragUeber(event)">
+        <div class="dash-flow" id="dashFlow" ondragover="ordDragUeber(event)">
 
           <div class="dash-item dw-voll" data-widget="begruessung">
-            <div class="dash-werk">
-            <button class="griff" draggable="true" ondragstart="dashDragStart(event)" ondragend="dashDragEnde(event)" title="Verschieben" aria-label="Verschieben">
-              <svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
-            </button>
-            <button onclick="dashBewegen('begruessung',-1)" title="Weiter vorne" aria-label="Weiter vorne">
-              <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-            </button>
-            <button onclick="dashBewegen('begruessung',1)" title="Weiter hinten" aria-label="Weiter hinten">
-              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-            <button onclick="dashSichtbarUm('begruessung')" class="dash-auge" title="Ein- oder ausblenden" aria-label="Ein- oder ausblenden">
-              <svg class="i-auge-an" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-              <svg class="i-auge-aus" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 4.22-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 8 11 8a20.4 20.4 0 0 1-2.68 3.9M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-            </button>
-          </div>
             <div class="card begr-karte">
               <div class="card-bd">
                 <div class="begr-kopf">
@@ -1748,40 +1743,10 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
           </div>
 
           <div class="dash-item dw-voll" data-widget="kpi">
-            <div class="dash-werk">
-          <button class="griff" draggable="true" ondragstart="dashDragStart(event)" ondragend="dashDragEnde(event)" title="Verschieben" aria-label="Verschieben">
-            <svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
-          </button>
-          <button onclick="dashBewegen('kpi',-1)" title="Weiter vorne" aria-label="Weiter vorne">
-            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button onclick="dashBewegen('kpi',1)" title="Weiter hinten" aria-label="Weiter hinten">
-            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-          <button onclick="dashSichtbarUm('kpi')" class="dash-auge" title="Ein- oder ausblenden" aria-label="Ein- oder ausblenden">
-            <svg class="i-auge-an" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="i-auge-aus" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 4.22-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 8 11 8a20.4 20.4 0 0 1-2.68 3.9M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          </button>
-        </div>
             <div class="grid g-kpi" id="kpiGrid"></div>
           </div>
 
           <div class="dash-item dw-breit" data-widget="verlauf">
-            <div class="dash-werk">
-          <button class="griff" draggable="true" ondragstart="dashDragStart(event)" ondragend="dashDragEnde(event)" title="Verschieben" aria-label="Verschieben">
-            <svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
-          </button>
-          <button onclick="dashBewegen('verlauf',-1)" title="Weiter vorne" aria-label="Weiter vorne">
-            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button onclick="dashBewegen('verlauf',1)" title="Weiter hinten" aria-label="Weiter hinten">
-            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-          <button onclick="dashSichtbarUm('verlauf')" class="dash-auge" title="Ein- oder ausblenden" aria-label="Ein- oder ausblenden">
-            <svg class="i-auge-an" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="i-auge-aus" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 4.22-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 8 11 8a20.4 20.4 0 0 1-2.68 3.9M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          </button>
-        </div>
             <div class="card">
               <div class="card-hd">
                 <h2>Stundenverlauf</h2>
@@ -1793,21 +1758,6 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
           </div>
 
           <div class="dash-item dw-schmal" data-widget="angemeldet">
-            <div class="dash-werk">
-          <button class="griff" draggable="true" ondragstart="dashDragStart(event)" ondragend="dashDragEnde(event)" title="Verschieben" aria-label="Verschieben">
-            <svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
-          </button>
-          <button onclick="dashBewegen('angemeldet',-1)" title="Weiter vorne" aria-label="Weiter vorne">
-            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button onclick="dashBewegen('angemeldet',1)" title="Weiter hinten" aria-label="Weiter hinten">
-            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-          <button onclick="dashSichtbarUm('angemeldet')" class="dash-auge" title="Ein- oder ausblenden" aria-label="Ein- oder ausblenden">
-            <svg class="i-auge-an" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="i-auge-aus" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 4.22-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 8 11 8a20.4 20.4 0 0 1-2.68 3.9M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          </button>
-        </div>
             <div class="card">
               <div class="card-hd">
                 <h2>Angemeldete Benutzer</h2>
@@ -1819,21 +1769,6 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
           </div>
 
           <div class="dash-item dw-breit" data-widget="letzte">
-            <div class="dash-werk">
-          <button class="griff" draggable="true" ondragstart="dashDragStart(event)" ondragend="dashDragEnde(event)" title="Verschieben" aria-label="Verschieben">
-            <svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
-          </button>
-          <button onclick="dashBewegen('letzte',-1)" title="Weiter vorne" aria-label="Weiter vorne">
-            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button onclick="dashBewegen('letzte',1)" title="Weiter hinten" aria-label="Weiter hinten">
-            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-          <button onclick="dashSichtbarUm('letzte')" class="dash-auge" title="Ein- oder ausblenden" aria-label="Ein- oder ausblenden">
-            <svg class="i-auge-an" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="i-auge-aus" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 4.22-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 8 11 8a20.4 20.4 0 0 1-2.68 3.9M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          </button>
-        </div>
             <div class="card">
               <div class="card-hd">
                 <h2>Letzte Rapporte</h2>
@@ -1845,21 +1780,6 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
           </div>
 
           <div class="dash-item dw-schmal" data-widget="proma">
-            <div class="dash-werk">
-          <button class="griff" draggable="true" ondragstart="dashDragStart(event)" ondragend="dashDragEnde(event)" title="Verschieben" aria-label="Verschieben">
-            <svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
-          </button>
-          <button onclick="dashBewegen('proma',-1)" title="Weiter vorne" aria-label="Weiter vorne">
-            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button onclick="dashBewegen('proma',1)" title="Weiter hinten" aria-label="Weiter hinten">
-            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-          <button onclick="dashSichtbarUm('proma')" class="dash-auge" title="Ein- oder ausblenden" aria-label="Ein- oder ausblenden">
-            <svg class="i-auge-an" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="i-auge-aus" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 4.22-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 8 11 8a20.4 20.4 0 0 1-2.68 3.9M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          </button>
-        </div>
             <div class="card">
               <div class="card-hd">
                 <h2>Stunden je Mitarbeitende</h2>
@@ -1871,21 +1791,6 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
           </div>
 
           <div class="dash-item dw-voll" data-widget="sperrfeed">
-            <div class="dash-werk">
-          <button class="griff" draggable="true" ondragstart="dashDragStart(event)" ondragend="dashDragEnde(event)" title="Verschieben" aria-label="Verschieben">
-            <svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
-          </button>
-          <button onclick="dashBewegen('sperrfeed',-1)" title="Weiter vorne" aria-label="Weiter vorne">
-            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button onclick="dashBewegen('sperrfeed',1)" title="Weiter hinten" aria-label="Weiter hinten">
-            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-          <button onclick="dashSichtbarUm('sperrfeed')" class="dash-auge" title="Ein- oder ausblenden" aria-label="Ein- oder ausblenden">
-            <svg class="i-auge-an" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="i-auge-aus" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 4.22-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 8 11 8a20.4 20.4 0 0 1-2.68 3.9M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          </button>
-        </div>
             <div class="card">
               <div class="card-hd">
                 <h2>Neue Sperrtage</h2>
@@ -2227,15 +2132,41 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             </div>
             <button class="btn btn-primary btn-sm" onclick="mdBearbeiten()">Bearbeiten</button>
           </div>
-          <div class="tabs" id="mdTabs" style="margin-bottom:14px">
+          <!-- Der Reiter „Personaldossier“ traegt den Begriff aus Art. 10
+               Ziff. 3 GAV. Die Werkzeuge zum Anpassen stehen rechts auf
+               derselben Zeile wie die Reiter -- dasselbe Muster wie der
+               Feiertags-Knopf in der Planung (ENT-038). -->
+          <div class="tabs md-tabs" id="mdTabs" style="margin-bottom:14px">
             <button class="tab on" id="mdtab-uebersicht" onclick="mdGoTab('uebersicht')">Übersicht</button>
+            <button class="tab" id="mdtab-dossier" onclick="mdGoTab('dossier')">Personaldossier</button>
             <button class="tab" id="mdtab-dienstplaene" onclick="mdGoTab('dienstplaene')">Dienstpläne</button>
+            <div style="flex:1"></div>
+            <button class="btn btn-plain btn-sm" onclick="ordBearbeitenStart('ma_detail')" id="btnMdBearbeiten" title="Übersicht anpassen">
+              <svg class="i i-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+              <span class="lbl">Anpassen</span>
+            </button>
+            <div class="dash-editleiste" id="mdEditleiste" style="display:none">
+              <button class="btn btn-plain btn-sm" onclick="ordZuruecksetzen()" title="Alle Container auf die Standardansicht zurücksetzen">
+                <span class="lbl">Zurücksetzen</span>
+              </button>
+              <button class="btn btn-plain btn-sm" onclick="ordBearbeitenAbbrechen()"><span class="lbl">Abbrechen</span></button>
+              <button class="btn btn-primary btn-sm" onclick="ordSpeichern()"><span class="lbl">Speichern</span></button>
+            </div>
           </div>
           <div class="md-tab on" id="md-uebersicht">
-            <!-- Kein Karten-Rahmen mehr drumherum: Seit ENT-072 stellt die
-                 Uebersicht selbst Abschnitts-Karten, und eine Karte in einer
-                 Karte gibt nur einen doppelten Rand. -->
-            <div id="mdInfo"></div>
+            <div id="mdHinweis"></div>
+            <!-- Flexbox statt des Spaltenrasters der Dossier-Ansicht: Die
+                 Reihenfolge wird ueber CSS-`order` gesetzt, und das kennt ein
+                 Mehrspalten-Layout nicht. Gemessen, nicht vermutet. -->
+            <div class="dash-flow" id="mdFlow" ondragover="ordDragUeber(event)"></div>
+            <div id="mdLeer" style="display:none"></div>
+          </div>
+          <!-- Personaldossier: alle Abschnitte, fest und vollstaendig. NICHT
+               konfigurierbar -- ein ausgeblendetes Feld waere hier nicht von
+               einem leeren zu unterscheiden, und genau das darf das Werkzeug
+               nirgends erzeugen. -->
+          <div class="md-tab" id="md-dossier">
+            <div id="mdDossier"></div>
           </div>
           <div class="md-tab" id="md-dienstplaene">
             <div class="bar-tools bar-eng">
@@ -3240,7 +3171,7 @@ function enter() {
   $('uName').textContent = me.name;
   $('uRole').textContent = 'Administration';
   $('uAvatar').textContent = initials(me.name);
-  dashInit();
+  ordLaden('uebersicht');
   sprachBereit('rt');
   reloadAll();
   pruefeUpdate();
@@ -3259,15 +3190,20 @@ const TITLES = {
 
 // Monatsraster brauchen die volle Fensterbreite, alles andere bleibt auf
 // Lesebreite -- eine 1900px breite Formularspalte liest niemand gern.
-// ══════════════════════════════════════════ KONFIGURIERBARES DASHBOARD (ENT-031)
-// Reihenfolge und Sichtbarkeit der Übersicht-Container, je Gerät gespeichert
-// -- wie schon die schmale Seitenleiste und die Farbwahl. Kein Server-Stand,
-// weil das eine persönliche Arbeitsfläche ist, keine betriebliche Regel.
+// ══════════════════════════════════════════ ANORDENBARE BEREICHE
+// (ENT-031, seit ENT-073 fuer mehrere Bereiche)
 //
-// Die Registrierung ist absichtlich vom Layout getrennt: ein künftiger
-// Container braucht nur einen neuen Eintrag hier, dashLayoutLaden() reiht
-// ihn automatisch ein, ohne die gespeicherte Anordnung der bestehenden
-// Container zu verwerfen.
+// Reihenfolge und Sichtbarkeit von Containern. Bis ENT-073 gab es das nur
+// fuer die Uebersicht, und die Mechanik war fest mit ihr verdrahtet -- bis
+// hinunter zu den Namen der Bedienelemente. Seit die Mitarbeitendendetails
+// dasselbe koennen, steht sie EINMAL hier. Ein zweites Ziehen-und-Ablegen
+// danebenzubauen waere ein zweiter Ort, an dem dieselbe Bedienung anders
+// funktioniert.
+//
+// Je Bereich unterscheiden sich nur vier Dinge: welche Container es gibt,
+// wo sie stehen, woher der gespeicherte Stand kommt und wohin er geht.
+// Genau das steht in ORD_BEREICHE, alles Uebrige ist gemeinsam.
+
 const DASH_WIDGETS = [
   { id: 'begruessung', titel: 'Begrüssung' },
   { id: 'kpi', titel: 'Kennzahlen' },
@@ -3277,122 +3213,235 @@ const DASH_WIDGETS = [
   { id: 'proma', titel: 'Stunden je Mitarbeitende' },
   { id: 'sperrfeed', titel: 'Neue Sperrtage' },
 ];
-const DASH_STANDARD = DASH_WIDGETS.map(w => ({ id: w.id, sichtbar: true }));
 
-let dashLayout = null;   // zuletzt gespeicherter Stand
-let dashEntwurf = null;  // Arbeitskopie waehrend des Bearbeitens
-let dashZiehtId = null;
+const ORD_BEREICHE = {
+  // Die Uebersicht liegt weiterhin im Browser. Sie an den Server zu haengen
+  // ist eine eigene Entscheidung und gehoert nicht in ENT-073 -- die
+  // Mechanik kann inzwischen beides, der Umzug ist ein Einzeiler.
+  uebersicht: {
+    flow: 'dashFlow', leer: 'dashLeer',
+    knopf: 'btnDashBearbeiten', leiste: 'dashEditleiste',
+    container: () => DASH_WIDGETS,
+    standard: () => DASH_WIDGETS.map(w => ({ id: w.id, sichtbar: true })),
+    laden: () => {
+      let g = null;
+      try { g = JSON.parse(localStorage.getItem('rv3_dash_layout') || 'null'); } catch (e) {}
+      return Promise.resolve(g);
+    },
+    speichern: layout => {
+      localStorage.setItem('rv3_dash_layout', JSON.stringify(layout));
+      return Promise.resolve({ ok: true });
+    },
+  },
+  // Mitarbeitendendetails: am Server, pro Benutzer (Entscheid des
+  // Projektinhabers am 2026-08-21). Eine Anordnung, die beim Wechsel vom
+  // Buerorechner auf den Laptop wieder auf Standard steht, wirkt wie ein
+  // Fehler.
+  ma_detail: {
+    flow: 'mdFlow', leer: 'mdLeer',
+    knopf: 'btnMdBearbeiten', leiste: 'mdEditleiste',
+    container: () => MD_CONTAINER,
+    standard: () => MD_CONTAINER.map(c => ({ id: c.id, sichtbar: c.standard !== false })),
+    laden: () => api('layout_get.php?bereich=ma_detail')
+      .then(({ ok, data }) => (ok && data.status === 'ok' ? data.layout : null))
+      .catch(() => null),
+    speichern: layout => api('layout_save.php', { method: 'POST', body: { bereich: 'ma_detail', layout } })
+      .then(({ ok, data }) => ({ ok: ok && data.status === 'ok',
+        meldung: data && data.message ? data.message : '' }))
+      .catch(() => ({ ok: false, meldung: 'Die Anordnung liess sich nicht speichern.' })),
+  },
+};
+
+let ordLayout = {};      // je Bereich der zuletzt gespeicherte Stand
+let ordEntwurf = null;   // Arbeitskopie waehrend des Bearbeitens
+let ordAktiv = null;     // welcher Bereich wird gerade bearbeitet
+let ordZiehtId = null;
 
 // Gespeicherten Stand mit der aktuellen Registrierung abgleichen: neue
 // Container werden angehaengt, entfernte fallen weg. So bleibt eine
-// gespeicherte Anordnung auch nach einer künftigen Erweiterung gültig.
-function dashLayoutLaden() {
-  let gespeichert = null;
-  try { gespeichert = JSON.parse(localStorage.getItem('rv3_dash_layout') || 'null'); } catch (e) {}
-  if (!Array.isArray(gespeichert) || !gespeichert.length) return DASH_STANDARD.map(x => ({ ...x }));
-  const bekannt = new Set(DASH_WIDGETS.map(w => w.id));
-  const uebernommen = gespeichert.filter(x => x && bekannt.has(x.id)).map(x => ({ id: x.id, sichtbar: x.sichtbar !== false }));
+// gespeicherte Anordnung auch nach einer kuenftigen Erweiterung gueltig.
+function ordAbgleichen(bereich, gespeichert) {
+  const b = ORD_BEREICHE[bereich];
+  if (!Array.isArray(gespeichert) || !gespeichert.length) { return b.standard(); }
+  const alle = b.container();
+  const bekannt = new Set(alle.map(w => w.id));
+  const uebernommen = gespeichert.filter(x => x && bekannt.has(x.id))
+    .map(x => ({ id: x.id, sichtbar: x.sichtbar !== false }));
   const vorhanden = new Set(uebernommen.map(x => x.id));
-  DASH_WIDGETS.forEach(w => { if (!vorhanden.has(w.id)) uebernommen.push({ id: w.id, sichtbar: true }); });
+  // Neue Container erscheinen so, wie der Bereich sie vorsieht -- ein neuer
+  // Baustein soll nicht ungefragt jede bestehende Anordnung fuellen.
+  alle.forEach(w => {
+    if (!vorhanden.has(w.id)) { uebernommen.push({ id: w.id, sichtbar: w.standard !== false }); }
+  });
   return uebernommen;
 }
 
-function dashAnwenden(layout, bearbeitenAktiv) {
-  const flow = $('dashFlow');
+// Werkzeugleiste eines Containers. EINMAL hier, statt in jedem Container
+// noch einmal: Wer die Bedienung aendert, aendert sie sonst nur an sechs
+// von sieben Stellen.
+function ordWerkzeug(id) {
+  const e = s => String(s).replace(/'/g, '&#39;');
+  return `<div class="dash-werk">
+    <button class="griff" draggable="true" ondragstart="ordDragStart(event)" ondragend="ordDragEnde(event)" title="Verschieben" aria-label="Verschieben">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
+    </button>
+    <button onclick="ordBewegen('${e(id)}',-1)" title="Weiter vorne" aria-label="Weiter vorne">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button onclick="ordBewegen('${e(id)}',1)" title="Weiter hinten" aria-label="Weiter hinten">
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <button onclick="ordSichtbarUm('${e(id)}')" class="dash-auge" title="Ein- oder ausblenden" aria-label="Ein- oder ausblenden">
+      <svg class="i-auge-an" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+      <svg class="i-auge-aus" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 4.22-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 8 11 8a20.4 20.4 0 0 1-2.68 3.9M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+    </button>
+  </div>`;
+}
+
+function ordAnwenden(bereich, layout, bearbeitenAktiv) {
+  const b = ORD_BEREICHE[bereich];
+  const flow = $(b.flow);
+  if (!flow) { return; }
   flow.classList.toggle('bearb', !!bearbeitenAktiv);
   layout.forEach((eintrag, i) => {
     const el = flow.querySelector(`.dash-item[data-widget="${eintrag.id}"]`);
-    if (!el) return;
+    if (!el) { return; }
+    // Werkzeugleiste nachruesten, falls der Container sie noch nicht hat.
+    if (!el.querySelector('.dash-werk')) { el.insertAdjacentHTML('afterbegin', ordWerkzeug(eintrag.id)); }
     el.style.order = i;
     el.classList.toggle('versteckt', !eintrag.sichtbar);
   });
   const nichtsSichtbar = !bearbeitenAktiv && layout.every(x => !x.sichtbar);
-  $('dashLeer').style.display = nichtsSichtbar ? '' : 'none';
+  const leer = $(b.leer);
+  if (!leer) { return; }
+  leer.style.display = nichtsSichtbar ? '' : 'none';
   if (nichtsSichtbar) {
-    $('dashLeer').innerHTML = `<div class="dash-leer">` + EMPTY('Alle Container sind ausgeblendet',
+    leer.innerHTML = `<div class="dash-leer">` + EMPTY('Alle Container sind ausgeblendet',
       'Über „Bearbeiten“ oben rechts lassen sie sich wieder einblenden.') + `</div>`;
   }
 }
 
-function dashInit() {
-  dashLayout = dashLayoutLaden();
-  dashAnwenden(dashLayout, false);
+// Laedt den gespeicherten Stand und wendet ihn an. Der Bereich zeigt bis
+// dahin seinen Standard -- eine leere Flaeche waehrend des Ladens saehe aus
+// wie "nichts eingerichtet".
+function ordLaden(bereich) {
+  const b = ORD_BEREICHE[bereich];
+  if (!ordLayout[bereich]) {
+    ordLayout[bereich] = b.standard();
+    ordAnwenden(bereich, ordLayout[bereich], false);
+  }
+  return b.laden().then(gespeichert => {
+    ordLayout[bereich] = ordAbgleichen(bereich, gespeichert);
+    ordAnwenden(bereich, ordLayout[bereich], false);
+    return ordLayout[bereich];
+  });
 }
 
-function dashBearbeitenStart() {
-  dashEntwurf = dashLayout.map(x => ({ ...x }));
-  $('btnDashBearbeiten').style.display = 'none';
-  $('dashEditleiste').style.display = '';
-  dashAnwenden(dashEntwurf, true);
+// Der zuletzt angewandte Stand eines Bereichs, ohne zu laden.
+function ordStand(bereich) {
+  if (!ordLayout[bereich]) { ordLayout[bereich] = ORD_BEREICHE[bereich].standard(); }
+  return ordLayout[bereich];
 }
 
-function dashBearbeitenBeenden() {
-  $('btnDashBearbeiten').style.display = '';
-  $('dashEditleiste').style.display = 'none';
-  dashEntwurf = null;
+function ordBearbeitenStart(bereich) {
+  ordAktiv = bereich;
+  ordEntwurf = ordStand(bereich).map(x => ({ ...x }));
+  // Die Container der Mitarbeitendendetails entstehen beim Zeichnen. Im
+  // Bearbeitungsmodus muessen auch die ausgeblendeten und die leeren im HTML
+  // stehen, sonst laesst sich nichts einblenden, was man gerade sucht.
+  if (bereich === 'ma_detail') { mdUebersicht(); }
+  const b = ORD_BEREICHE[bereich];
+  if ($(b.knopf)) { $(b.knopf).style.display = 'none'; }
+  if ($(b.leiste)) { $(b.leiste).style.display = ''; }
+  ordAnwenden(bereich, ordEntwurf, true);
 }
 
-function dashBearbeitenAbbrechen() {
-  dashAnwenden(dashLayout, false);
-  dashBearbeitenBeenden();
+function ordBearbeitenBeenden() {
+  const b = ORD_BEREICHE[ordAktiv] || {};
+  if ($(b.knopf)) { $(b.knopf).style.display = ''; }
+  if ($(b.leiste)) { $(b.leiste).style.display = 'none'; }
+  ordEntwurf = null;
+  ordAktiv = null;
 }
 
-function dashBearbeitenSpeichern() {
-  dashLayout = dashEntwurf.map(x => ({ ...x }));
-  localStorage.setItem('rv3_dash_layout', JSON.stringify(dashLayout));
-  dashAnwenden(dashLayout, false);
-  dashBearbeitenBeenden();
-  toast('Anordnung gespeichert.');
+function ordBearbeitenAbbrechen() {
+  if (!ordAktiv) { return; }
+  const bereich = ordAktiv;
+  ordBearbeitenBeenden();
+  if (bereich === 'ma_detail') { mdUebersicht(); }
+  else { ordAnwenden(bereich, ordStand(bereich), false); }
 }
 
-// Setzt den Entwurf auf die Standardreihenfolge zurück -- bleibt im
-// Bearbeitungsmodus, damit erst „Speichern“ es endgültig macht.
-function dashZuruecksetzen() {
-  dashEntwurf = DASH_STANDARD.map(x => ({ ...x }));
-  dashAnwenden(dashEntwurf, true);
+function ordSpeichern() {
+  if (!ordAktiv || !ordEntwurf) { return; }
+  const bereich = ordAktiv;
+  const entwurf = ordEntwurf.map(x => ({ ...x }));
+  ORD_BEREICHE[bereich].speichern(entwurf).then(({ ok, meldung }) => {
+    if (!ok) {
+      // Nicht stillschweigend uebernehmen: Sonst steht die Anordnung da,
+      // ist aber nirgends gespeichert, und beim naechsten Laden ist sie weg.
+      toast(meldung || 'Die Anordnung liess sich nicht speichern.');
+      return;
+    }
+    ordLayout[bereich] = entwurf;
+    ordBearbeitenBeenden();
+    if (bereich === 'ma_detail') { mdUebersicht(); }
+    else { ordAnwenden(bereich, ordLayout[bereich], false); }
+    toast('Anordnung gespeichert.');
+  });
 }
 
-function dashBewegen(id, richtung) {
-  const i = dashEntwurf.findIndex(x => x.id === id);
+// Setzt den Entwurf auf die Standardanordnung zurueck -- bleibt im
+// Bearbeitungsmodus, damit erst „Speichern“ es endgueltig macht.
+function ordZuruecksetzen() {
+  if (!ordAktiv) { return; }
+  ordEntwurf = ORD_BEREICHE[ordAktiv].standard();
+  ordAnwenden(ordAktiv, ordEntwurf, true);
+}
+
+function ordBewegen(id, richtung) {
+  if (!ordEntwurf) { return; }
+  const i = ordEntwurf.findIndex(x => x.id === id);
   const j = i + richtung;
-  if (i < 0 || j < 0 || j >= dashEntwurf.length) return;
-  [dashEntwurf[i], dashEntwurf[j]] = [dashEntwurf[j], dashEntwurf[i]];
-  dashAnwenden(dashEntwurf, true);
+  if (i < 0 || j < 0 || j >= ordEntwurf.length) { return; }
+  [ordEntwurf[i], ordEntwurf[j]] = [ordEntwurf[j], ordEntwurf[i]];
+  ordAnwenden(ordAktiv, ordEntwurf, true);
 }
 
-function dashSichtbarUm(id) {
-  const e = dashEntwurf.find(x => x.id === id);
-  if (e) e.sichtbar = !e.sichtbar;
-  dashAnwenden(dashEntwurf, true);
+function ordSichtbarUm(id) {
+  if (!ordEntwurf) { return; }
+  const e = ordEntwurf.find(x => x.id === id);
+  if (e) { e.sichtbar = !e.sichtbar; }
+  ordAnwenden(ordAktiv, ordEntwurf, true);
 }
 
 // ── Ziehen per Griff. Nur der Griff selbst ist "draggable", damit ein Klick
-// auf die Pfeile oder das Auge nicht versehentlich einen Zug auslöst.
-function dashDragStart(e) {
+// auf die Pfeile oder das Auge nicht versehentlich einen Zug ausloest.
+function ordDragStart(e) {
   const item = e.target.closest('.dash-item');
-  dashZiehtId = item ? item.dataset.widget : null;
+  ordZiehtId = item ? item.dataset.widget : null;
   e.dataTransfer.effectAllowed = 'move';
-  try { e.dataTransfer.setData('text/plain', dashZiehtId || ''); } catch (err) {}
+  try { e.dataTransfer.setData('text/plain', ordZiehtId || ''); } catch (err) {}
 }
-function dashDragEnde() {
-  dashZiehtId = null;
+function ordDragEnde() {
+  ordZiehtId = null;
   document.querySelectorAll('.dash-item.dash-ziel').forEach(el => el.classList.remove('dash-ziel'));
 }
-function dashDragUeber(e) {
-  if (!dashZiehtId) return;
+function ordDragUeber(e) {
+  if (!ordZiehtId || !ordEntwurf) { return; }
   e.preventDefault();
   const ueber = e.target.closest('.dash-item');
   document.querySelectorAll('.dash-item.dash-ziel').forEach(el => el.classList.remove('dash-ziel'));
-  if (!ueber || ueber.dataset.widget === dashZiehtId) return;
+  if (!ueber || ueber.dataset.widget === ordZiehtId) { return; }
   ueber.classList.add('dash-ziel');
   ueber.ondrop = ev => {
     ev.preventDefault();
-    const von = dashEntwurf.findIndex(x => x.id === dashZiehtId);
-    const nach = dashEntwurf.findIndex(x => x.id === ueber.dataset.widget);
-    if (von < 0 || nach < 0) return;
-    const [x] = dashEntwurf.splice(von, 1);
-    dashEntwurf.splice(nach, 0, x);
-    dashAnwenden(dashEntwurf, true);
+    const von = ordEntwurf.findIndex(x => x.id === ordZiehtId);
+    const nach = ordEntwurf.findIndex(x => x.id === ueber.dataset.widget);
+    if (von < 0 || nach < 0) { return; }
+    const [x] = ordEntwurf.splice(von, 1);
+    ordEntwurf.splice(nach, 0, x);
+    ordAnwenden(ordAktiv, ordEntwurf, true);
   };
 }
 
@@ -3660,7 +3709,7 @@ function go(view) {
   // ENT-067 haengt die Scroll-Sperre des Hintergrunds daran. Wer hier abkuerzt,
   // laesst eine Seite zurueck, die sich nicht mehr scrollen laesst.
   toggleSide(false);
-  if (view !== 'uebersicht' && dashEntwurf) dashBearbeitenAbbrechen();
+  if (view !== 'uebersicht' && ordAktiv === 'uebersicht') ordBearbeitenAbbrechen();
   // Das Anpassen ergibt nur auf der Übersicht einen Sinn -- der Knopf
   // verschwindet sonst, statt auf eine unsichtbare Ansicht zu wirken.
   $('btnDashBearbeiten').style.display = view === 'uebersicht' ? '' : 'none';
@@ -4179,18 +4228,32 @@ function openMaDetail(name) {
   // setzt seine Merkfahne sofort, und nur daran erkennt renderMaDetail, dass
   // die Person gerade noch kommt und nicht fehlt.
   const laeuft = maAkteLaden(name);
+  // Die Anordnung gilt fuer den Bereich, nicht fuer die Person -- einmal
+  // geladen, gilt sie fuer jede weitere geoeffnete Akte.
+  if (!ordLayout.ma_detail) { ordLaden('ma_detail').then(() => renderMaDetail()); }
   if (!$('mdMonat').value) { $('mdMonat').value = isoTag().slice(0, 7); }
   maGoTab('detail');
   mdGoTab(mdTab);
   laeuft.then(() => renderMaDetail())
-    .catch(e => { $('mdInfo').innerHTML = `<div class="msg-err">${esc(e.message)}</div>`; });
+    // Der Fehler gehoert dorthin, wo sonst die Angaben stuenden -- und die
+    // Container muessen weg, sonst steht daneben der Stand der zuletzt
+    // geoeffneten Person.
+    .catch(e => {
+      $('mdHinweis').innerHTML = `<div class="msg-err">${esc(e.message)}</div>`;
+      $('mdFlow').innerHTML = '';
+      $('mdDossier').innerHTML = '';
+    });
 }
 function mdGoTab(t) {
+  // Ein offener Bearbeitungsmodus endet mit dem Reiter: Sonst stuenden die
+  // Speichern-Knoepfe ueber einer Ansicht, die gar nicht anpassbar ist.
+  if (ordAktiv === 'ma_detail' && t !== 'uebersicht') { ordBearbeitenAbbrechen(); }
   mdTab = t;
   document.querySelectorAll('#mdTabs .tab').forEach(b => b.classList.remove('on'));
   document.querySelectorAll('#mv-detail .md-tab').forEach(v => v.classList.remove('on'));
   $('mdtab-' + t).classList.add('on');
   $('md-' + t).classList.add('on');
+  $('btnMdBearbeiten').style.display = t === 'uebersicht' ? '' : 'none';
   renderMaDetail();
 }
 function mdMonatUm(n) {
@@ -4259,6 +4322,7 @@ function renderMaDetail() {
     + (Number(p.ist_admin) ? ' · Verwaltung' : '');
 
   if (mdTab === 'uebersicht') { mdUebersicht(); return; }
+  if (mdTab === 'dossier') { mdDossier(); return; }
   mdDienstplaene();
 }
 
@@ -4282,90 +4346,199 @@ const MD_ZUSAMMEN = {
   mobil:                  { mit: ['mobil_geschaeft'],        label: 'Mobil',              vor: 'geschäftlich ' },
 };
 
+// Felder, die auf die UEBERSICHT gehoeren. Der Projektinhaber hat am
+// 2026-08-21 die drei Karten Personalien, Adresse und Kontakt markiert und
+// zu einem Container zusammengefasst -- mit "nur die allerwichtigsten
+// Angaben". Das ist diese Liste; alles Uebrige steht im Personaldossier.
+//
+// Bewusst NICHT dabei: die AHV-Nummer. Sie ist die schutzwuerdigste Angabe
+// im Datensatz und hat auf der Ansicht, die man im Vorbeigehen offen hat,
+// nichts zu suchen. Ebenso wenig Kurzzeichen und Geschlecht -- die braucht
+// beim Einteilen niemand.
+const MD_WICHTIG = [
+  'personalnummer', 'anrede', 'vorname', 'nachname', 'geburtsdatum',
+  'strasse', 'hausnummer', 'plz', 'ort', 'land',
+  'telefon', 'mobil', 'email', 'email_privat', 'notfallkontakt',
+];
+
+// Container der Uebersicht (ENT-073). Ein Eintrag fasst einen oder mehrere
+// Abschnitte aus MB_ABSCHNITTE zusammen -- oder bringt mit `eigen` seine
+// eigene Zeichenfunktion mit. Die Widgets aus der Vision des Projektinhabers
+// (Rapporte, geleistete Stunden) kommen so dazu, ohne dass hier etwas
+// umgebaut werden muss.
+//
+// Die ids stehen in der gespeicherten Anordnung und duerfen sich nie aendern.
+// `standard: false` heisst: gibt es, ist aber zunaechst ausgeblendet.
+const MD_CONTAINER = [
+  { id: 'person', titel: 'Person', abschnitte: ['personalien', 'adresse', 'kontakt'], felder: MD_WICHTIG },
+  // Steht oben und zeigt sich nur, wenn es etwas zu sagen gibt. Eine
+  // abgelaufene Bewilligung darf nicht erst auffallen, wenn jemand den
+  // richtigen Container einblendet -- damit darf niemand eingeteilt werden.
+  { id: 'status', titel: 'Zu beachten', eigen: 'status' },
+  { id: 'betrieb', titel: 'Betriebliches', abschnitte: ['betrieb'] },
+  { id: 'qualifikation', titel: 'Qualifikationen mit Lohnfolge', abschnitte: ['qualifikation'], standard: false },
+  { id: 'anstellung', titel: 'Anstellung nach Art. 8 GAV', abschnitte: ['anstellung'], standard: false },
+  { id: 'ausweise', titel: 'Ausweise und Bewilligungen', abschnitte: ['ausweise'], standard: false },
+  { id: 'herkunft', titel: 'Herkunft und Zivilstand', abschnitte: ['herkunft'], standard: false },
+  { id: 'nachweise', titel: 'Nachweise', abschnitte: ['nachweise'], standard: false },
+  { id: 'zugang', titel: 'Zugang', abschnitte: ['zugang'], standard: false },
+];
+
+// Frist eines "gueltig bis"-Feldes. Ein abgelaufener Ausweis ist keine
+// Nebensache: Damit darf niemand eingeteilt werden.
+function mdFrist(feld, wert) {
+  if (!/gueltig_bis$/.test(feld) || leeresDatum(wert)) { return ''; }
+  const tag = String(wert).slice(0, 10);
+  if (tag < isoTag()) { return ' <span class="chip chip-x">abgelaufen</span>'; }
+  const in60 = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
+  return tag <= in60 ? ' <span class="chip chip-w">läuft bald ab</span>' : '';
+}
+
+// Ein Feld als Text, ohne Beschriftung. null heisst "steht nichts drin".
+function mdText(m, [f, , typ, quelle]) {
+  const roh = m[f];
+  if (typ === 'd') { return leeresDatum(roh) ? null : dmy(roh); }
+  if (typ === 'a' && quelle && !Array.isArray(quelle)) {
+    const liste = quelle === 'anstellungsort' ? anstellungsorte : (mbListen[quelle] || []);
+    const e = liste.find(x => Number(x.id) === Number(roh));
+    return e ? e.bezeichnung : null;
+  }
+  return (roh === null || roh === undefined || String(roh).trim() === '') ? null : String(roh);
+}
+
+// Die dl-Zeilen EINES Abschnitts. `nur` begrenzt auf eine Feldliste; ohne
+// Angabe kommt alles. Diese Funktion bedient Uebersicht und Personaldossier
+// -- zwei Fassungen davon waeren zwei Orte, an denen ein Feld fehlt.
+function mdAbschnittZeilen(m, a, nur) {
+  const felder = (a.felder || []).filter(x => !nur || nur.includes(x[0]));
+  const erledigt = new Set();
+  let zeilen = felder.map(eintrag => {
+    const f = eintrag[0];
+    if (erledigt.has(f)) { return ''; }
+    const zus = MD_ZUSAMMEN[f];
+    if (!zus) {
+      const w = mdText(m, eintrag);
+      return w === null ? '' : `<dt>${esc(eintrag[1])}</dt><dd>${esc(w)}${mdFrist(f, m[f])}</dd>`;
+    }
+    // Zusammengefasste Zeile: erst der Hauptwert, dann die Beisatz-Felder.
+    const haupt = mdText(m, eintrag);
+    const teile = [];
+    let anhang = '';
+    zus.mit.forEach(g => {
+      erledigt.add(g);
+      const e2 = felder.find(x => x[0] === g);
+      if (!e2) { return; }
+      const w2 = mdText(m, e2);
+      if (w2 === null) { return; }
+      teile.push((zus.vor || '') + w2);
+      anhang += mdFrist(g, m[g]);
+    });
+    if (haupt === null && !teile.length) { return ''; }
+    const wert = [haupt, teile.join(' · ')].filter(Boolean).join(zus.vor ? ' · ' : ' ');
+    return `<dt>${esc(zus.label)}</dt><dd>${esc(wert)}${anhang}</dd>`;
+  }).join('');
+
+  // Ja/Nein NUR bei "ja", und als eine Zeile mit Marken. Ein "nein" bei jeder
+  // Berechtigung fuellt die Seite mit Nichtinformation.
+  const marken = (a.janein || []).filter(([f]) => Number(m[f]))
+    .map(([, lang, kurz]) => `<span class="chip chip-n">${esc(kurz || lang)}</span>`);
+  if (marken.length) {
+    zeilen += `<dt>Berechtigt für</dt><dd class="md-marken">${marken.join(' ')}</dd>`;
+  }
+  if (a.konto) {
+    zeilen += `<dt>Rolle</dt><dd>${Number(m.ist_admin) ? 'Verwaltung (Admin)' : 'Mitarbeitende'}</dd>`
+           + `<dt>Angelegt am</dt><dd>${m.erstellt_am ? dmy(m.erstellt_am) : '–'}</dd>`;
+  }
+  return zeilen;
+}
+
+// Der Container "Zu beachten". Er zeigt NUR, was jemanden von einem Einsatz
+// abhalten koennte -- und bleibt sonst ganz weg. "Keine Warnung" ist nichts,
+// was man lesen muss.
+function mdStatusZeilen(m) {
+  const zeilen = [];
+  MB_ABSCHNITTE.forEach(a => (a.felder || []).forEach(([f, label]) => {
+    const marke = mdFrist(f, m[f]);
+    if (!marke) { return; }
+    // "gültig bis 01.01.2020 abgelaufen" sagt nicht, WAS abgelaufen ist. In
+    // seinem Abschnitt steht das Datum neben seinem Ausweis; hier steht es
+    // allein und braucht darum den Bezug dazu. Der Besitzer des Datums ist
+    // derselbe, der es in der Leseansicht mit sich zusammenfasst.
+    const besitzer = Object.keys(MD_ZUSAMMEN).find(k => MD_ZUSAMMEN[k].mit.includes(f));
+    const wem = besitzer ? MD_ZUSAMMEN[besitzer].label : label;
+    zeilen.push(`<dt>${esc(wem)}</dt><dd>${esc(dmy(m[f]))}${marke}</dd>`);
+  }));
+  // Art. 10 GAV: mindestens 20 Stunden waehrend der Probezeit, ausser bei
+  // eidgenoessischem Fachausweis (Ziff. 4). Kein Datum heisst offen.
+  if (!m.fachausweis && leeresDatum(m.basisausbildung_am)) {
+    zeilen.push('<dt>Basisausbildung</dt><dd>noch nicht eingetragen '
+      + '<span class="chip chip-w">Art. 10 GAV</span></dd>');
+  }
+  return zeilen.join('');
+}
+
+// Eine Container-Karte als Text. Leer heisst: nichts anzuzeigen.
+function mdContainerInhalt(m, c) {
+  if (c.eigen === 'status') { return mdStatusZeilen(m); }
+  return (c.abschnitte || []).map(id => {
+    const a = MB_ABSCHNITTE.find(x => x.id === id);
+    return a ? mdAbschnittZeilen(m, a, c.felder) : '';
+  }).join('');
+}
+
+// ── Uebersicht: die konfigurierbaren Container ───────────────────────────
 function mdUebersicht() {
+  const flow = $('mdFlow');
   if (!maAkte) {
-    $('mdInfo').innerHTML = '<div style="color:var(--ink-3)">Wird geladen …</div>';
+    $('mdHinweis').innerHTML = '<div style="color:var(--ink-3)">Wird geladen …</div>';
+    flow.innerHTML = '';
     return;
   }
   const m = maAkte;
-  const heute = isoTag();
+  $('mdHinweis').innerHTML = mdEinrichtungshinweis();
 
-  // Ein abgelaufener Ausweis ist keine Nebensache: Damit darf niemand
-  // eingeteilt werden. Ein bald ablaufender auch nicht mehr lange.
-  const frist = (feld, wert) => {
-    if (!/gueltig_bis$/.test(feld) || leeresDatum(wert)) { return ''; }
-    const tag = String(wert).slice(0, 10);
-    if (tag < heute) { return ' <span class="chip chip-x">abgelaufen</span>'; }
-    const in60 = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
-    return tag <= in60 ? ' <span class="chip chip-w">läuft bald ab</span>' : '';
-  };
+  // Im Bearbeitungsmodus muss AUCH ein leerer Container sichtbar bleiben --
+  // sonst laesst sich etwas nicht einblenden, das man gerade sucht.
+  const bearb = ordAktiv === 'ma_detail';
+  flow.innerHTML = MD_CONTAINER.map(c => {
+    const zeilen = mdContainerInhalt(m, c);
+    if (!zeilen && !bearb) { return ''; }
+    const leer = zeilen ? '' : '<div style="color:var(--ink-3);font-size:13px">Für diese Person leer.</div>';
+    return `<div class="dash-item dw-schmal" data-widget="${esc(c.id)}">
+      <div class="card"><div class="card-hd"><h3>${esc(c.titel)}</h3></div>
+        <div class="card-bd"><dl class="ku-detail-info">${zeilen}</dl>${leer}</div></div>
+    </div>`;
+  }).join('');
 
-  // Ein Feld als Text, ohne Beschriftung. null heisst "steht nichts drin".
-  const text = ([f, , typ, quelle]) => {
-    const roh = m[f];
-    if (typ === 'd') { return leeresDatum(roh) ? null : dmy(roh); }
-    if (typ === 'a' && quelle && !Array.isArray(quelle)) {
-      const liste = quelle === 'anstellungsort' ? anstellungsorte : (mbListen[quelle] || []);
-      const e = liste.find(x => Number(x.id) === Number(roh));
-      return e ? e.bezeichnung : null;
-    }
-    return (roh === null || roh === undefined || String(roh).trim() === '') ? null : String(roh);
-  };
+  ordAnwenden('ma_detail', bearb && ordEntwurf ? ordEntwurf : ordStand('ma_detail'), bearb);
+}
 
+// ── Personaldossier: alles, fest ─────────────────────────────────────────
+function mdDossier() {
+  if (!maAkte) {
+    $('mdDossier').innerHTML = '<div style="color:var(--ink-3)">Wird geladen …</div>';
+    return;
+  }
+  const m = maAkte;
   const karten = MB_ABSCHNITTE.map(a => {
-    const felder = a.felder || [];
-    const erledigt = new Set();
-    let zeilen = felder.map((eintrag, i) => {
-      const f = eintrag[0];
-      if (erledigt.has(f)) { return ''; }
-      const zus = MD_ZUSAMMEN[f];
-      if (!zus) {
-        const w = text(eintrag);
-        return w === null ? '' : `<dt>${esc(eintrag[1])}</dt><dd>${esc(w)}${frist(f, m[f])}</dd>`;
-      }
-      // Zusammengefasste Zeile: erst der Hauptwert, dann die Beisatz-Felder.
-      const haupt = text(eintrag);
-      const teile = [];
-      let anhang = '';
-      zus.mit.forEach(g => {
-        erledigt.add(g);
-        const e2 = felder.find(x => x[0] === g);
-        if (!e2) { return; }
-        const w2 = text(e2);
-        if (w2 === null) { return; }
-        teile.push((zus.vor || '') + w2);
-        anhang += frist(g, m[g]);
-      });
-      if (haupt === null && !teile.length) { return ''; }
-      const wert = [haupt, teile.join(' · ')].filter(Boolean).join(zus.vor ? ' · ' : ' ');
-      return `<dt>${esc(zus.label)}</dt><dd>${esc(wert)}${anhang}</dd>`;
-    }).join('');
-    // Ja/Nein NUR bei "ja", und als eine Zeile mit Marken. Ein "nein" bei
-    // jeder Berechtigung fuellt die Seite mit Nichtinformation.
-    const marken = (a.janein || []).filter(([f]) => Number(m[f]))
-      .map(([, lang, kurz]) => `<span class="chip chip-n">${esc(kurz || lang)}</span>`);
-    if (marken.length) {
-      zeilen += `<dt>Berechtigt für</dt><dd class="md-marken">${marken.join(' ')}</dd>`;
-    }
-    if (a.konto) {
-      zeilen += `<dt>Rolle</dt><dd>${Number(m.ist_admin) ? 'Verwaltung (Admin)' : 'Mitarbeitende'}</dd>`
-             + `<dt>Angelegt am</dt><dd>${m.erstellt_am ? dmy(m.erstellt_am) : '–'}</dd>`;
-    }
+    const zeilen = mdAbschnittZeilen(m, a);
     if (!zeilen) { return ''; }              // Leere Abschnitte fallen weg
     return `<div class="card"><div class="card-hd"><h3>${esc(a.titel)}</h3></div>
       <div class="card-bd"><dl class="ku-detail-info">${zeilen}</dl></div></div>`;
   }).join('');
 
-  // "Nichts erfasst" und "Felder fehlen in der Datenbank" sind zwei
-  // verschiedene Aussagen und duerfen nicht gleich aussehen.
-  const hinweis = !maEingerichtet
-    ? `<div class="ki-hint web on ma-regel"><span><b>Die Felder aus ENT-072 sind in dieser
-       Datenbank noch nicht angelegt.</b> Was hier fehlt, ist deshalb nicht zwingend leer
-       erfasst. Einmal „Einrichtung“ in der Seitenleiste ausführen.</span></div>` : '';
-
-  $('mdInfo').innerHTML = hinweis + (karten
+  $('mdDossier').innerHTML = mdEinrichtungshinweis() + (karten
     ? `<div class="ma-karten">${karten}</div>`
     : EMPTY('Noch nichts erfasst', 'Über „Bearbeiten“ lassen sich die Angaben zu dieser Person eintragen.'));
+}
+
+// "Nichts erfasst" und "Felder fehlen in der Datenbank" sind zwei
+// verschiedene Aussagen und duerfen nicht gleich aussehen.
+function mdEinrichtungshinweis() {
+  return maEingerichtet ? '' :
+    `<div class="ki-hint web on ma-regel"><span><b>Die Felder aus ENT-072 sind in dieser
+     Datenbank noch nicht angelegt.</b> Was hier fehlt, ist deshalb nicht zwingend leer
+     erfasst. Einmal „Einrichtung“ in der Seitenleiste ausführen.</span></div>`;
 }
 
 function mdDienstplaene() {
@@ -8479,10 +8652,14 @@ const kuId = f => 'ku_' + f;
 // Bedienung und nicht des Datenmodells. Der Server prueft die Werte, die
 // Oberflaeche ordnet sie an -- beides an seinem Platz.
 
+// Jeder Abschnitt hat eine feste id. Sie steht in der gespeicherten
+// Anordnung (ENT-073) und darf sich darum NIE aendern -- ein umbenannter
+// Titel ist eine Beschriftung, eine umbenannte id verwirft die Einstellung
+// aller Benutzer.
 // f  = einzeilig | d = Datum | z = Zahl | a = Auswahl | j = Ja/Nein
 // b  = breit (ganze Zeile)
 const MB_ABSCHNITTE = [
-  { titel: 'Personalien', felder: [
+  { id: 'personalien', titel: 'Personalien', felder: [
     ['personalnummer', 'Personalnummer', 'f'],
     ['kurzzeichen',    'Kurzzeichen',    'f'],
     ['anrede',         'Anrede',         'a', ['Herr', 'Frau', 'Divers']],
@@ -8494,7 +8671,7 @@ const MB_ABSCHNITTE = [
   ]},
   // Eigener Abschnitt statt dreizehn Felder unter einer Ueberschrift: Herkunft
   // und Zivilstand werden aus anderem Anlass nachgefuehrt als der Name.
-  { titel: 'Herkunft und Zivilstand', felder: [
+  { id: 'herkunft', titel: 'Herkunft und Zivilstand', felder: [
     ['geburtsort',     'Geburtsort',     'f'],
     ['heimatort',      'Heimatort',      'f'],
     ['nationalitaet',  'Nationalität',   'f'],
@@ -8503,7 +8680,7 @@ const MB_ABSCHNITTE = [
        'eingetragene Partnerschaft', 'aufgeloeste Partnerschaft']],
     ['heiratsdatum',   'Heiratsdatum',   'd'],
   ]},
-  { titel: 'Adresse', felder: [
+  { id: 'adresse', titel: 'Adresse', felder: [
     ['strasse',      'Strasse',       'f', null, null, true],
     ['hausnummer',   'Nummer',        'f'],
     ['adresszusatz', 'Adresszusatz',  'f'],
@@ -8511,7 +8688,7 @@ const MB_ABSCHNITTE = [
     ['ort',          'Ort',           'f'],
     ['land',         'Land',          'f'],
   ]},
-  { titel: 'Kontakt', felder: [
+  { id: 'kontakt', titel: 'Kontakt', felder: [
     ['telefon',           'Telefon privat',   'f'],
     ['telefon_geschaeft', 'Telefon Geschäft', 'f'],
     ['mobil',             'Mobil privat',     'f'],
@@ -8521,7 +8698,7 @@ const MB_ABSCHNITTE = [
     ['notfallkontakt',    'Notfallkontakt',   'f', null,
       'Wen anrufen, wenn auf Schicht etwas passiert', true],
   ]},
-  { titel: 'Betriebliches', felder: [
+  { id: 'betrieb', titel: 'Betriebliches', felder: [
     ['funktion_id',       'Funktion',   'a', 'funktion'],
     ['abteilung_id',      'Abteilung',  'a', 'abteilung'],
     ['anstellungsort_id', 'Standort',   'a', 'anstellungsort'],
@@ -8529,11 +8706,11 @@ const MB_ABSCHNITTE = [
     ['eintritt',          'Eintritt',   'd'],
     ['austritt',          'Austritt',   'd'],
   ]},
-  { titel: 'Anstellung nach Art. 8 GAV', felder: [
+  { id: 'anstellung', titel: 'Anstellung nach Art. 8 GAV', felder: [
     ['anstellungskategorie', 'Kategorie',           'a', ['A', 'B', 'C']],
     ['pensum_stunden',       'Jahrespensum (Std.)', 'z'],
   ]},
-  { titel: 'Qualifikationen mit Lohnfolge', gav: true, felder: [
+  { id: 'qualifikation', titel: 'Qualifikationen mit Lohnfolge', gav: true, felder: [
     ['fachausweis',    'Eidg. Fachausweis', 'a',
       ['Personenschutz', 'Bewachung', 'Anlaesse', 'Zentralendienste']],
     ['fachausweis_am', 'erworben am',       'd'],
@@ -8553,7 +8730,7 @@ const MB_ABSCHNITTE = [
   // gerade Zahl Felder liegt. ZEMIS nimmt darum die ganze Zeile -- sonst
   // rutscht das dritte "gültig bis" unter die ZEMIS-Nummer und sieht aus,
   // als gehoerte es dorthin.
-  { titel: 'Ausweise und Bewilligungen', felder: [
+  { id: 'ausweise', titel: 'Ausweise und Bewilligungen', felder: [
     ['aufenthaltsbewilligung', 'Ausweiskategorie', 'a',
       ['B', 'C', 'Ci', 'G', 'L', 'F', 'N', 'S']],
     ['aufenthalt_gueltig_bis', 'gültig bis',       'd'],
@@ -8563,11 +8740,11 @@ const MB_ABSCHNITTE = [
     ['dienstausweis_nr',       'Dienstausweis-Nr.', 'f'],
     ['dienstausweis_gueltig_bis', 'gültig bis',    'd'],
   ]},
-  { titel: 'Nachweise', felder: [
+  { id: 'nachweise', titel: 'Nachweise', felder: [
     ['strafregister_datum', 'Strafregisterauszug vom',      'd'],
     ['betreibung_datum',    'Betreibungsregisterauszug vom', 'd'],
   ]},
-  { titel: 'Zugang', konto: true, felder: [
+  { id: 'zugang', titel: 'Zugang', konto: true, felder: [
     ['sprache',    'Sprache',              'a', ['de', 'fr', 'it', 'en']],
     ['zugang_bis', 'Zugang deaktivieren per', 'd'],
   ]},
