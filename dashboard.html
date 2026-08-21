@@ -431,6 +431,7 @@ th.sortbar.aktiv .pf { opacity: 1; color: var(--accent); }
 .search { position: relative; flex: 1; min-width: 200px; max-width: 340px; }
 .search svg.i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--ink-3); }
 .search .inp { padding-left: 34px; }
+.search-rechts { margin-left: auto; flex: 0 1 340px; }
 
 /* Detail-Schublade */
 .scrim { position: fixed; inset: 0; background: rgba(16,18,22,.42); z-index: 60; opacity: 0; pointer-events: none; transition: opacity .2s; }
@@ -559,12 +560,13 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .pick-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--ink-3); }
 
 /* Reiter innerhalb eines Bereichs */
-.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 18px; overflow-x: auto; }
-.tab { border: none; background: transparent; padding: 10px 14px 9px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 42px; overflow-x: auto; }
+.tab { border: none; background: transparent; padding: 10px 14px 9px; font: inherit; font-size: 16px; font-weight: 600; color: var(--ink-3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
 .tab:hover { color: var(--ink); }
 .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
 .tab-nebenan { display: flex; align-items: center; gap: 6px; border: none; background: transparent; padding: 8px 6px 9px;
-  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; }
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent;
+  margin-right: 47px; }
 .tab-nebenan:hover { color: var(--ink); }
 .tab-nebenan svg.i { width: 15px; height: 15px; }
 .ptab { display: none; }
@@ -691,7 +693,7 @@ tbody tr.zu .i-schloss { color: var(--warn); }
 }
 
 /* Monatsmatrix — erste Spalte bleibt stehen, die Tage scrollen in der Karte */
-.mx-info { font-size: 12px; color: var(--ink-3); margin: -6px 0 12px; }
+.mx-info { font-size: 13px; color: var(--ink-3); margin: 2px 0 26px; }
 .mx-info b { color: var(--ink-2); font-weight: 600; }
 .mx { overflow-x: auto; }
 .mx table { border-collapse: separate; border-spacing: 0; }
@@ -1293,6 +1295,9 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
   .bar-tools { gap: 8px; }
   .bar-tools > .sp { display: none; }
   .search { flex: 1 1 100%; min-width: 0; max-width: none; }
+  /* Auf schmalen Schirmen nimmt die Suche wieder die volle Zeile, das
+     Rechtshalten aus der Desktop-Regel muss dafuer weichen. */
+  .search-rechts { flex: 1 1 100%; margin-left: 0; }
   .bar-tools select.inp, .bar-tools input.inp { flex: 1 1 100%; width: 100% !important; min-width: 0; }
   .bar-tools .btn { flex: 1 1 auto; justify-content: center; }
   .bar-tools .check { flex: 1 1 100%; }
@@ -1875,11 +1880,6 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
               <option value="woche">Diese Woche</option>
               <option value="monat">Dieser Monat</option>
             </select>
-            <div class="search">
-              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input class="inp" type="search" id="mxSuche" placeholder="Objekt, Kunde, Ort oder Mitarbeitende …" oninput="renderMatrix()">
-            </div>
-            <div class="sp" style="flex:1"></div>
             <div class="tool-gruppe">
               <select class="inp" id="mxMon" style="width:auto" aria-label="Monat"></select>
               <select class="inp" id="mxJahr" style="width:auto" aria-label="Jahr"></select>
@@ -1903,6 +1903,15 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             <select class="inp" id="mxObj" style="width:auto" onchange="renderMatrix()" aria-label="Einzelnes Objekt anzeigen">
               <option value="">Alle Objekte</option>
             </select>
+            <!-- Die Suche steht am Ende der Leiste, damit die Filter links
+                 zusammenbleiben (Skizze 21.08.2026). Rechts gehalten wird sie
+                 ueber margin-left und nicht ueber einen Abstandhalter: bricht
+                 die Leiste um, bliebe der in der ersten Zeile zurueck und die
+                 Suche stuende in der zweiten links. -->
+            <div class="search search-rechts">
+              <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="inp" type="search" id="mxSuche" placeholder="Objekt, Kunde, Ort oder Mitarbeitende …" oninput="renderMatrix()">
+            </div>
           </div>
           <div class="mx-info" id="mxInfo"></div>
           <div class="card">
