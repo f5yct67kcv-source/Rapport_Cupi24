@@ -428,7 +428,7 @@ th.sortbar.aktiv .pf { opacity: 1; color: var(--accent); }
 /* Die Filter behalten ihre Breite und bleiben in einer Zeile. Reicht der
    Platz nicht, weicht die Suche in die naechste Zeile aus statt einen
    Filter mitzureissen. */
-.bar-tools { display: flex; align-items: flex-start; gap: 9px; flex-wrap: wrap; padding: 9px 0; margin-bottom: 16px; }
+.bar-tools { display: flex; align-items: flex-start; gap: 9px; flex-wrap: wrap; padding: 10px 0; margin-bottom: 16px; }
 /* Zusammengehörige Bedienelemente rücken enger zusammen, damit die Leiste
    trotz vieler Felder in Blöcke zerfällt statt in eine Reihe Einzelteile. */
 .tool-gruppe { display: flex; align-items: center; gap: 5px; }
@@ -436,6 +436,19 @@ th.sortbar.aktiv .pf { opacity: 1; color: var(--accent); }
 .search { position: relative; flex: 1; min-width: 200px; max-width: 340px; }
 .search svg.i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--ink-3); }
 .search .inp { padding-left: 34px; }
+/* Groessere Bedienelemente in der Einsaetze-Leiste (Skizze 21.08.2026).
+   Bewusst nur hier: die Uebersicht behaelt ihre 41 px. */
+#pv-einsaetze .bar-tools .inp,
+#pv-einsaetze .bar-tools .btn { height: 45px; box-sizing: border-box; }
+/* Rechts gehalten ueber margin statt ueber einen Abstandhalter: bricht die
+   Leiste um, bliebe der in der ersten Zeile zurueck. */
+#pv-einsaetze .bar-tools .btn-primary { width: 167px; margin-left: auto; }
+#pStatus { padding-left: 21px; }
+/* Der Abstand zur Leiste kommt jetzt aus dem Innenabstand, der Aussenabstand
+   des Rasters faellt weg (Skizze 21.08.2026). */
+#plKpi { padding: 18px 0; margin-bottom: 0; }
+#pv-einsaetze > .bar-tools { margin-bottom: 37px; }
+#pv-einsaetze > .card { padding: 11px 0; }
 /* Bei ausgeklappter Seitennavigation bleiben nur 1444 px. Die Suche muss
    weit genug schrumpfen koennen, sonst kippt die Leiste in zwei Zeilen. */
 .search-rechts { flex: 1 1 140px; max-width: 340px; min-width: 140px; margin-left: auto; }
@@ -1965,11 +1978,6 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             <option value="monat">Dieser Monat</option>
             <option value="alle">Alle, auch vergangene</option>
           </select>
-          <div class="search">
-            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="inp" type="search" id="pQ" placeholder="Kunde, Ort, Bezeichnung oder Mitarbeitende …" oninput="renderPlanung()">
-          </div>
-          <div class="sp" style="flex:1"></div>
           <!-- Herkunft der Zeile (ENT-058). Ein Einsatz entsteht entweder frei --
                eine Baustelle, ein Anlass -- oder aus einem Objekt samt seiner
                Masterschichten. Das sind zwei verschiedene Arbeiten, und wer
@@ -1995,6 +2003,13 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             <option value="offen">Nur unterbesetzt</option>
             <option value="abgesagt">Nur abgesagt</option>
           </select>
+          <!-- Suche hinter den Filtern, Abstandhalter davor dem Knopf:
+               so stehen die Filter links beisammen und "Neuer Einsatz"
+               allein rechts (Skizze 21.08.2026). -->
+          <div class="search">
+            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="inp" type="search" id="pQ" placeholder="Kunde, Ort, Bezeichnung oder Mitarbeitende …" oninput="renderPlanung()">
+          </div>
           <button class="btn btn-primary btn-sm" onclick="openEinsatzNeu()">
             <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Neuer Einsatz
