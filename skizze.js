@@ -16,6 +16,7 @@
     { id: 'verschieben',  name: 'Verschieben', hinweis: 'ziehen rastet ein, Alt hält es an' },
     { id: 'abstand',      name: 'Abstand',     hinweis: '← → ↑ ↓ · Alt = aussen' },
     { id: 'groesse',      name: 'Grösse',      hinweis: '← → Breite, ↑ ↓ Höhe' },
+    { id: 'schrift',      name: 'Schrift',     hinweis: '↑ ↓ Grösse, ← → Stärke' },
     { id: 'text',         name: 'Text',        hinweis: 'anklicken und tippen' },
     { id: 'reihenfolge',  name: 'Reihenfolge', hinweis: '← → tauscht mit Nachbar' },
     { id: 'duplizieren',  name: 'Duplizieren', hinweis: 'Element anklicken' },
@@ -26,7 +27,7 @@
     { id: 'notiz',        name: 'Notiz',       hinweis: 'Element anklicken' }
   ];
   /* Werkzeuge, die auf mehrere Elemente gleichzeitig wirken. */
-  var MEHRFACH = /^(verschieben|abstand|groesse|farbe|ausblenden|duplizieren)$/;
+  var MEHRFACH = /^(verschieben|abstand|groesse|schrift|farbe|ausblenden|duplizieren)$/;
 
   var aktiv = false;
   var werkzeug = 'auswahl';
@@ -459,6 +460,7 @@
     var w = WERKZEUGE.filter(function (x) { return x.id === id; })[0];
     var text = w ? w.hinweis : '';
     if (/^(groesse|abstand|verschieben)$/.test(id)) text += ' · Shift = 10 px';
+    if (id === 'schrift') text += ' · Shift = 4 px';
     if (MEHRFACH.test(id)) text += ' · Shift+Klick wählt mehrere, G Container, H Linie';
     if (id === 'farbe') text = 'Klick = Fläche, Shift+Klick = Schrift · G Container, H Linie';
     wurzel.getElementById('hinweis').textContent = text;
@@ -701,6 +703,13 @@
 
   /* ---------- Werkzeuge ---------- */
 
+  /* Haben die gewaehlten Elemente verschiedene Ausgangswerte, waere ein einzelner
+     Wert gelogen. Dann die Spanne zeigen. */
+  function spanne(werte, einheit) {
+    var min = Math.min.apply(null, werte), max = Math.max.apply(null, werte);
+    return (min === max ? String(min) : min + '–' + max) + (einheit || '');
+  }
+
   function px(el, eigenschaft) {
     return Math.round(parseFloat(getComputedStyle(el)[eigenschaft]) || 0);
   }
@@ -810,23 +819,25 @@
       var eig = (aussen ? 'margin' : 'padding') + seite;
       var lese = richtung[0] ? (aussen ? 'marginLeft' : 'paddingLeft')
                              : (aussen ? 'marginTop' : 'paddingTop');
-      var altA = px(auswahl[0], lese), neuA = 0;
+      var alteA = [], neueA = [];
       auswahl.forEach(function (el) { friereGeschwisterEin(el); });
       auswahl.forEach(function (el) {
         merkeStil(el, eig);
-        neuA = Math.max(0, px(el, lese) + delta * schritt);
+        var vorA = px(el, lese);
+        var neuA = Math.max(0, vorA + delta * schritt);
         el.style[eig] = neuA + 'px';
+        alteA.push(vorA); neueA.push(neuA);
       });
       notiereGebuendelt(auswahl.slice(), aussen ? 'margin' : 'padding',
-        richtung[0] ? 'links und rechts' : 'oben und unten', altA + 'px', neuA + 'px');
+        richtung[0] ? 'links und rechts' : 'oben und unten',
+        spanne(alteA, 'px'), spanne(neueA, 'px'));
       aktualisiereAnzeige();
       return true;
     }
 
     if (werkzeug === 'groesse') {
       var eigG = richtung[0] ? 'width' : 'height';
-      var altG = Math.round(auswahl[0].getBoundingClientRect()[eigG]);
-      var neuG = 0;
+      var alteG = [], neueG = [];
       auswahl.forEach(function (el) { friereGeschwisterEin(el); });
       auswahl.forEach(function (el) {
         /* Vor jedem Eingriff messen: sobald das Element nicht mehr mitwaechst,
@@ -852,8 +863,9 @@
             el.style.alignSelf = 'flex-start';
           }
         }
-        neuG = Math.max(4, vor + delta * schritt);
+        var neuG = Math.max(4, vor + delta * schritt);
         el.style[eigG] = neuG + 'px';
+        alteG.push(vor); neueG.push(neuG);
         /* In Tabellen ueberstimmt das Auto-Layout ein blosses width. */
         if (/^(TD|TH)$/.test(el.tagName)) {
           var eigMin = richtung[0] ? 'minWidth' : 'minHeight';
@@ -862,7 +874,43 @@
         }
       });
       notiereGebuendelt(auswahl.slice(), 'grösse', eigG === 'width' ? 'Breite' : 'Höhe',
-        altG + 'px', neuG + 'px');
+        spanne(alteG, 'px'), spanne(neueG, 'px'));
+      aktualisiereAnzeige();
+      return true;
+    }
+
+    if (werkzeug === 'schrift') {
+      /* Eine groessere Schrift macht das Element groesser -- in einer Flex-Leiste
+         wuerden sonst die Nachbarn nachgeben. */
+      auswahl.forEach(function (el) { friereGeschwisterEin(el); });
+      if (richtung[1]) {
+        var schrittS = e.shiftKey ? 4 : 1;
+        var alteS = [], neueS = [];
+        auswahl.forEach(function (el) {
+          merkeStil(el, 'fontSize');
+          var vorS = px(el, 'fontSize');
+          /* Nach oben groesser: ArrowUp ist -1 auf der Achse. */
+          var neuS = Math.max(6, vorS - richtung[1] * schrittS);
+          el.style.fontSize = neuS + 'px';
+          alteS.push(vorS); neueS.push(neuS);
+        });
+        notiereGebuendelt(auswahl.slice(), 'schrift', 'Grösse',
+          spanne(alteS, 'px'), spanne(neueS, 'px'));
+      } else {
+        var lies = function (el) {
+          var w = parseInt(getComputedStyle(el).fontWeight, 10);
+          return isNaN(w) ? 400 : w;
+        };
+        var alteW = [], neueW = [];
+        auswahl.forEach(function (el) {
+          merkeStil(el, 'fontWeight');
+          var vorW = lies(el);
+          var neuW = Math.min(900, Math.max(100, Math.round(vorW / 100) * 100 + richtung[0] * 100));
+          el.style.fontWeight = String(neuW);
+          alteW.push(vorW); neueW.push(neuW);
+        });
+        notiereGebuendelt(auswahl.slice(), 'schrift', 'Stärke', spanne(alteW), spanne(neueW));
+      }
       aktualisiereAnzeige();
       return true;
     }

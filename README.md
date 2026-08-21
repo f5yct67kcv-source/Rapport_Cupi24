@@ -128,11 +128,15 @@ Beim Ziehen erscheinen Ausrichtungshilfen: sobald eine Kante oder Mitte mit
 einem anderen Element fluchtet, zeigt eine Linie das an und das Element rastet
 ein. `Alt` beim Ziehen hält das Einrasten an.
 
-Auswählen zeigt Selektor und Masse. Verschieben, Abstand, Grösse und Reihenfolge
-arbeiten mit den Pfeiltasten, `Shift` macht Zehnerschritte, `Alt` schaltet beim
-Abstand von innen auf aussen. Dazu Text ändern, Duplizieren, Ausblenden, Farbe,
-Messen, freie Platzhalter-Rechtecke für noch nicht existierende Elemente und
-Notizen an einzelnen Elementen.
+Auswählen zeigt Selektor und Masse. Verschieben, Abstand, Grösse, Schrift und
+Reihenfolge arbeiten mit den Pfeiltasten, `Shift` macht grössere Schritte, `Alt`
+schaltet beim Abstand von innen auf aussen. Beim Schrift-Werkzeug ändern `↑` und
+`↓` die Schriftgrösse, `←` und `→` die Schriftstärke. Dazu Text ändern,
+Duplizieren, Ausblenden, Farbe, Messen, freie Platzhalter-Rechtecke für noch
+nicht existierende Elemente und Notizen an einzelnen Elementen.
+
+Haben mehrere gewählte Elemente verschiedene Ausgangswerte, steht im Protokoll
+die Spanne (`11–15px → 13–17px`) statt eines Werts, den keines von ihnen hat.
 
 Jede Handlung landet im Protokoll mit Selektor und Alt-Neu-Wert. `Kopieren` legt
 das Protokoll als Text und JSON in die Zwischenablage, `Datei` speichert es als
