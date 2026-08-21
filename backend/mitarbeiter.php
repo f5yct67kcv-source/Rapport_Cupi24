@@ -45,6 +45,11 @@ const MA_AUSWEISE = ['B', 'C', 'Ci', 'G', 'L', 'F', 'N', 'S'];
 
 const MA_SPRACHEN = ['de', 'fr', 'it', 'en'];
 
+// Die vier eidgenoessischen Fachausweise, die Art. 19 Ziff. 1 GAV woertlich
+// nennt: "fuer Personenschutz, Bewachung, Anlaesse oder Zentralendienste".
+// Kein Ja/Nein, weil der Wortlaut vier verschiedene aufzaehlt.
+const MA_FACHAUSWEISE = ['Personenschutz', 'Bewachung', 'Anlaesse', 'Zentralendienste'];
+
 // ── Feldliste ────────────────────────────────────────────────────────────
 // Reihenfolge und Typ an EINER Stelle. Wer ein Feld ergaenzt, ergaenzt es
 // hier -- Endpunkte und Pruefungen ziehen daraus.
@@ -104,6 +109,21 @@ function ma_felder(): array
         'betreibung_datum'          => 'datum',
         'dienstausweis_nr'          => 'text',
         'dienstausweis_gueltig_bis' => 'datum',
+        // Qualifikationen mit Lohnfolge (Art. 19 und Art. 10 GAV)
+        //
+        // Hier steht die BERECHTIGUNG, nicht der Zuschlag. Nach Art. 19
+        // Ziff. 2 und 3 entsteht dieser aus dem ANGEORDNETEN Einsatz mit
+        // Diensthund beziehungsweise Schusswaffe -- das gehoert an die
+        // Schicht und ist noch nicht gebaut. Wer die beiden verwechselt,
+        // zahlt Zuschlaege an Leute, die an diesem Tag weder Hund noch
+        // Waffe dabeihatten.
+        'fachausweis'                => 'liste',
+        'fachausweis_am'             => 'datum',
+        'diensthundefuehrer'         => 'janein',
+        'diensthund_bewilligung_bis' => 'datum',
+        'waffentragberechtigt'       => 'janein',
+        'waffe_bewilligung_bis'      => 'datum',
+        'basisausbildung_am'         => 'datum',
         // Zugang
         'sprache'    => 'liste',
         'zugang_bis' => 'datum',
@@ -129,6 +149,11 @@ function ma_listenfelder(): array
         'telefon', 'mobil', 'email',
         'kurzzeichen', 'funktion_id', 'abteilung_id', 'anstellungsort_id',
         'eintritt', 'austritt', 'anstellungskategorie', 'pensum_stunden',
+        // Die Berechtigungen gehoeren in die Liste, die Ausbildungsdaten
+        // nicht: Wer einteilt, muss sehen, wer Hund oder Waffe fuehren darf --
+        // sonst plant man jemanden auf einen Einsatz, den er nicht leisten
+        // darf. Das WANN einer Ausbildung braucht dafuer niemand.
+        'fachausweis', 'diensthundefuehrer', 'waffentragberechtigt',
     ];
 }
 
@@ -227,6 +252,8 @@ function ma_eingabe_lesen(array $input, array $bestand = [], ?PDO $pdo = null): 
 
         if ($roh === '') {
             // Leer heisst leer -- und bei Verweisen und Zahlen NULL, nicht 0.
+            // Ein Ja/Nein-Feld kennt kein "leer": nicht angekreuzt heisst nein.
+            if ($typ === 'janein') { $spalten[$feld] = 0; continue; }
             $spalten[$feld] = ($typ === 'id' || $typ === 'zahl') ? null : '';
             continue;
         }
@@ -242,6 +269,9 @@ function ma_eingabe_lesen(array $input, array $bestand = [], ?PDO $pdo = null): 
                 break;
             case 'zahl':
                 $spalten[$feld] = (int)$roh;
+                break;
+            case 'janein':
+                $spalten[$feld] = in_array(strtolower($roh), ['1', 'true', 'ja', 'on'], true) ? 1 : 0;
                 break;
             case 'id':
                 $spalten[$feld] = (int)$roh > 0 ? (int)$roh : null;
@@ -295,6 +325,12 @@ function ma_eingabe_lesen(array $input, array $bestand = [], ?PDO $pdo = null): 
         }
     }
 
+    // Art. 10 Ziff. 4 GAV: "Mitarbeitende mit einem eidgenoessischen
+    // Fachausweis der Sicherheitsdienstleistungsbranche muessen die
+    // Basisausbildung nicht absolvieren." Das wird NICHT automatisch
+    // gesetzt -- ein erfundenes Ausbildungsdatum waere eine Behauptung in
+    // der Datenbank. Die Oberflaeche sagt es stattdessen hin.
+    //
     // Austritt vor Eintritt ist keine Kleinigkeit: Daran haengen die
     // Jahresstunden nach Art. 8 GAV.
     $ein = (string)($spalten['eintritt'] ?? $bestand['eintritt'] ?? '');
@@ -316,6 +352,7 @@ function ma_erlaubte_werte(string $feld): ?array
         case 'zivilstand':             return MA_ZIVILSTAENDE;
         case 'aufenthaltsbewilligung': return MA_AUSWEISE;
         case 'sprache':                return MA_SPRACHEN;
+        case 'fachausweis':            return MA_FACHAUSWEISE;
         default:                       return null;
     }
 }

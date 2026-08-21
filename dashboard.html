@@ -1095,6 +1095,42 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 .pk-tag b { font-size: 14px; font-weight: 680; }
 .pk-tag .note { font-size: 11.5px; color: var(--ink-3); }
 
+/* Bearbeitungsflaeche Mitarbeitende (ENT-072).
+   Abschnitts-Karten nebeneinander. auto-fill mit einer Mindestbreite statt
+   einer festen Spaltenzahl: Auf einem breiten Bildschirm stehen drei Karten
+   nebeneinander, auf einem schmalen zwei, ohne dass jemand Umschaltpunkte
+   pflegen muss.
+   Eigenes Raster und NICHT .form-grid angefasst: das hat ueber zwanzig
+   Verwendungen im Werkzeug, eine Aenderung dort traefe jeden Dialog. */
+/* SPALTEN, nicht Zeilen. Ein Zeilenraster macht jede Zeile so hoch wie ihre
+   hoechste Karte -- neben "Personalien" mit dreizehn Feldern stuende dann ein
+   Loch von 200 px unter "Adresse". Gemessen, nicht vermutet: genau das war
+   der erste Entwurf. Mit Spalten fliessen die Karten nach unten weiter und
+   der Browser gleicht die Spaltenhoehen selbst aus.
+   break-inside verhindert, dass eine Karte mitten im Feld umbricht. */
+.ma-karten { column-width: 380px; column-gap: 16px; }
+.ma-karten > .card { break-inside: avoid; margin: 0 0 16px; }
+/* Faellt ein Etikett auf zwei Zeilen ("Betreibungsregisterauszug vom"), soll
+   trotzdem das EINGABEFELD mit dem daneben fluchten und nicht die Ueber-
+   schrift -- sonst steht ein Feld sichtbar tiefer als sein Nachbar. */
+.ma-karten .form-grid { align-items: end; }
+/* Ein Datumsfeld ist in Chromium zwei Pixel hoeher als ein Textfeld: die
+   innere Feldgruppe des Kalenders bringt eigenen Innenabstand mit. Auf dieser
+   Flaeche steht fast ueberall ein Datum neben einem Textfeld, und zwei Pixel
+   Versatz ueber vierzig Felder sieht unruhig aus, ohne dass man sagen kann
+   warum. Der Innenabstand wird darum genullt -- ohne feste Pixelhoehe, damit
+   die Felder auf dem Handy mit der groesseren Schrift mitwachsen. */
+.ma-karten input[type="date"]::-webkit-datetime-edit-fields-wrapper { padding: 0; }
+.ma-karten .card-hd h3 { font-size: 12px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--ink-3); }
+.ma-karten .card-bd { padding: 16px 18px 18px; }
+/* Ja/Nein-Felder in eigener Zeile, nicht im Raster -- ein Kaestchen neben
+   einem Eingabefeld sieht aus wie dessen Beschriftung. */
+.ma-janein { display: flex; flex-wrap: wrap; gap: 14px 22px; margin-top: 4px; }
+.ma-janein label { display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 550; cursor: pointer; }
+.ma-regel { margin-bottom: 14px; }
+
 /* Tageskopf im Tagesplan (ENT-068) -- als Klassen statt Inline-Stil, damit
    sich die Groesse mobil anheben laesst, ohne den Desktop anzutasten. */
 .tg-kopfkarte-card { margin-bottom: 16px; }
@@ -2211,6 +2247,34 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             <div id="mdVorbehalt"></div>
           </div>
         </div>
+
+        <!-- ── Volle Bearbeitungsflaeche (ENT-072) ──────────────────────────
+             Ersetzt die frühere Schublade rechts. Mit rund fünfzig Feldern
+             war sie zu schmal: Ein Formular, das man durch einen Spalt
+             bedient, lädt zu Flüchtigkeitsfehlern ein — und hier stehen
+             Angaben mit Lohnfolge drin.
+             Abschnitts-Karten nebeneinander, wie vom Projektinhaber gewählt.
+             KEINE eigene Handy-Fassung, so entschieden. Gemessen bei 390 px:
+             Die Karten fallen auf eine Spalte, nichts läuft seitlich über,
+             Eingabefelder sind 16 px gross und 44 px hoch. Bedienbar also,
+             aber lang — für die Erfassung ist der Desktop gedacht. -->
+        <div class="ma-tab" id="mv-bearbeiten">
+          <div class="ku-detail-hd">
+            <button class="ku-zurueck" onclick="mbAbbrechen()" aria-label="Zurück ohne zu speichern">
+              <svg class="i" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div style="flex:1">
+              <h2 id="mbName">–</h2>
+              <div class="sub" id="mbSub">–</div>
+            </div>
+            <button class="btn btn-plain" onclick="mbAbbrechen()">Abbrechen</button>
+            <button class="btn btn-primary" id="mbSpeichern" onclick="mbSpeichern()">Angaben speichern</button>
+          </div>
+          <div class="msg-err" id="mbErr" style="display:none"></div>
+          <div id="mbKi"></div>
+          <div id="mbHinweise"></div>
+          <div class="ma-karten" id="mbKarten"></div>
+        </div>
       </section>
 
       <!-- ─────────── KUNDEN ─────────── -->
@@ -3040,7 +3104,7 @@ let objekte = [];
 let masterschichten = [];   // die des offenen Objekts
 let feiertage = {};         // Datum -> Feiertag, für Matrix und Tagesplan
 let drawerId = null;   // offener Rapport in der Schublade
-let maTarget = null;   // offener Mitarbeitender (Login-Name)
+let maEingerichtet = true;  // stehen die Felder aus ENT-072 in der Datenbank?
 let enTarget = null;   // offener Einsatz (id)
 let obTarget = null;   // offenes Objekt (id)
 let msTarget = null;   // offene Masterschicht (id)
@@ -3076,7 +3140,28 @@ const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum'
 const MA_LABEL = { personalnummer:'Personalnummer', anrede:'Anrede', vorname:'Vorname', nachname:'Nachname',
   geburtsdatum:'Geburtsdatum', strasse:'Strasse', ort:'PLZ / Ort', telefon:'Telefon', mobil:'Mobil', email:'E-Mail',
   anstellungskategorie:'Anstellungskategorie', pensum_stunden:'Jahrespensum (Std.)', eintritt:'Eintritt' };
-const labelListe = fs => fs.map(f => MA_LABEL[f] || f).join(', ');
+// Beschriftung fuer Feldnamen. MA_LABEL deckt den kurzen Anlege-Dialog ab
+// (dort heisst "ort" bewusst "PLZ / Ort", weil ein Feld beides aufnimmt);
+// alles Weitere holt sich den Namen aus den Abschnitten der Bearbeitungs-
+// flaeche, damit ein Diktat-Hinweis auch neue Felder benennen kann.
+function mbLabel(f) {
+  for (const a of MB_ABSCHNITTE) {
+    for (const x of (a.felder || []).concat(a.janein || [])) { if (x[0] === f) { return x[1]; } }
+  }
+  return f;
+}
+const labelListe = fs => fs.map(f => MA_LABEL[f] || mbLabel(f)).join(', ');
+
+// Ein Sprachmodell haelt sich nicht mit Sicherheit an getrennte Felder: "4632
+// Trimbach" landet gern im reinen Ortsfeld. Der Griff steht serverseitig in
+// kunden.php und mitarbeiter.php -- hier EINMAL fuer beide Masken, damit
+// Kundenstamm und Personalstamm nicht verschieden trennen.
+// Gibt die Ergaenzung zurueck oder null, wenn nichts zu trennen ist.
+function plzOrtTrennen(felder) {
+  if (!felder || !felder.ort || felder.plz) { return null; }
+  const t = String(felder.ort).trim().match(/^(\d{4})\s+(.+)$/);
+  return t ? { plz: t[1], ort: t[2].trim() } : null;
+}
 const MIC = '<svg class="i i-sm" viewBox="0 0 24 24" style="margin-top:1px;flex:none"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>';
 
 // ── Hilfsfunktionen
@@ -3445,7 +3530,11 @@ function rtDialogOeffnen(data) {
     if (bereich === 'mitarbeiter' && aktion === 'aendern') {
       const idx = mitarbeiter.findIndex(m => m.name === data.mitarbeiter_login_name);
       if (idx === -1) { toast('Die erkannte Person steht nicht in der Liste.'); return; }
-      openMa(idx, data.aenderungen || {});
+      // Dieselbe Flaeche wie beim Klick auf "Bearbeiten". Zwei Oberflaechen
+      // fuer dasselbe Formular waeren zwei Orte, an denen ein Feld fehlen
+      // kann -- der Diktat-Weg markiert nur zusaetzlich, was er erkannt hat.
+      go('mitarbeiter');
+      mbOeffnen(data.mitarbeiter_login_name, data.aenderungen || {});
       return;
     }
     if (bereich === 'mitarbeiter') { openMaNeu(data.felder || {}); return; }
@@ -3742,6 +3831,10 @@ function loadMitarbeiter() {
   return api('mitarbeiter_list.php').then(({ ok, data }) => {
     if (!ok || data.status !== 'ok') return;
     mitarbeiter = data.mitarbeiter || [];
+    // Funktion und Abteilung kommen als Liste mit -- die Bearbeitungsflaeche
+    // macht daraus Namen, ohne dafuer eine zweite Anfrage zu stellen.
+    mbListen = data.listen || {};
+    maEingerichtet = data.eingerichtet !== false;
     renderMitarbeiter();
   });
 }
@@ -4044,7 +4137,8 @@ let mdTab = 'uebersicht';
 function maGoTab(t) {
   document.querySelectorAll('#view-mitarbeiter .ma-tab').forEach(v => v.classList.remove('on'));
   $('mv-' + t).classList.add('on');
-  $('pgCrumb').textContent = t === 'detail' ? 'Mitarbeitendendetails' : 'Stammdaten';
+  $('pgCrumb').textContent = t === 'detail' ? 'Mitarbeitendendetails'
+    : t === 'bearbeiten' ? 'Angaben bearbeiten' : 'Stammdaten';
   if (t === 'liste') { mdName = null; renderMitarbeiter(); }
 }
 function openMaDetail(name) {
@@ -4068,8 +4162,7 @@ function mdMonatUm(n) {
   renderMaDetail();
 }
 function mdBearbeiten() {
-  const i = mitarbeiter.findIndex(x => x.name === mdName);
-  if (i >= 0) { openMa(i); }
+  if (mdName) { mbOeffnen(mdName); }
 }
 
 // Alle abgeglichenen Schichten einer Person im gewählten Monat, chronologisch.
@@ -4895,7 +4988,7 @@ const enSchloss = e => enGesperrt(e) ? `<span title="Abgeglichen und festgeschri
 function openEinsatz(id) {
   const e = einsaetze.find(x => Number(x.id) === Number(id));
   if (!e) { toast('Einsatz nicht gefunden — bitte aktualisieren.'); return; }
-  drawerId = null; maTarget = null;
+  drawerId = null;
   enTarget = Number(id);
   // Festgeschrieben: die Schublade zeigt weiter alles, laesst aber nichts mehr
   // aendern. Lesen soll moeglich bleiben -- sonst muesste man in den Abgleich
@@ -5652,7 +5745,7 @@ function obDistanzenSpeichern(objektId) {
 function openObjekt(id) {
   const o = objekte.find(x => Number(x.id) === Number(id));
   if (!o) { toast('Objekt nicht gefunden — bitte aktualisieren.'); return; }
-  drawerId = null; maTarget = null; enTarget = null;
+  drawerId = null; enTarget = null;
   obTarget = Number(id);
 
   $('drTitle').textContent = o.name;
@@ -7523,7 +7616,7 @@ function closeDrawer() {
   $('scrim').classList.remove('on');
   $('drawer').classList.remove('on');
   $('drawer').setAttribute('aria-hidden', 'true');
-  drawerId = null; maTarget = null; enTarget = null;
+  drawerId = null; enTarget = null;
 }
 
 function askDeleteRapport(id) {
@@ -7613,97 +7706,16 @@ function createMa() {
 }
 
 // ══════════════════════════════════════════ MITARBEITENDE BEARBEITEN
-function openMa(i, aenderungen) {
-  const m = mitarbeiter[i];
-  if (!m) return;
-  drawerId = null;
-  maTarget = m.name;
-
-  const a = aenderungen || {};
-  const val = f => (a[f] !== undefined ? a[f] : (m[f] || ''));
-  const mark = f => (a[f] !== undefined ? ' ki' : '');
-  const inp = (f, label, typ, wide) =>
-    `<div class="f${wide ? ' wide' : ''}"><label for="maE_${f}">${label}</label>` +
-    `<input class="inp${mark(f)}" id="maE_${f}" type="${typ || 'text'}" value="${esc(val(f))}"></div>`;
-  const anredeOpts = ['', 'Herr', 'Frau', 'Divers']
-    .map(o => `<option value="${o}"${val('anrede') === o ? ' selected' : ''}>${o || '–'}</option>`).join('');
-  const erkannt = Object.keys(a).filter(f => MA_FELDER.includes(f));
-
-  $('drTitle').textContent = fullName(m) || m.name;
-  $('drBody').innerHTML = `
-    ${erkannt.length ? `<div class="ki-hint on">${MIC}<span>Blau markiert wurde aus dem Diktat übernommen: ${esc(labelListe(erkannt))}. Es ist noch nichts gespeichert — bitte prüfen und unten speichern.</span></div>` : ''}
-    <dl class="dl">
-      <dt>Login-Name</dt><dd>${esc(m.name)}</dd>
-      <dt>Rolle</dt><dd>${Number(m.ist_admin) ? 'Verwaltung (Admin)' : 'Mitarbeitende'}</dd>
-      <dt>Angelegt am</dt><dd>${m.erstellt_am ? dmy(m.erstellt_am) : '–'}</dd>
-    </dl>
-    <div class="form-grid" style="margin-top:18px">
-      ${inp('personalnummer', 'Personalnummer')}
-      <div class="f"><label for="maE_anrede">Anrede</label><select class="inp${mark('anrede')}" id="maE_anrede">${anredeOpts}</select></div>
-      ${inp('vorname', 'Vorname')}
-      ${inp('nachname', 'Nachname')}
-      ${inp('geburtsdatum', 'Geburtsdatum', 'date')}
-      ${inp('ort', 'PLZ / Ort')}
-      ${inp('strasse', 'Strasse', 'text', true)}
-      ${inp('telefon', 'Telefon')}
-      ${inp('mobil', 'Mobil')}
-      ${inp('email', 'E-Mail', 'email', true)}
-    </div>
-    <!-- Anstellung nach Art. 8 GAV (ENT-065). Eigener Block statt einer
-         weiteren Zeile im Adressblock: Diese drei Angaben sind nicht
-         Kontaktdaten, sondern die Grundlage der Pensenkontrolle. -->
-    <div class="zone" style="margin-top:18px">
-      <div class="zone-hd">Anstellung nach Art. 8 GAV</div>
-      <div class="zone-note">Bestimmt, gegen welche Jahresgrenze die geleisteten Stunden geprüft werden:
-        <b>C</b> bis 900 Stunden (inkl. Ferien, Zeitbonus und Zeitzuschlag), <b>B</b> 901–1'800,
-        <b>A</b> 1'801–2'300. Bleibt das Feld leer, wird nichts geprüft — eine geratene Kategorie
-        behauptet eine Grenze, die niemand vereinbart hat.</div>
-      <div class="form-grid" style="margin-top:12px">
-        <div class="f"><label for="maE_anstellungskategorie">Kategorie</label>
-          <select class="inp${mark('anstellungskategorie')}" id="maE_anstellungskategorie">
-            ${['', 'A', 'B', 'C'].map(o => `<option value="${o}"${val('anstellungskategorie') === o ? ' selected' : ''}>${o || '– keine –'}</option>`).join('')}
-          </select></div>
-        ${inp('pensum_stunden', 'Jahrespensum (Std.)', 'number')}
-        ${inp('eintritt', 'Eintritt', 'date')}
-      </div>
-    </div>
-    <div class="zone">
-      <div class="zone-hd">Passwort</div>
-      <div class="zone-note">Setzt ein neues Passwort und meldet die Person auf allen Geräten ab.</div>
-      <div class="inp-row">
-        <input class="inp" id="maPw" type="text" placeholder="min. 6 Zeichen" autocomplete="off">
-        <button class="btn btn-plain" onclick="resetMaPw()">Setzen</button>
-      </div>
-    </div>
-    ${m.name === (me && me.name) ? '' : `
-    <div class="zone danger">
-      <div class="zone-hd">Mitarbeitenden entfernen</div>
-      <div class="zone-note">Das Konto wird deaktiviert und die Person überall abgemeldet. Bereits erfasste Rapporte bleiben unverändert erhalten.</div>
-      <button class="btn btn-danger btn-sm" onclick="askRemoveMa()">Entfernen</button>
-    </div>`}`;
-  $('drFoot').innerHTML =
-    `<button class="btn btn-plain" onclick="closeDrawer()">Schliessen</button>
-     <div style="flex:1"></div>
-     <button class="btn btn-primary" onclick="saveMa()">Angaben speichern</button>`;
-  showDrawer();
-}
-
-function saveMa() {
-  if (!maTarget) return;
-  const body = { name: maTarget };
-  MA_FELDER.forEach(f => { const el = $('maE_' + f); if (el) { body[f] = (el.value || '').trim(); } });
-  api('mitarbeiter_update.php', { method: 'POST', body }).then(({ ok, data }) => {
-    if (!ok || data.status !== 'ok') { toast(data.message || 'Speichern fehlgeschlagen.'); return; }
-    closeDrawer();
-    loadMitarbeiter().then(() => toast('Angaben gespeichert.'));
-  });
-}
+// Die frueher hier stehende Schublade ist seit ENT-072 ersetzt: bearbeitet
+// wird auf der vollen Flaeche (mbOeffnen weiter unten). Passwort und
+// Deaktivierung sind mitgezogen und stehen dort in der Karte "Zugang".
 
 function resetMaPw() {
-  if (!maTarget) return;
+  const name = mbDaten && mbDaten.name;
+  if (!name) return;
   const password = $('maPw').value;
   if (password.length < 6) { toast('Passwort mindestens 6 Zeichen.'); return; }
-  api('mitarbeiter_reset_password.php', { method: 'POST', body: { name: maTarget, password } }).then(({ ok, data }) => {
+  api('mitarbeiter_reset_password.php', { method: 'POST', body: { name, password } }).then(({ ok, data }) => {
     if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
     $('maPw').value = '';
     toast('Neues Passwort gesetzt.');
@@ -7711,15 +7723,18 @@ function resetMaPw() {
 }
 
 function askRemoveMa() {
-  const name = maTarget;
+  const name = mbDaten && mbDaten.name;
   if (!name) return;
   askConfirm('Mitarbeitenden entfernen?',
     `„${name}“ wird deaktiviert und überall abgemeldet. Erfasste Rapporte bleiben erhalten.`,
     'Entfernen',
     () => api('mitarbeiter_deactivate.php', { method: 'POST', body: { name } }).then(({ ok, data }) => {
       if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
-      closeDrawer();
-      Promise.all([loadMitarbeiter(), loadStats()]).then(() => toast('Mitarbeitender entfernt.'));
+      // Zurueck in die Liste, nicht auf die Detailseite: die Person ist dort
+      // nicht mehr, und eine leere Detailseite sieht aus wie ein Fehler.
+      mbDaten = null; mbAend = {};
+      Promise.all([loadMitarbeiter(), loadStats()])
+        .then(() => { maGoTab('liste'); toast('Mitarbeitender entfernt.'); });
     }));
 }
 
@@ -8137,7 +8152,7 @@ function agZeilenwert(k, feld, ersatz) {
 function openAbgleich(k) {
   const z = agZeilen.find(x => agKey(x) === k);
   if (!z) { toast('Zeile nicht gefunden — bitte aktualisieren.'); return; }
-  drawerId = null; maTarget = null; enTarget = null;
+  drawerId = null; enTarget = null;
   agTarget = z;
 
   const erst = (z.ist_status || 'offen') === 'offen';
@@ -8365,6 +8380,327 @@ const KU_WEGE_VORGABE = ['email', 'telefon', 'webseite'];
 const KU_PERSON_WEGE_VORGABE = ['email', 'mobil'];
 const KU_PAPIERKORB = '<svg class="i i-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
 const kuId = f => 'ku_' + f;
+
+// ══════════════════════════════════════════ MITARBEITENDE BEARBEITEN (ENT-072)
+//
+// Volle Arbeitsflaeche statt Schublade. Die Abschnitte stehen EINMAL hier;
+// Reihenfolge und Beschriftung gibt es nicht zweimal.
+//
+// Bewusst NICHT aus einer Feldliste des Servers erzeugt: Welches Feld in
+// welchen Abschnitt gehoert und wie es beschriftet ist, ist eine Frage der
+// Bedienung und nicht des Datenmodells. Der Server prueft die Werte, die
+// Oberflaeche ordnet sie an -- beides an seinem Platz.
+
+// f  = einzeilig | d = Datum | z = Zahl | a = Auswahl | j = Ja/Nein
+// b  = breit (ganze Zeile)
+const MB_ABSCHNITTE = [
+  { titel: 'Personalien', felder: [
+    ['personalnummer', 'Personalnummer', 'f'],
+    ['kurzzeichen',    'Kurzzeichen',    'f'],
+    ['anrede',         'Anrede',         'a', ['Herr', 'Frau', 'Divers']],
+    ['geschlecht',     'Geschlecht',     'a', ['weiblich', 'maennlich', 'unbestimmt']],
+    ['vorname',        'Vorname',        'f'],
+    ['nachname',       'Nachname',       'f'],
+    ['geburtsdatum',   'Geburtsdatum',   'd'],
+    ['ahv_nr',         'AHV-Nummer',     'f', null, '756.XXXX.XXXX.XX'],
+  ]},
+  // Eigener Abschnitt statt dreizehn Felder unter einer Ueberschrift: Herkunft
+  // und Zivilstand werden aus anderem Anlass nachgefuehrt als der Name.
+  { titel: 'Herkunft und Zivilstand', felder: [
+    ['geburtsort',     'Geburtsort',     'f'],
+    ['heimatort',      'Heimatort',      'f'],
+    ['nationalitaet',  'Nationalität',   'f'],
+    ['zivilstand',     'Zivilstand',     'a',
+      ['ledig', 'verheiratet', 'verwitwet', 'geschieden',
+       'eingetragene Partnerschaft', 'aufgeloeste Partnerschaft']],
+    ['heiratsdatum',   'Heiratsdatum',   'd'],
+  ]},
+  { titel: 'Adresse', felder: [
+    ['strasse',      'Strasse',       'f', null, null, true],
+    ['hausnummer',   'Nummer',        'f'],
+    ['adresszusatz', 'Adresszusatz',  'f'],
+    ['plz',          'PLZ',           'f'],
+    ['ort',          'Ort',           'f'],
+    ['land',         'Land',          'f'],
+  ]},
+  { titel: 'Kontakt', felder: [
+    ['telefon',           'Telefon privat',   'f'],
+    ['telefon_geschaeft', 'Telefon Geschäft', 'f'],
+    ['mobil',             'Mobil privat',     'f'],
+    ['mobil_geschaeft',   'Mobil Geschäft',   'f'],
+    ['email',             'E-Mail Geschäft',  'f', null, null, true],
+    ['email_privat',      'E-Mail privat',    'f', null, null, true],
+    ['notfallkontakt',    'Notfallkontakt',   'f', null,
+      'Wen anrufen, wenn auf Schicht etwas passiert', true],
+  ]},
+  { titel: 'Betriebliches', felder: [
+    ['funktion_id',       'Funktion',   'a', 'funktion'],
+    ['abteilung_id',      'Abteilung',  'a', 'abteilung'],
+    ['anstellungsort_id', 'Standort',   'a', 'anstellungsort'],
+    ['beruf',             'Beruf',      'f'],
+    ['eintritt',          'Eintritt',   'd'],
+    ['austritt',          'Austritt',   'd'],
+  ]},
+  { titel: 'Anstellung nach Art. 8 GAV', felder: [
+    ['anstellungskategorie', 'Kategorie',           'a', ['A', 'B', 'C']],
+    ['pensum_stunden',       'Jahrespensum (Std.)', 'z'],
+  ]},
+  { titel: 'Qualifikationen mit Lohnfolge', gav: true, felder: [
+    ['fachausweis',    'Eidg. Fachausweis', 'a',
+      ['Personenschutz', 'Bewachung', 'Anlaesse', 'Zentralendienste']],
+    ['fachausweis_am', 'erworben am',       'd'],
+    ['basisausbildung_am', 'Basisausbildung absolviert am', 'd', null, null, true],
+    ['diensthund_bewilligung_bis', 'Diensthundeführer-Bewilligung gültig bis', 'd'],
+    ['waffe_bewilligung_bis',      'Waffentragbewilligung gültig bis',        'd'],
+  ], janein: [
+    ['diensthundefuehrer',   'Darf mit Diensthund eingesetzt werden'],
+    ['waffentragberechtigt', 'Darf mit Schusswaffe eingesetzt werden'],
+  ]},
+  // Reihenfolge ist hier keine Geschmacksfrage: In einem zweispaltigen Raster
+  // steht jedes "gültig bis" nur dann neben seinem Ausweis, wenn davor eine
+  // gerade Zahl Felder liegt. ZEMIS nimmt darum die ganze Zeile -- sonst
+  // rutscht das dritte "gültig bis" unter die ZEMIS-Nummer und sieht aus,
+  // als gehoerte es dorthin.
+  { titel: 'Ausweise und Bewilligungen', felder: [
+    ['aufenthaltsbewilligung', 'Ausweiskategorie', 'a',
+      ['B', 'C', 'Ci', 'G', 'L', 'F', 'N', 'S']],
+    ['aufenthalt_gueltig_bis', 'gültig bis',       'd'],
+    ['arbeitsbewilligung',     'Arbeitsbewilligung', 'f'],
+    ['arbeit_gueltig_bis',     'gültig bis',       'd'],
+    ['zemis_nr',               'ZEMIS-Nummer',     'f', null, null, true],
+    ['dienstausweis_nr',       'Dienstausweis-Nr.', 'f'],
+    ['dienstausweis_gueltig_bis', 'gültig bis',    'd'],
+  ]},
+  { titel: 'Nachweise', felder: [
+    ['strafregister_datum', 'Strafregisterauszug vom',      'd'],
+    ['betreibung_datum',    'Betreibungsregisterauszug vom', 'd'],
+  ]},
+  { titel: 'Zugang', konto: true, felder: [
+    ['sprache',    'Sprache',              'a', ['de', 'fr', 'it', 'en']],
+    ['zugang_bis', 'Zugang deaktivieren per', 'd'],
+  ]},
+];
+
+let mbDaten = null;      // der geladene Datensatz
+let mbAend  = {};        // aus dem Diktat uebernommen, noch nicht gespeichert
+let mbListen = {};       // pflegbare Listen aus der Antwort
+
+function mbAlleFelder() {
+  const f = [];
+  MB_ABSCHNITTE.forEach(a => {
+    (a.felder || []).forEach(x => f.push(x[0]));
+    (a.janein || []).forEach(x => f.push(x[0]));
+  });
+  return f;
+}
+
+// Einstieg: von der Detailseite aus -- oder aus dem Diktat, dann mit den
+// erkannten Werten, die vorgelegt und blau markiert werden.
+function mbOeffnen(name, aenderungen) {
+  mbAend = aenderungen || {};
+  // Seit ENT-072 sind PLZ und Ort zwei Felder. Kommt aus dem Diktat ein
+  // gemeinsames "3000 Bern", muss es hier getrennt werden -- sonst schickt
+  // die Maske eine PLZ aus dem Bestand mit einem Ort aus dem Diktat mit,
+  // und der Server hat keine Chance mehr, das zu bemerken.
+  const geteilt = plzOrtTrennen(mbAend);
+  if (geteilt) { mbAend = Object.assign({}, mbAend, geteilt); }
+  // Die Detailseite mitfuehren, egal woher der Aufruf kam: "Abbrechen"
+  // landet dann auf der Person, die man gerade bearbeitet hat, und nicht
+  // auf der zuletzt geoeffneten oder auf gar nichts.
+  mdName = name;
+  if (!$('mdMonat').value) { $('mdMonat').value = isoTag().slice(0, 7); }
+  $('mbErr').style.display = 'none';
+  $('mbKi').innerHTML = '';
+  $('mbHinweise').innerHTML = '';
+  $('mbKarten').innerHTML = '<div class="card"><div class="card-bd">Wird geladen …</div></div>';
+  maGoTab('bearbeiten');
+  // Die Anstellungsorte kommen mit: ohne sie stuende im Feld "Standort"
+  // "noch keine erfasst", obwohl es nur nicht geladen war.
+  Promise.all([
+    api('mitarbeiter_dossier.php?name=' + encodeURIComponent(name)),
+    anstellungsorte.length ? Promise.resolve() : ladeAnstellungsorte(),
+  ]).then(([{ ok, data }]) => {
+    if (!ok || data.status !== 'ok') {
+      mbFehler(data && data.message ? data.message : 'Der Datensatz liess sich nicht laden.');
+      $('mbKarten').innerHTML = '';
+      return;
+    }
+    mbDaten = data.mitarbeiter;
+    maEingerichtet = data.eingerichtet !== false;
+    mbZeichnen();
+  });
+}
+
+function mbAbbrechen() {
+  mbDaten = null;
+  mbAend = {};
+  maGoTab('detail');
+  mdGoTab(mdTab);
+}
+
+function mbFehler(text) {
+  const e = $('mbErr');
+  e.textContent = text || '';
+  e.style.display = text ? '' : 'none';
+}
+
+function mbAuswahl(feld, quelle, wert) {
+  // Quelle ist entweder eine feste Liste oder der Name einer pflegbaren.
+  if (Array.isArray(quelle)) {
+    return ['<option value="">– keine –</option>'].concat(
+      quelle.map(v => `<option value="${esc(v)}"${String(wert) === v ? ' selected' : ''}>${esc(v)}</option>`)
+    ).join('');
+  }
+  const eintraege = quelle === 'anstellungsort'
+    ? anstellungsorte.map(o => ({ id: o.id, bezeichnung: o.bezeichnung }))
+    : (mbListen[quelle] || []);
+  if (!eintraege.length) {
+    // "Noch keine erfasst" ist etwas anderes als "keine ausgewaehlt" --
+    // sonst sucht man den Fehler beim eigenen Klick statt bei der leeren Liste.
+    return '<option value="">– noch keine erfasst –</option>';
+  }
+  return ['<option value="">– keine –</option>'].concat(
+    eintraege.map(e => `<option value="${e.id}"${Number(wert) === Number(e.id) ? ' selected' : ''}>${esc(e.bezeichnung)}</option>`)
+  ).join('');
+}
+
+function mbZeichnen() {
+  const m = mbDaten || {};
+  $('mbName').textContent = fullName(m) || m.name || '–';
+  $('mbSub').textContent = [m.personalnummer ? 'Pers-Nr. ' + m.personalnummer : '', m.name,
+    m.ist_admin ? 'Verwaltung (Admin)' : 'Mitarbeitende(r)'].filter(Boolean).join(' · ');
+
+  // Ein Diktat-Wert schlaegt den gespeicherten -- er steht ja zur Pruefung da.
+  const wert = f => {
+    const v = mbAend[f] !== undefined ? mbAend[f] : m[f];
+    return (v === null || v === undefined) ? '' : String(v);
+  };
+  const mark = f => (mbAend[f] !== undefined ? ' ki' : '');
+
+  const feld = ([f, label, typ, quelle, hinweis, breit]) => {
+    const id = 'mb_' + f;
+    let steuer;
+    if (typ === 'a') {
+      steuer = `<select class="inp${mark(f)}" id="${id}">${mbAuswahl(f, quelle, wert(f))}</select>`;
+    } else {
+      const t = typ === 'd' ? 'date' : typ === 'z' ? 'number' : 'text';
+      steuer = `<input class="inp${mark(f)}" id="${id}" type="${t}" value="${esc(wert(f))}"`
+             + (hinweis ? ` placeholder="${esc(hinweis)}"` : '') + '>';
+    }
+    return `<div class="f${breit ? ' wide' : ''}"><label for="${id}">${esc(label)}</label>${steuer}</div>`;
+  };
+
+  $('mbKarten').innerHTML = MB_ABSCHNITTE.map(a => `
+    <div class="card">
+      <div class="card-hd"><h3>${esc(a.titel)}</h3></div>
+      <div class="card-bd">
+        <div class="form-grid">${(a.felder || []).map(feld).join('')}</div>
+        ${(a.janein || []).length ? `<div class="ma-janein">${a.janein.map(([f, label]) =>
+          `<label><input type="checkbox" id="mb_${f}"${Number(wert(f)) ? ' checked' : ''}> ${esc(label)}</label>`
+        ).join('')}</div>` : ''}
+        ${a.konto ? mbKonto() : ''}
+      </div>
+    </div>`).join('');
+
+  // Was aus dem Diktat kam, wird benannt -- eine blaue Umrandung allein sagt
+  // nicht, wonach man suchen soll, wenn neun Karten offen sind.
+  const alle = mbAlleFelder();
+  const erkannt = Object.keys(mbAend).filter(f => alle.includes(f));
+  $('mbKi').innerHTML = erkannt.length
+    ? `<div class="ki-hint on ma-regel">${MIC}<span>Blau markiert wurde aus dem Diktat
+       übernommen: ${esc(erkannt.map(mbLabel).join(', '))}. Es ist noch nichts gespeichert —
+       bitte prüfen und oben speichern.</span></div>` : '';
+
+  mbHinweise();
+}
+
+// Der Kontoteil der Zugang-Karte. Er steht IN dieser Karte und nicht daneben:
+// Sprache, Ablaufdatum, Passwort und Abmeldung gehoeren zur selben Frage --
+// wer kommt hier womit rein.
+function mbKonto() {
+  const m = mbDaten || {};
+  const selbst = m.name === (me && me.name);
+  return `
+    <dl class="dl" style="margin-top:6px">
+      <dt>Login-Name</dt><dd>${esc(m.name || '–')}</dd>
+      <dt>Rolle</dt><dd>${Number(m.ist_admin) ? 'Verwaltung (Admin)' : 'Mitarbeitende'}</dd>
+      <dt>Angelegt am</dt><dd>${m.erstellt_am ? dmy(m.erstellt_am) : '–'}</dd>
+    </dl>
+    <div class="zone">
+      <div class="zone-hd">Passwort</div>
+      <div class="zone-note">Setzt ein neues Passwort und meldet die Person auf allen Geräten ab.</div>
+      <div class="inp-row">
+        <input class="inp" id="maPw" type="text" placeholder="min. 6 Zeichen" autocomplete="off">
+        <button class="btn btn-plain" onclick="resetMaPw()">Setzen</button>
+      </div>
+    </div>
+    ${selbst ? '' : `
+    <div class="zone danger">
+      <div class="zone-hd">Mitarbeitenden entfernen</div>
+      <div class="zone-note">Das Konto wird deaktiviert und die Person überall abgemeldet.
+        Bereits erfasste Rapporte bleiben unverändert erhalten.</div>
+      <button class="btn btn-danger btn-sm" onclick="askRemoveMa()">Entfernen</button>
+    </div>`}`;
+}
+
+// Hinweise, die aus dem GAV folgen. Sie SAGEN etwas, sie setzen nichts --
+// ein automatisch gefuelltes Ausbildungsdatum waere eine Behauptung.
+function mbHinweise() {
+  const m = mbDaten || {};
+  const teile = [];
+  if (!maEingerichtet) {
+    // Ohne die Spalten aus ENT-072 gibt es die meisten Felder in der Daten-
+    // bank nicht. Leer aussehende Felder, die sich nicht speichern lassen,
+    // sind sonst nicht von "noch nichts erfasst" zu unterscheiden.
+    teile.push(`<b>Die neuen Felder sind in dieser Datenbank noch nicht angelegt.</b>
+      Was hier leer steht, ist deshalb nicht zwingend leer erfasst — es fehlt die
+      Spalte. Einmal „Einrichtung“ in der Seitenleiste ausführen, dann erneut öffnen.`);
+  }
+  if (m.fachausweis && !m.basisausbildung_am) {
+    teile.push(`<b>Basisausbildung nicht nötig.</b> Art. 10 Ziff. 4 GAV: Wer einen
+      eidgenössischen Fachausweis der Branche hat, muss sie nicht absolvieren.
+      Das Feld darf leer bleiben.`);
+  }
+  if (!m.fachausweis && !m.basisausbildung_am) {
+    teile.push(`<b>Basisausbildung offen.</b> Art. 10 verlangt mindestens 20 Stunden
+      während der Probezeit; die Bestätigung ist nach Ziff. 3 im Personaldossier
+      abzulegen.`);
+  }
+  if (Number(m.diensthundefuehrer) || Number(m.waffentragberechtigt)) {
+    teile.push(`<b>Zuschlag entsteht am Einsatz, nicht hier.</b> Nach Art. 19
+      Ziff. 2 und 3 wird der Zuschlag für <i>angeordnete</i> Einsätze mit Diensthund
+      oder Schusswaffe geschuldet. Hier steht nur die Berechtigung — ob ein
+      einzelner Einsatz so angeordnet war, führt das Werkzeug noch nicht.`);
+  }
+  const box = $('mbHinweise');
+  box.innerHTML = teile.length
+    ? `<div class="ki-hint web on ma-regel"><span>${teile.join('<br><br>')}</span></div>` : '';
+}
+
+function mbSpeichern() {
+  if (!mbDaten) { return; }
+  const body = { name: mbDaten.name };
+  mbAlleFelder().forEach(f => {
+    const el = $('mb_' + f);
+    if (!el) { return; }
+    body[f] = el.type === 'checkbox' ? (el.checked ? '1' : '') : (el.value || '').trim();
+  });
+  const knopf = $('mbSpeichern');
+  knopf.disabled = true;
+  mbFehler('');
+  api('mitarbeiter_update.php', { method: 'POST', body }).then(({ ok, data }) => {
+    knopf.disabled = false;
+    if (!ok || data.status !== 'ok') {
+      // Fehlerband statt Toast: Bei einer Prueffziffer oder einem Datum will
+      // man den Text stehen sehen, waehrend man das Feld sucht.
+      mbFehler(data && data.message ? data.message : 'Speichern fehlgeschlagen.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    toast('Angaben gespeichert.');
+    loadMitarbeiter().then(() => { mbAbbrechen(); });
+  });
+}
 
 // ══════════════════════════════════════════ KUNDENIMPORT (ENT-066)
 //
@@ -8746,16 +9082,11 @@ function kuFehlendePflicht() {
 // Kommunikationszeilen -- sie landen in der ersten passenden leeren Zeile.
 function kuFelderEinsetzen(felder, web) {
   const gefuellt = [];
-  // Notnagel gegen ein "4632 Trimbach" im reinen Ortsfeld: Diktat und
-  // Recherche liefern beides getrennt, aber ein Sprachmodell hält sich nicht
-  // mit Sicherheit daran. Derselbe Griff steht serverseitig in kunden.php.
-  if (felder.ort && !felder.plz) {
-    const t = String(felder.ort).trim().match(/^(\d{4})\s+(.+)$/);
-    if (t) {
-      felder = Object.assign({}, felder, { plz: t[1], ort: t[2].trim() });
-      // Die PLZ stammt dann aus derselben Quelle wie der Ort.
-      if (web.includes('ort')) web = web.concat('plz');
-    }
+  const geteilt = plzOrtTrennen(felder);
+  if (geteilt) {
+    felder = Object.assign({}, felder, geteilt);
+    // Die PLZ stammt dann aus derselben Quelle wie der Ort.
+    if (web.includes('ort')) web = web.concat('plz');
   }
   KU_FELDER.forEach(f => {
     const wert = felder[f];

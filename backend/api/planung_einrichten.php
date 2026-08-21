@@ -426,6 +426,33 @@ $spalten = [
     ['mitarbeiter', 'zugang_bis',            "ALTER TABLE mitarbeiter ADD COLUMN zugang_bis DATE NULL"],
     ['mitarbeiter', 'letzter_zugriff',       "ALTER TABLE mitarbeiter ADD COLUMN letzter_zugriff DATETIME NULL"],
     ['mitarbeiter', 'passwort_geaendert_am', "ALTER TABLE mitarbeiter ADD COLUMN passwort_geaendert_am DATETIME NULL"],
+    //
+    // ── Qualifikationen mit Lohnfolge (ENT-072, Art. 19 und Art. 10 GAV) ──
+    // Diese vier Angaben verlangt der GAV, die Vorlage kennt keine davon.
+    //
+    // WICHTIG, und der Grund fuer den Zuschnitt: Nach Art. 19 Ziff. 2 und 3
+    // entsteht der Zuschlag aus dem ANGEORDNETEN EINSATZ mit Diensthund
+    // beziehungsweise Schusswaffe -- nicht daraus, dass jemand die
+    // Berechtigung besitzt. Hier steht deshalb nur die Berechtigung. Ob ein
+    // konkreter Einsatz mit Hund oder Waffe angeordnet war, gehoert an die
+    // Schicht und ist noch nicht gebaut (offener Punkt).
+    //
+    // Der Fachausweis nach Ziff. 1 gilt "fuer Personenschutz, Bewachung,
+    // Anlaesse oder Zentralendienste" -- vier verschiedene, darum ein Wert
+    // und kein Ja/Nein.
+    ['mitarbeiter', 'fachausweis',                "ALTER TABLE mitarbeiter ADD COLUMN fachausweis VARCHAR(30) NULL"],
+    ['mitarbeiter', 'fachausweis_am',             "ALTER TABLE mitarbeiter ADD COLUMN fachausweis_am DATE NULL"],
+    ['mitarbeiter', 'diensthundefuehrer',         "ALTER TABLE mitarbeiter ADD COLUMN diensthundefuehrer TINYINT(1) NOT NULL DEFAULT 0"],
+    // Die kantonale Diensthundefuehrer-Bewilligung zahlt nach Art. 19 Ziff. 2
+    // der Arbeitgeber -- ein abgelaufenes Datum ist also seine Sache.
+    ['mitarbeiter', 'diensthund_bewilligung_bis', "ALTER TABLE mitarbeiter ADD COLUMN diensthund_bewilligung_bis DATE NULL"],
+    ['mitarbeiter', 'waffentragberechtigt',       "ALTER TABLE mitarbeiter ADD COLUMN waffentragberechtigt TINYINT(1) NOT NULL DEFAULT 0"],
+    ['mitarbeiter', 'waffe_bewilligung_bis',      "ALTER TABLE mitarbeiter ADD COLUMN waffe_bewilligung_bis DATE NULL"],
+    // Art. 10 Ziff. 3: Die Bestaetigung der Basisausbildung "ist im
+    // Personaldossier abzulegen". Gespeichert wird das Datum; die Bestaetigung
+    // selbst gehoert in die Dokumentenablage (Stufe 2).
+    // Ziff. 4: Wer einen eidg. Fachausweis hat, muss sie nicht absolvieren.
+    ['mitarbeiter', 'basisausbildung_am',         "ALTER TABLE mitarbeiter ADD COLUMN basisausbildung_am DATE NULL"],
     // Sparte (ENT-037). Der Bestand ist ausnahmslos Sicherheit -- die Reinigung
     // kommt erst mit diesem Schritt dazu. Die Vorgabe traegt die Altdaten also
     // richtig, ohne dass etwas von Hand nachgetragen werden muss.
