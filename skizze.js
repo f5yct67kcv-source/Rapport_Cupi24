@@ -13,7 +13,7 @@
   var FARBE = '#D85A30';
   var WERKZEUGE = [
     { id: 'auswahl',      name: 'Auswählen',   hinweis: 'Element anklicken' },
-    { id: 'verschieben',  name: 'Verschieben', hinweis: 'ziehen oder ← → ↑ ↓' },
+    { id: 'verschieben',  name: 'Verschieben', hinweis: 'ziehen rastet ein, Alt hält es an' },
     { id: 'abstand',      name: 'Abstand',     hinweis: '← → ↑ ↓ · Alt = aussen' },
     { id: 'groesse',      name: 'Grösse',      hinweis: '← → Breite, ↑ ↓ Höhe' },
     { id: 'text',         name: 'Text',        hinweis: 'anklicken und tippen' },
@@ -37,6 +37,8 @@
   var host, wurzel, panel, liste, zielzeile, hover, umrisse, marke, ziehflaeche;
   var zieht = null;
   var hilfsElemente = [];
+  var kandidaten = [];
+  var linien = [];
 
   function erstes() { return auswahl[0] || null; }
 
@@ -339,6 +341,9 @@
     'padding:2px 6px;border-radius:4px;z-index:2147482100;display:none;white-space:nowrap}' +
     '#zieh{position:fixed;pointer-events:none;border:1.5px dashed ' + FARBE + ';background:rgba(216,90,48,.12);' +
     'border-radius:4px;z-index:2147482000;display:none}' +
+    '.linie{position:fixed;pointer-events:none;z-index:2147482400;background:#7F77DD}' +
+    '.linie.waag{height:1px}' +
+    '.linie.senk{width:1px}' +
     '#meldung{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1b1b1d;color:#e8e8e6;' +
     'border:1px solid #3a3a3d;border-radius:8px;padding:8px 14px;font-size:12px;z-index:2147483100;display:none}';
 
@@ -454,8 +459,8 @@
     var w = WERKZEUGE.filter(function (x) { return x.id === id; })[0];
     var text = w ? w.hinweis : '';
     if (/^(groesse|abstand|verschieben)$/.test(id)) text += ' · Shift = 10 px';
-    if (MEHRFACH.test(id)) text += ' · Shift+Klick wählt mehrere, G die ganze Ebene';
-    if (id === 'farbe') text = 'Klick = Fläche, Shift+Klick = Schrift · G die ganze Ebene';
+    if (MEHRFACH.test(id)) text += ' · Shift+Klick wählt mehrere, G Container, H Linie';
+    if (id === 'farbe') text = 'Klick = Fläche, Shift+Klick = Schrift · G Container, H Linie';
     wurzel.getElementById('hinweis').textContent = text;
     wurzel.getElementById('farben').classList.toggle('an', id === 'farbe');
     document.body.style.cursor = (id === 'platzhalter' || id === 'messen') ? 'crosshair' : '';
@@ -544,6 +549,106 @@
       if (m) Object.keys(m).forEach(function (k) { el.style[k] = m[k]; });
     });
     hilfsElemente = [];
+  }
+
+  /* ---------- Ausrichtungshilfen ---------- */
+
+  var TOLERANZ = 6;
+
+  /* Einmal beim Anfassen sammeln: alles Sichtbare, was weder zur Auswahl noch
+     zu deren Vorfahren oder Kindern gehoert. */
+  function sammleKandidaten(ziele) {
+    var out = [];
+    var alle = document.body.querySelectorAll('*');
+    for (var i = 0; i < alle.length; i++) {
+      var el = alle[i];
+      if (istEigen(el)) continue;
+      var verwandt = false;
+      for (var j = 0; j < ziele.length; j++) {
+        if (el === ziele[j] || el.contains(ziele[j]) || ziele[j].contains(el)) { verwandt = true; break; }
+      }
+      if (verwandt) continue;
+      var r = el.getBoundingClientRect();
+      if (r.width < 8 || r.height < 8) continue;
+      if (r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth) continue;
+      out.push({ el: el, r: r });
+      if (out.length >= 800) break;
+    }
+    return out;
+  }
+
+  function kantenX(r) { return [r.left, (r.left + r.right) / 2, r.right]; }
+  function kantenY(r) { return [r.top, (r.top + r.bottom) / 2, r.bottom]; }
+
+  /* Sucht die naechstliegende Flucht in beide Richtungen. */
+  function findeFlucht(r) {
+    var bx = null, by = null;
+    var zx = kantenX(r), zy = kantenY(r);
+    kandidaten.forEach(function (k) {
+      kantenX(k.r).forEach(function (kx) {
+        zx.forEach(function (x) {
+          var d = kx - x;
+          if (Math.abs(d) <= TOLERANZ && (!bx || Math.abs(d) < Math.abs(bx.d))) bx = { d: d, pos: kx, k: k };
+        });
+      });
+      kantenY(k.r).forEach(function (ky) {
+        zy.forEach(function (y) {
+          var d = ky - y;
+          if (Math.abs(d) <= TOLERANZ && (!by || Math.abs(d) < Math.abs(by.d))) by = { d: d, pos: ky, k: k };
+        });
+      });
+    });
+    return { x: bx, y: by };
+  }
+
+  function zeigeLinien(flucht, r) {
+    versteckeLinien();
+    if (flucht.x) {
+      var d = document.createElement('div');
+      d.className = 'linie senk';
+      d.style.left = Math.round(flucht.x.pos) + 'px';
+      d.style.top = Math.round(Math.min(r.top, flucht.x.k.r.top)) + 'px';
+      d.style.height = Math.round(Math.max(r.bottom, flucht.x.k.r.bottom) - Math.min(r.top, flucht.x.k.r.top)) + 'px';
+      wurzel.appendChild(d);
+      linien.push(d);
+    }
+    if (flucht.y) {
+      var h = document.createElement('div');
+      h.className = 'linie waag';
+      h.style.top = Math.round(flucht.y.pos) + 'px';
+      h.style.left = Math.round(Math.min(r.left, flucht.y.k.r.left)) + 'px';
+      h.style.width = Math.round(Math.max(r.right, flucht.y.k.r.right) - Math.min(r.left, flucht.y.k.r.left)) + 'px';
+      wurzel.appendChild(h);
+      linien.push(h);
+    }
+  }
+
+  function versteckeLinien() {
+    linien.forEach(function (l) { l.remove(); });
+    linien = [];
+  }
+
+  /* Alles, was optisch auf derselben waagrechten Linie sitzt -- auch wenn es im
+     HTML in einem anderen Container steht. Von verschachtelten Treffern bleibt
+     der innerste, das ist das eigentliche Bedienelement. */
+  function gleicheEbene() {
+    var el = erstes();
+    if (!el) return;
+    var r = el.getBoundingClientRect();
+    var mitte = (r.top + r.bottom) / 2;
+    var treffer = sammleKandidaten([el]).filter(function (k) {
+      var km = (k.r.top + k.r.bottom) / 2;
+      var fluchtet = Math.abs(km - mitte) <= 4 || Math.abs(k.r.top - r.top) <= 4;
+      /* Eine hohe Tabelle kann dieselbe Mittellinie haben wie ein Filterknopf,
+         gehoert aber nicht dazu. Nur aehnlich hohe Elemente zaehlen. */
+      var passt = Math.abs(k.r.height - r.height) <= Math.max(6, r.height * 0.25);
+      return fluchtet && passt;
+    }).map(function (k) { return k.el; });
+    var innerste = treffer.filter(function (a) {
+      return !treffer.some(function (b) { return b !== a && a.contains(b); });
+    });
+    setzeAuswahl([el].concat(innerste));
+    melde(auswahl.length + ' Elemente auf derselben Linie gewählt');
   }
 
   function zeichneListe() {
@@ -840,6 +945,7 @@
         var m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/.exec(k.style.transform || '');
         return { el: k, dx: m ? parseFloat(m[1]) : 0, dy: m ? parseFloat(m[2]) : 0 };
       });
+      kandidaten = sammleKandidaten(auswahl);
       zieht = { x: e.clientX, y: e.clientY, start: start };
     }
   }
@@ -855,11 +961,23 @@
       return;
     }
     if (zieht.start) {
-      zieht.start.forEach(function (s) {
-        var x = Math.round(s.dx + e.clientX - zieht.x);
-        var y = Math.round(s.dy + e.clientY - zieht.y);
-        s.el.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
-      });
+      var rohX = e.clientX - zieht.x, rohY = e.clientY - zieht.y;
+      var setze = function (kx, ky) {
+        zieht.start.forEach(function (s) {
+          s.el.style.transform = 'translate(' + Math.round(s.dx + kx) + 'px, ' +
+            Math.round(s.dy + ky) + 'px)';
+        });
+      };
+      setze(rohX, rohY);
+      /* Alt haelt das Einrasten an, wie in den Zeichenprogrammen ueblich. */
+      if (!e.altKey && kandidaten.length) {
+        var r = zieht.start[0].el.getBoundingClientRect();
+        var flucht = findeFlucht(r);
+        setze(rohX + (flucht.x ? flucht.x.d : 0), rohY + (flucht.y ? flucht.y.d : 0));
+        zeigeLinien(flucht, zieht.start[0].el.getBoundingClientRect());
+      } else {
+        versteckeLinien();
+      }
       zeichneAuswahl();
     }
   }
@@ -890,6 +1008,8 @@
       }
     }
     zieht = null;
+    versteckeLinien();
+    kandidaten = [];
   }
 
   function legePlatzhalter(l, t, w, h, unter) {
@@ -930,6 +1050,12 @@
       return;
     }
 
+    if (!e.metaKey && !e.ctrlKey && (e.key === 'h' || e.key === 'H')) {
+      e.preventDefault();
+      gleicheEbene();
+      return;
+    }
+
     var nr = parseInt(e.key, 10);
     if (!e.metaKey && !e.ctrlKey && nr >= 1 && nr <= 9 && WERKZEUGE[nr - 1]) {
       waehleWerkzeug(WERKZEUGE[nr - 1].id);
@@ -958,7 +1084,7 @@
     document.addEventListener('mouseup', beiHoch, true);
     window.addEventListener('scroll', beiScroll, true);
     window.addEventListener('resize', beiScroll);
-    melde('Skizzenmodus an · Zahlen 1–9 wählen Werkzeuge, G die ganze Ebene');
+    melde('Skizzenmodus an · Zahlen 1–9 wählen Werkzeuge, G und H wählen mehrere');
   }
 
   function aus() {
