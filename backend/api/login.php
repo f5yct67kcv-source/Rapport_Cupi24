@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 require __DIR__ . '/../anmeldung.php';
 require __DIR__ . '/../zweifaktor.php';
 
@@ -116,6 +117,12 @@ if ($geraetMerken && zf_ist_an(db(), $person)) {
     if (random_int(1, 20) === 1) { zf_geraete_aufraeumen(db()); }
 }
 
+// Rollen und Rechte gleich mitgeben (ENT-077), damit die Oberflaeche nach
+// dem Anmelden sofort weiss, was sie zeigen darf -- ohne eine zweite
+// Anfrage, waehrend deren Laufzeit falsche Knoepfe dastuenden.
+$rollen = rechte_rollen(db(), (int)$user['id'], (bool)$user['ist_admin']);
 json_response(['status' => 'ok', 'token' => $token, 'name' => $name,
-    'ist_admin' => (bool)$user['ist_admin'],
+    'ist_admin' => in_array(ROLLE_VERWALTUNG, $rollen, true),
+    'rollen'    => $rollen,
+    'rechte'    => rechte_aus_rollen($rollen),
     'geraet' => $geraetWert]);

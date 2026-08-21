@@ -1168,6 +1168,28 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 .ma-regel { margin-bottom: 14px; }
 .md-marken { display: flex; flex-wrap: wrap; gap: 6px; }
 
+/* Rollenauswahl (ENT-077). Untereinander, nicht nebeneinander: Zu jeder
+   Rolle gehoert ein Satz, der sagt, was sie darf -- nebeneinander waeren
+   das vier Textbloecke in schmalen Spalten. Die Trefferflaeche umfasst die
+   ganze Zeile samt Erklaerung, nicht nur das Kaestchen. */
+.ma-rollen { display: flex; flex-direction: column; gap: 2px; }
+.ma-rolle { display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 8px; border-radius: 8px; cursor: pointer; min-height: 44px; }
+.ma-rolle:hover { background: rgba(127,127,127,.08); }
+.ma-rolle input { margin-top: 3px; flex: 0 0 auto; }
+.ma-rolle span { display: flex; flex-direction: column; gap: 2px; }
+.ma-rolle b { font-size: 13px; font-weight: 650; }
+.ma-rolle small { font-size: 12px; line-height: 1.45; opacity: .72; }
+
+/* Rollenuebersicht unter Betrieb. Ueberschrift oben, Wert darunter --
+   dieselbe Ordnung wie ueberall sonst (ENT-070). */
+.rv-liste { display: flex; flex-direction: column; gap: 14px; }
+.rv-zeile { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.rv-zeile:last-child { border-bottom: 0; padding-bottom: 0; }
+.rv-kopf { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+.rv-kopf b { font-size: 13px; font-weight: 650; }
+.rv-text { font-size: 12px; line-height: 1.45; color: var(--ink-3); margin-bottom: 7px; }
+
 /* Tageskopf im Tagesplan (ENT-068) -- als Klassen statt Inline-Stil, damit
    sich die Groesse mobil anheben laesst, ohne den Desktop anzutasten. */
 .tg-kopfkarte-card { margin-bottom: 16px; }
@@ -2177,6 +2199,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             <button class="tab on" id="mdtab-uebersicht" onclick="mdGoTab('uebersicht')">Übersicht</button>
             <button class="tab" id="mdtab-dossier" onclick="mdGoTab('dossier')">Personaldossier</button>
             <button class="tab" id="mdtab-dienstplaene" onclick="mdGoTab('dienstplaene')">Dienstpläne</button>
+            <button class="tab" id="mdtab-verlauf" onclick="mdGoTab('verlauf')" style="display:none">Verlauf</button>
             <div style="flex:1"></div>
             <button class="btn btn-plain btn-sm" onclick="ordBearbeitenStart('ma_detail')" id="btnMdBearbeiten" title="Übersicht anpassen">
               <svg class="i i-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
@@ -2204,6 +2227,12 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
                nirgends erzeugen. -->
           <div class="md-tab" id="md-dossier">
             <div id="mdDossier"></div>
+          </div>
+          <!-- Verlauf: wer wann was geaendert hat (ENT-077). Nur lesend --
+               ein Logbuch, aus dem sich Eintraege entfernen lassen, waere
+               keines. -->
+          <div class="md-tab" id="md-verlauf">
+            <div id="mdVerlauf"></div>
           </div>
           <div class="md-tab" id="md-dienstplaene">
             <div class="bar-tools bar-eng">
@@ -2396,6 +2425,18 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
           <div class="card-bd">
             <div class="msg-err" id="zfErr" style="display:none"></div>
             <div id="zfInhalt"><div style="color:var(--ink-3)">Wird geladen …</div></div>
+          </div>
+        </div>
+
+        <!-- Wer hat welche Rolle (ENT-077). Steht hier zum NACHSEHEN, nicht
+             zum Zuweisen -- die Zuweisung gehoert in die Personalakte, wo man
+             ohnehin ist, wenn man jemanden anlegt. Ohne diese Uebersicht
+             waeren die Rechte ueber alle Akten verstreut, und niemand koennte
+             die Frage beantworten, wer eigentlich an die AHV-Nummern kommt. -->
+        <div class="card" style="margin-bottom:16px" id="rvKarte">
+          <div class="card-hd"><h3>Rollen im Betrieb</h3></div>
+          <div class="card-bd">
+            <div id="rvInhalt"><div style="color:var(--ink-3)">Wird geladen …</div></div>
           </div>
         </div>
 
@@ -3207,7 +3248,15 @@ function doLogin() {
       err.textContent = data.message || 'Anmeldung fehlgeschlagen.'; err.style.display = ''; return;
     }
     token = data.token;
+    // Rechte NUR uebernehmen, wenn der Server sie wirklich geschickt hat.
+    // Ein `|| []` waere hier ein schwerer Fehler: Eine fehlende Liste ist
+    // etwas anderes als eine leere. Antwortet ein Server ohne Rechte --
+    // waehrend eines Deploys, aus einem Zwischenspeicher --, wuerde jeder
+    // Verwaltungszugang stillschweigend in die Mitarbeiter-App geworfen.
+    // "Unbekannt" darf nie wie "keine" aussehen.
     me = { name: data.name, ist_admin: data.ist_admin };
+    if (Array.isArray(data.rollen)) { me.rollen = data.rollen; }
+    if (Array.isArray(data.rechte)) { me.rechte = data.rechte; }
     localStorage.setItem('rv3_token', token);
     localStorage.setItem('rv3_user', JSON.stringify(me));
     // Merkmal des vertrauenswuerdigen Geraets aufbewahren, falls eines kam.
@@ -3226,7 +3275,11 @@ function enter() {
   // Der Wert steht schon am Dokument -- hier nur Schalter und Systemleiste
   // nachziehen.
   themaSetzen(document.documentElement.getAttribute('data-thema') || 'hell');
-  if (!me || !me.ist_admin) {
+  // Massgeblich ist seit ENT-077 die Rolle, nicht mehr "Admin ja/nein":
+  // Auch Planung und Personal gehoeren ins Dashboard, obwohl sie keine
+  // Verwaltung sind.
+  const hatZugang = me && (Array.isArray(me.rechte) ? me.rechte.length > 0 : me.ist_admin);
+  if (!hatZugang) {
     // Mitarbeitende gehoeren nicht hierher, sondern in die App -- die
     // Anmeldung gilt bereits, darum ohne zweites Anmelden weiterleiten.
     location.replace('app.html');
@@ -3241,12 +3294,74 @@ function enter() {
     $('btnSchmal').title = 'Seitenleiste ausklappen';
   }
   $('uName').textContent = me.name;
-  $('uRole').textContent = 'Administration';
+  // Statt immer "Administration" die tatsaechlichen Rollen. Wer als Planung
+  // angemeldet ist, soll das sehen -- sonst wundert er sich, warum Knoepfe
+  // fehlen, die "der Administration" zustehen.
+  $('uRole').textContent = (Array.isArray(me.rollen) && me.rollen.length)
+    ? me.rollen.map(rolleTitel).join(' · ') : 'Administration';
   $('uAvatar').textContent = initials(me.name);
+  rechteAnwenden();
+  // Die gespeicherten Rechte koennen veraltet sein -- jemand kann eine Rolle
+  // bekommen oder verloren haben, seit dieser Browser sie abgelegt hat.
+  // Darum beim Oeffnen einmal nachfragen. Der Server entscheidet ohnehin
+  // jede Anfrage selbst; hier geht es nur darum, dass die Oberflaeche nicht
+  // laenger als noetig etwas Falsches zeigt.
+  api('me.php').then(({ ok, data }) => {
+    // Streng pruefen, was da ankommt. Eine Antwort ohne Namen oder ohne
+    // Rechteliste ist keine Auskunft ueber mich -- sie bloss zu uebernehmen
+    // hiesse, vorhandene Rechte durch eine leere Liste zu ersetzen und die
+    // halbe Oberflaeche auszublenden. Lieber der bisherige Stand als ein
+    // falscher: Entschieden wird ohnehin auf dem Server.
+    if (!ok || !data || data.status !== 'ok' || !data.name
+        || !Array.isArray(data.rechte)) { return; }
+    me = { name: data.name, ist_admin: data.ist_admin,
+           rollen: Array.isArray(data.rollen) ? data.rollen : [], rechte: data.rechte };
+    // (data.rechte ist oben schon als Array geprueft -- ohne das wird gar
+    // nichts uebernommen.)
+    localStorage.setItem('rv3_user', JSON.stringify(me));
+    $('uRole').textContent = (me.rollen && me.rollen.length)
+      ? me.rollen.map(rolleTitel).join(' · ') : 'Administration';
+    rechteAnwenden();
+  }).catch(() => {});
   ordLaden('uebersicht');
   sprachBereit('rt');
   reloadAll();
   pruefeUpdate();
+}
+
+// ══════════════════════════════════════════ RECHTE IN DER OBERFLAECHE
+// (ENT-077)
+//
+// EINE Stelle, an der Bedienelemente nach Rechten aus- und eingeblendet
+// werden. Verstreute Abfragen waeren nicht nachpruefbar -- man saehe nie,
+// ob eine Stelle vergessen wurde.
+//
+// Das ist ausdruecklich eine BEQUEMLICHKEIT und keine Absicherung: Wer die
+// Anfrage von Hand stellt, umgeht jedes ausgeblendete Element. Entschieden
+// wird auf dem Server, in jedem einzelnen Endpunkt.
+const NAV_RECHTE = {
+  'nav-planung':            'plan',
+  'nav-abgleich':           'abgleich',
+  'navg-kunden':            'kunden',
+  'nav-admin-mitarbeiter':  'personal_lesen',
+  'nav-admin-betrieb':      'betrieb',
+  'navg-kontrolle':         'plan',
+  'nav-einrichtung':        'betrieb',
+};
+
+function rechteAnwenden() {
+  Object.entries(NAV_RECHTE).forEach(([id, recht]) => {
+    const el = $(id);
+    if (el) { el.style.display = darf(recht) ? '' : 'none'; }
+  });
+  // Die Elterngruppe "Administration" verschwindet, wenn beide Kinder weg
+  // sind -- eine aufklappbare Rubrik ohne Inhalt ist schlimmer als keine.
+  const admGruppe = $('navg-admin');
+  if (admGruppe) {
+    admGruppe.style.display =
+      (darf('personal_lesen') || darf('betrieb')) ? '' : 'none';
+  }
+  mdReiterPruefen();
 }
 
 // ══════════════════════════════════════════ NAVIGATION
@@ -3791,7 +3906,7 @@ function go(view) {
   if (view !== 'planung') weiteAnsicht(false);
   if (view === 'planung' && MOBIL() && pTab === 'uebersicht') goTab('einsaetze');
   if (view === 'mitarbeiter' && !mitarbeiter.length) loadMitarbeiter();
-  if (view === 'betrieb') { ladeBetrieb(); zfLaden(); }
+  if (view === 'betrieb') { ladeBetrieb(); zfLaden(); rvLaden(); }
   // Die Administrationsgruppe klappt auf, wenn eine ihrer Seiten offen ist --
   // und der Elternpunkt wird mitmarkiert, sonst sieht die Seitenleiste aus,
   // als waere man nirgends (dasselbe Muster wie bei den Kunden, ENT-039).
@@ -4328,6 +4443,17 @@ function mdGoTab(t) {
   $('btnMdBearbeiten').style.display = t === 'uebersicht' ? '' : 'none';
   renderMaDetail();
 }
+
+// Den Verlaufs-Reiter nur zeigen, wenn die Rolle ihn lesen darf. Wird er
+// ausgeblendet, waehrend er offen ist, bliebe sonst eine leere Flaeche
+// stehen -- darum zurueck auf die Uebersicht.
+function mdReiterPruefen() {
+  const knopf = $('mdtab-verlauf');
+  if (!knopf) { return; }
+  const erlaubt = darf('rechte');
+  knopf.style.display = erlaubt ? '' : 'none';
+  if (!erlaubt && mdTab === 'verlauf') { mdGoTab('uebersicht'); }
+}
 function mdMonatUm(n) {
   const m = $('mdMonat').value || isoTag().slice(0, 7);
   const d = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + n, 1);
@@ -4395,6 +4521,7 @@ function renderMaDetail() {
 
   if (mdTab === 'uebersicht') { mdUebersicht(); return; }
   if (mdTab === 'dossier') { mdDossier(); return; }
+  if (mdTab === 'verlauf') { mdVerlauf(); return; }
   mdDienstplaene();
 }
 
@@ -4521,7 +4648,11 @@ function mdAbschnittZeilen(m, a, nur) {
     zeilen += `<dt>Berechtigt für</dt><dd class="md-marken">${marken.join(' ')}</dd>`;
   }
   if (a.konto) {
-    zeilen += `<dt>Rolle</dt><dd>${Number(m.ist_admin) ? 'Verwaltung (Admin)' : 'Mitarbeitende'}</dd>`
+    const rollen = Array.isArray(m.rollen) && m.rollen.length
+      ? m.rollen : [Number(m.ist_admin) ? 'verwaltung' : 'mitarbeitend'];
+    zeilen += `<dt>Rollen</dt><dd class="md-marken">`
+           + rollen.map(r => `<span class="chip chip-n">${esc(rolleTitel(r))}</span>`).join(' ')
+           + `</dd>`
            + `<dt>Angelegt am</dt><dd>${m.erstellt_am ? dmy(m.erstellt_am) : '–'}</dd>`;
   }
   return zeilen;
@@ -4616,6 +4747,103 @@ function mdEinrichtungshinweis() {
     `<div class="ki-hint web on ma-regel"><span><b>Die Felder aus ENT-072 sind in dieser
      Datenbank noch nicht angelegt.</b> Was hier fehlt, ist deshalb nicht zwingend leer
      erfasst. Einmal „Einrichtung“ in der Seitenleiste ausführen.</span></div>`;
+}
+
+// ── Verlauf einer Personalakte (ENT-077) ─────────────────────────────
+// Vom Projektinhaber bestellt: "wichtiges thema auch bei anderen änderung
+// ein log buch erfassen ... Mit zeit und datum" und "vorallem welcher admin
+// die änderung gemacht hat".
+let mdVerlaufDaten = null, mdVerlaufFuer = '';
+
+// Die Beschriftung eines Feldes kommt aus MB_ABSCHNITTE -- dieselbe Quelle
+// wie Eingabe und Leseansicht. Ein zweites Verzeichnis von Feldnamen waere
+// die Stelle, die beim naechsten neuen Feld vergessen geht.
+function mdFeldName(feld) {
+  if (feld === 'rollen')   { return 'Rollen'; }
+  if (feld === 'passwort') { return 'Passwort'; }
+  if (feld === 'aktiv')    { return 'Konto aktiv'; }
+  if (feld === 'angelegt') { return 'Angelegt'; }
+  for (const a of MB_ABSCHNITTE) {
+    for (const [f, label] of (a.felder || [])) { if (f === feld) { return label; } }
+    for (const [f, lang] of (a.janein || [])) { if (f === feld) { return lang; } }
+  }
+  return feld;
+}
+
+function mdVerlaufWert(w) {
+  if (w === null || w === undefined || w === '') { return '<i>leer</i>'; }
+  return esc(String(w));
+}
+
+function mdVerlauf() {
+  const ziel = $('mdVerlauf');
+  if (!darf('rechte')) {
+    ziel.innerHTML = EMPTY('Kein Zugriff', 'Der Verlauf ist der Verwaltung vorbehalten.');
+    return;
+  }
+  if (mdVerlaufFuer !== mdName) {
+    ziel.innerHTML = '<div style="color:var(--ink-3)">Wird geladen …</div>';
+    mdVerlaufFuer = mdName;
+    api('logbuch_list.php?name=' + encodeURIComponent(mdName)).then(({ ok, data }) => {
+      mdVerlaufDaten = (ok && data.status === 'ok') ? data : { fehler: true };
+      if (mdTab === 'verlauf') { mdVerlauf(); }
+    });
+    return;
+  }
+  const d = mdVerlaufDaten || {};
+  if (d.fehler) {
+    ziel.innerHTML = EMPTY('Nicht geladen', 'Der Verlauf liess sich nicht abrufen. Bitte später erneut versuchen.');
+    return;
+  }
+  // "Noch nicht eingerichtet" und "nichts passiert" sind verschiedene
+  // Aussagen -- eine fehlende Tabelle darf nie wie ein sauberer Verlauf
+  // aussehen.
+  if (!d.eingerichtet) {
+    ziel.innerHTML = EMPTY('Logbuch noch nicht eingerichtet',
+      'Unten links auf „Einrichtung“ — ab dann wird jede Änderung festgehalten. '
+      + 'Was vorher geändert wurde, lässt sich nicht nachtragen.');
+    return;
+  }
+  const e = d.eintraege || [];
+  if (!e.length) {
+    ziel.innerHTML = EMPTY('Keine Änderung',
+      'Seit der Einrichtung des Logbuchs wurde an dieser Akte nichts geändert.');
+    return;
+  }
+  ziel.innerHTML = `
+    <table class="tbl">
+      <thead><tr>
+        <th style="width:150px">Wann</th>
+        <th style="width:150px">Wer</th>
+        <th style="width:200px">Was</th>
+        <th>Änderung</th>
+      </tr></thead>
+      <tbody>${e.map(z => `
+        <tr>
+          <td>${esc(dmyZeit(z.zeitpunkt))}</td>
+          <td>${esc(z.akteur_name || '?')}</td>
+          <td>${esc(mdFeldName(z.feld))}</td>
+          <td>${z.werte_verborgen
+                ? '<span class="chip chip-n">geändert</span> '
+                  + '<small style="opacity:.7">vertraulich — Werte werden nicht mitgeschrieben</small>'
+                : mdVerlaufWert(z.wert_alt) + ' <span style="opacity:.5">→</span> ' + mdVerlaufWert(z.wert_neu)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    ${d.gekuerzt ? `<div style="margin-top:10px;color:var(--ink-3);font-size:12.5px">
+      Es werden die letzten ${d.grenze} Einträge gezeigt — es gibt ältere.</div>` : ''}`;
+}
+
+// Datum und Uhrzeit. Ohne Uhrzeit waere ein Logbuch bei mehreren Aenderungen
+// am selben Tag wertlos -- der Projektinhaber hat "Mit zeit und datum"
+// ausdruecklich verlangt.
+function dmyZeit(z) {
+  if (!z) { return '–'; }
+  const t = String(z).replace(' ', 'T');
+  const d = new Date(t);
+  if (isNaN(d)) { return String(z); }
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`
+       + `${d.getFullYear()}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function mdDienstplaene() {
@@ -6046,6 +6274,48 @@ function ladeBetrieb() {
 //      beim naechsten Anmelden.
 //   3. Notfallcodes zeigen -- einmal, im Klartext, zum Ausdrucken.
 let zfStand = null;
+
+// ── Rollen im Betrieb (ENT-077) ──────────────────────────────────────
+function rvLaden() {
+  const karte = $('rvKarte'), ziel = $('rvInhalt');
+  if (!karte || !ziel) { return; }
+  // Wer keine Rollen vergeben darf, braucht die Liste nicht -- sie sagt,
+  // wer an welche Personendaten kommt.
+  karte.style.display = darf('rechte') ? '' : 'none';
+  if (!darf('rechte')) { return; }
+
+  api('mitarbeiter_list.php').then(({ ok, data }) => {
+    if (!ok || data.status !== 'ok') {
+      ziel.innerHTML = EMPTY('Nicht geladen', 'Die Rollenübersicht liess sich nicht abrufen.');
+      return;
+    }
+    const leute = (data.mitarbeiter || []).filter(m => m.aktiv !== false && Number(m.aktiv) !== 0);
+    // Nach Rolle gruppiert, nicht nach Person: Die Frage lautet "wer kommt
+    // an die Personalakte", nicht "was darf Frau Muster".
+    const gruppen = ROLLEN.map(([id, titel, text]) => ({
+      id, titel, text,
+      leute: leute.filter(m => (m.rollen || []).includes(id)),
+    }));
+    ziel.innerHTML = `
+      <div class="rv-liste">${gruppen.map(g => `
+        <div class="rv-zeile">
+          <div class="rv-kopf">
+            <b>${esc(g.titel)}</b>
+            <span class="chip ${g.leute.length ? 'chip-a' : 'chip-n'}">${g.leute.length}</span>
+          </div>
+          <div class="rv-text">${esc(g.text)}</div>
+          <div class="md-marken">${g.leute.length
+            ? g.leute.map(m => `<span class="chip chip-n">${esc(fullName(m) || m.name)}</span>`).join('')
+            : '<span style="color:var(--ink-3);font-size:12.5px">niemand</span>'}</div>
+        </div>`).join('')}
+      </div>
+      <div class="ki-hint web on" style="margin-top:14px"><span>
+        Rollen werden in der <b>Personalakte</b> vergeben, Abschnitt „Zugang“ —
+        dort, wo man ohnehin ist, wenn man jemanden anlegt.
+        Es zählen nur aktive Konten.
+      </span></div>`;
+  });
+}
 
 function zfLaden() {
   api('zweifaktor_status.php').then(({ ok, data }) => {
@@ -8992,6 +9262,31 @@ const MB_ABSCHNITTE = [
   ]},
 ];
 
+// Die vier Rollen (ENT-077). Gespiegelt aus backend/rechte.php -- dort
+// steht die Wahrheit, hier nur die Beschriftung. Eine Pruefung vergleicht
+// beide Fassungen miteinander, damit sie nicht auseinanderlaufen.
+const ROLLEN = [
+  ['mitarbeitend', 'Mitarbeitend',
+   'Nur die eigenen Daten in der App: eigene Schichten, eigene Rapporte, eigene Sperrtage. Kein Zugang zur Verwaltung.'],
+  ['planung', 'Planung',
+   'Einsätze, Objekte, Masterschichten, Kunden und der Abgleich der Ist-Zeiten. Sieht Mitarbeitende mit Name, Funktion und Berechtigungen — nicht AHV-Nummer, Aufenthaltsstatus oder Registerdaten.'],
+  ['personal', 'Personal',
+   'Die vollständige Personalakte inklusive der vertraulichen Angaben, Anlegen und Ändern von Mitarbeitenden. Keine Einsatzplanung, keine Kunden.'],
+  ['verwaltung', 'Verwaltung',
+   'Alles, zusätzlich die Betriebseinstellungen, die Einrichtung und die Rollenvergabe selbst.'],
+];
+const rolleTitel = id => (ROLLEN.find(r => r[0] === id) || [id, id])[1];
+
+// Darf die angemeldete Person das? Spiegel von darf() auf dem Server --
+// AUSSCHLIESSLICH zum Ausblenden von Bedienelementen. Entschieden wird
+// jede Anfrage auf dem Server; ein ausgeblendeter Knopf ist Bequemlichkeit,
+// keine Absicherung.
+function darf(recht) {
+  if (!me) { return false; }
+  if (Array.isArray(me.rechte)) { return me.rechte.includes(recht); }
+  return !!me.ist_admin;   // Antwort ohne Rechteliste: alter Stand
+}
+
 let mbAend  = {};        // aus dem Diktat uebernommen, noch nicht gespeichert
 let mbListen = {};       // pflegbare Listen aus der Antwort
 let mbNeuModus = false;  // legt die Flaeche eine Person an statt sie zu aendern?
@@ -9044,8 +9339,13 @@ function mbNeu(felder) {
 // auftaucht, wirkt wie ein Fehler.
 const PW_MIN = 12, PW_MIN_ADMIN = 16;
 function mbPwMin() {
-  const h = $('mbNeuAdmin');
-  return (h && h.checked) ? PW_MIN_ADMIN : PW_MIN;
+  // Massgeblich ist jetzt die Rolle, nicht mehr ein Admin-Haekchen. Auch
+  // Planung und Personal sehen fremde Personendaten und brauchen darum das
+  // laengere Passwort -- genau wie es der Server prueft (ENT-077).
+  const vorsatz = mbNeuModus ? 'mbNeuRolle_' : 'maRolle_';
+  const gewaehlt = mbRollenLesen(vorsatz);
+  const stark = gewaehlt.some(r => r !== 'mitarbeitend');
+  return stark ? PW_MIN_ADMIN : PW_MIN;
 }
 function mbPwLaenge() {
   const feld = $('mbNeuPass');
@@ -9212,10 +9512,13 @@ function mbNeuKonto() {
           <div class="f"><label for="mbNeuPass">Passwort *</label>
             <input class="inp" id="mbNeuPass" type="text" placeholder="mind. 12 Zeichen" autocomplete="new-password"></div>
         </div>
-        <div class="ma-janein">
-          <label><input type="checkbox" id="mbNeuAdmin" onchange="mbPwLaenge()">
-            Darf die Verwaltung benutzen (Admin)</label>
-        </div>
+        ${darf('rechte') ? `
+        <div class="zone">
+          <div class="zone-hd">Rollen</div>
+          <div class="zone-note">Ohne Auswahl wird eine mitarbeitende Person angelegt —
+            die kleinste Rolle. Rechte entstehen nie aus Versehen.</div>
+          <div class="ma-rollen">${mbRollenKaesten(['mitarbeitend'], 'mbNeuRolle_')}</div>
+        </div>` : ''}
       </div>
     </div>`;
 }
@@ -9234,15 +9537,57 @@ function mbSpalten(bausteinFn) {
 // Der Kontoteil der Zugang-Karte. Er steht IN dieser Karte und nicht daneben:
 // Sprache, Ablaufdatum, Passwort und Abmeldung gehoeren zur selben Frage --
 // wer kommt hier womit rein.
+// Die Rollenkaestchen. Wer sie nicht vergeben darf, sieht die Rollen als
+// Marken -- nicht gar nichts: "keine Rolle" und "ich darf es nicht sehen"
+// sind verschiedene Aussagen.
+function mbRollenBlock(gewaehlt, darfAendern, idVorsatz) {
+  if (!darfAendern) {
+    const marken = (gewaehlt.length ? gewaehlt : ['mitarbeitend'])
+      .map(r => `<span class="chip chip-n">${esc(rolleTitel(r))}</span>`).join(' ');
+    return `<dt>Rollen</dt><dd class="md-marken">${marken}</dd>`;
+  }
+  return '';
+}
+
+function mbRollenKaesten(gewaehlt, idVorsatz) {
+  return ROLLEN.map(([id, titel, text]) => `
+    <label class="ma-rolle">
+      <input type="checkbox" id="${idVorsatz}${id}" ${gewaehlt.includes(id) ? 'checked' : ''}
+             onchange="mbRollenGeaendert()">
+      <span><b>${esc(titel)}</b><small>${esc(text)}</small></span>
+    </label>`).join('');
+}
+
+// Aus den Kaestchen die gewaehlten Rollen lesen.
+function mbRollenLesen(idVorsatz) {
+  return ROLLEN.map(r => r[0]).filter(id => {
+    const k = $(idVorsatz + id);
+    return k && k.checked;
+  });
+}
+
+// Die Verwaltungsrolle entscheidet ueber die Mindestlaenge des Passworts.
+function mbRollenGeaendert() { mbPwLaenge(); }
+
 function mbKonto() {
   const m = maAkte || {};
   const selbst = m.name === (me && me.name);
+  const rollen = Array.isArray(m.rollen) && m.rollen.length
+    ? m.rollen : [Number(m.ist_admin) ? 'verwaltung' : 'mitarbeitend'];
+  const darfRollen = darf('rechte');
   return `
     <dl class="dl" style="margin-top:6px">
       <dt>Login-Name</dt><dd>${esc(m.name || '–')}</dd>
-      <dt>Rolle</dt><dd>${Number(m.ist_admin) ? 'Verwaltung (Admin)' : 'Mitarbeitende'}</dd>
+      ${mbRollenBlock(rollen, darfRollen, 'maRolle_')}
       <dt>Angelegt am</dt><dd>${m.erstellt_am ? dmy(m.erstellt_am) : '–'}</dd>
     </dl>
+    ${darfRollen ? `
+    <div class="zone">
+      <div class="zone-hd">Rollen</div>
+      <div class="zone-note">Bestimmen, was diese Person im Werkzeug sehen und tun darf.
+        Mehrere sind möglich${selbst ? ' — die eigene Verwaltungsrolle lässt sich nicht wegnehmen, solange niemand sonst sie hat' : ''}.</div>
+      <div class="ma-rollen">${mbRollenKaesten(rollen, 'maRolle_')}</div>
+    </div>` : ''}
     <div class="zone">
       <div class="zone-hd">Passwort</div>
       <div class="zone-note">Setzt ein neues Passwort und meldet die Person auf allen Geräten ab.</div>
@@ -9316,7 +9661,7 @@ function mbSpeichern() {
   if (mbNeuModus) {
     body.name = ($('mbNeuName').value || '').trim();
     body.password = $('mbNeuPass').value || '';
-    body.ist_admin = $('mbNeuAdmin').checked ? 1 : 0;
+    if (darf('rechte')) { body.rollen = mbRollenLesen('mbNeuRolle_'); }
     if (!body.name) { scheitern('Login-Name erforderlich.'); $('mbNeuName').focus(); return; }
     if (body.password.length < mbPwMin()) {
       scheitern(`Passwort mindestens ${mbPwMin()} Zeichen`
@@ -9326,6 +9671,16 @@ function mbSpeichern() {
     }
   } else {
     body.name = maAkte.name;
+    // Rollen nur mitschicken, wenn die Kaestchen ueberhaupt dastehen --
+    // sonst wuerde ein Speichern aus einer Rolle ohne Rechtevergabe die
+    // vorhandenen Rollen mit einer leeren Liste ueberschreiben.
+    if (darf('rechte') && $('maRolle_mitarbeitend')) {
+      body.rollen = mbRollenLesen('maRolle_');
+      if (!body.rollen.length) {
+        scheitern('Mindestens eine Rolle muss gesetzt sein.');
+        return;
+      }
+    }
   }
 
   const knopf = $('mbSpeichern');
