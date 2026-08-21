@@ -155,10 +155,25 @@
     }
     if (extra) Object.keys(extra).forEach(function (k) { e[k] = extra[k]; });
     e._els = els;
+    merkeZiel(e);
     eintraege.push(e);
     zeichneListe();
     sichere();
     return e;
+  }
+
+  /* Wohin das Element soll, nicht nur um wie viel es sich bewegt hat. Ein
+     Verschieben per transform kostet im Layout keinen Platz, im gebauten
+     Ergebnis aber schon -- ohne den Zielrahmen ist nicht zu erkennen, ob etwas
+     in dieselbe Zeile gehoert oder in eine neue. */
+  function merkeZiel(e) {
+    var el = (e._els || [])[0];
+    if (!el || !el.getBoundingClientRect) return;
+    var r = el.getBoundingClientRect();
+    e.ziel = {
+      x: Math.round(r.left), y: Math.round(r.top + window.scrollY),
+      w: Math.round(r.width), h: Math.round(r.height)
+    };
   }
 
   function gleicheMenge(a, b) {
@@ -174,6 +189,7 @@
       var e = eintraege[i];
       if (e.art === art && e.was === was && gleicheMenge(e._els, els)) {
         e.nachher = nachher;
+        merkeZiel(e);
         zeichneListe();
         sichere();
         return e;
@@ -199,6 +215,7 @@
       if (e.nachher !== undefined && e.nachher !== null) d.nachher = e.nachher;
       if (e.form) d.form = e.form;
       if (e.text) d.text = e.text;
+      if (e.ziel) d.ziel = e.ziel;
       return d;
     });
   }
@@ -251,7 +268,8 @@
 
   function alsText() {
     if (!eintraege.length) return 'Keine Änderungen.';
-    var zeilen = ['Skizze ' + new Date().toISOString().slice(0, 10) + ' · ' + location.pathname, ''];
+    var zeilen = ['Skizze ' + new Date().toISOString().slice(0, 10) + ' · ' + location.pathname,
+      'Fenster ' + window.innerWidth + ' × ' + window.innerHeight + ' px', ''];
     eintraege.forEach(function (e) {
       var z = e.nr + '. ' + e.art;
       if (e.was) z += ' · ' + e.was;
@@ -263,13 +281,19 @@
       if (e.vorher != null && e.nachher != null) zeilen.push('   ' + e.vorher + ' -> ' + e.nachher);
       else if (e.nachher != null) zeilen.push('   ' + e.nachher);
       if (e.form) zeilen.push('   Rechteck ' + e.form.w + ' x ' + e.form.h + ' bei ' + e.form.x + ',' + e.form.y);
+      if (e.ziel) zeilen.push('   steht danach bei ' + e.ziel.x + ',' + e.ziel.y +
+        ' und ist ' + e.ziel.w + ' x ' + e.ziel.h + ' px');
       zeilen.push('');
     });
     return zeilen.join('\n');
   }
 
   function kopiere() {
-    var nutz = alsText() + '\n\n```json\n' + JSON.stringify(alsDaten(), null, 2) + '\n```';
+    var nutz = alsText() + '\n\n```json\n' + JSON.stringify({
+      seite: location.pathname + location.hash,
+      fenster: { breite: window.innerWidth, hoehe: window.innerHeight },
+      aenderungen: alsDaten()
+    }, null, 2) + '\n```';
     navigator.clipboard.writeText(nutz).then(function () {
       melde('In die Zwischenablage kopiert');
     }, function () {
@@ -283,6 +307,7 @@
     var blob = new Blob([JSON.stringify({
       seite: location.pathname + location.hash,
       erstellt: new Date().toISOString(),
+      fenster: { breite: window.innerWidth, hoehe: window.innerHeight },
       aenderungen: alsDaten()
     }, null, 2)], { type: 'application/json' });
     var a = document.createElement('a');

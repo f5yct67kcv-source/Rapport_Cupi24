@@ -138,7 +138,11 @@ nicht existierende Elemente und Notizen an einzelnen Elementen.
 Haben mehrere gewählte Elemente verschiedene Ausgangswerte, steht im Protokoll
 die Spanne (`11–15px → 13–17px`) statt eines Werts, den keines von ihnen hat.
 
-Jede Handlung landet im Protokoll mit Selektor und Alt-Neu-Wert. `Kopieren` legt
+Jede Handlung landet im Protokoll mit Selektor, Alt-Neu-Wert und dem Rahmen, in
+dem das Element danach steht. Der Zielrahmen ist wichtig, weil ein Verschieben
+per `transform` im Layout keinen Platz kostet, das gebaute Ergebnis aber schon:
+ohne ihn ist nicht zu erkennen, ob etwas in dieselbe Zeile gehört oder in eine
+neue. Dazu wird die Fenstergrösse festgehalten. `Kopieren` legt
 das Protokoll als Text und JSON in die Zwischenablage, `Datei` speichert es als
 JSON. Nichts davon wird gespeichert: Neuladen setzt die Seite zurück.
 
