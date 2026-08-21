@@ -429,7 +429,7 @@ th.sortbar.aktiv .pf { opacity: 1; color: var(--accent); }
 /* Zusammengehörige Bedienelemente rücken enger zusammen, damit die Leiste
    trotz vieler Felder in Blöcke zerfällt statt in eine Reihe Einzelteile. */
 .tool-gruppe { display: flex; align-items: center; gap: 5px; }
-.tool-bis { font-size: 12px; color: var(--ink-3); }
+.tool-bis { font-size: 12px; font-weight: 900; color: var(--ink-3); }
 .search { position: relative; flex: 1; min-width: 200px; max-width: 340px; }
 .search svg.i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--ink-3); }
 .search .inp { padding-left: 34px; }
@@ -573,7 +573,7 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
 .tab-nebenan { display: flex; align-items: center; gap: 6px; border: none; background: transparent; padding: 8px 6px 9px;
   font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent;
-  margin-right: 47px; }
+  margin-right: 19px; }
 .tab-nebenan:hover { color: var(--ink); }
 .tab-nebenan svg.i { width: 15px; height: 15px; }
 .ptab { display: none; }
@@ -700,7 +700,7 @@ tbody tr.zu .i-schloss { color: var(--warn); }
 }
 
 /* Monatsmatrix — erste Spalte bleibt stehen, die Tage scrollen in der Karte */
-.mx-info { font-size: 13px; color: var(--ink-3); margin: 2px 0 26px; }
+.mx-info { font-size: 13px; color: var(--ink-3); margin: 17px 0 34px; }
 .mx-info b { color: var(--ink-2); font-weight: 600; }
 .mx { overflow-x: auto; }
 .mx table { border-collapse: separate; border-spacing: 0; }
@@ -1893,7 +1893,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
                 <option value="monat">Dieser Monat</option>
               </select>
               <div class="tool-gruppe">
-                <select class="inp" id="mxMon" style="width:auto" aria-label="Monat"></select>
+                <select class="inp" id="mxMon" style="width:91px" aria-label="Monat"></select>
                 <select class="inp" id="mxJahr" style="width:auto" aria-label="Jahr"></select>
                 <button class="btn btn-quiet btn-sm" onclick="mxMonatZeigen()">Monat anzeigen</button>
               </div>
@@ -1901,19 +1901,19 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
                 <button class="btn btn-quiet btn-sm" onclick="mxSchieben(-1)" title="Zurück, um die Länge des Zeitraums">‹</button>
                 <button class="btn btn-quiet btn-sm" onclick="mxSchieben(1)" title="Weiter, um die Länge des Zeitraums">›</button>
               </div>
-              <select class="inp" id="mxSparte" style="width:auto" onchange="renderMatrix()" aria-label="Nach Sparte filtern">
+              <select class="inp" id="mxObj" style="width:127px" onchange="renderMatrix()" aria-label="Einzelnes Objekt anzeigen">
+                <option value="">Alle Objekte</option>
+              </select>
+              <select class="inp" id="mxSparte" style="width:137px" onchange="renderMatrix()" aria-label="Nach Sparte filtern">
                 <option value="">Beide Sparten</option>
                 <option value="sicherheit">Nur Sicherheit</option>
                 <option value="reinigung">Nur Reinigung</option>
               </select>
-              <select class="inp" id="mxBeleg" style="width:auto" onchange="renderMatrix()" aria-label="Nach Belegung filtern">
+              <select class="inp" id="mxBeleg" style="width:145px" onchange="renderMatrix()" aria-label="Nach Belegung filtern">
                 <option value="">Jede Belegung</option>
                 <option value="luecke">Nur mit Lücken</option>
                 <option value="voll">Nur vollständig besetzte</option>
                 <option value="ohne">Nur ohne Einsätze</option>
-              </select>
-              <select class="inp" id="mxObj" style="width:auto" onchange="renderMatrix()" aria-label="Einzelnes Objekt anzeigen">
-                <option value="">Alle Objekte</option>
               </select>
             </div>
             <!-- Die Suche steht am Ende der Leiste, damit die Filter links
