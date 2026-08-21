@@ -341,6 +341,11 @@ tbody tr:last-child td { border-bottom: none; }
 tbody tr.click { cursor: pointer; }
 tbody tr.click:hover td { background: var(--surface-3); }
 td.num, th.num { text-align: right; }
+/* Masterschichten-Ansicht: Nullwerte treten zurueck, Summen heben sich ab. */
+td.num.leer { color: var(--ink-3); }
+tbody tr.summe td { background: var(--surface-2); font-weight: 650; border-top: 1px solid var(--line); }
+tbody tr.aus td { opacity: .55; }
+#msSeiteTabelle td:last-child .btn { margin-left: 6px; }
 td .sec { font-size: 11.5px; color: var(--ink-3); }
 .strong { font-weight: 620; }
 .nowrap { white-space: nowrap; }
@@ -2097,7 +2102,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             </div>
           </div>
           <div id="oplBody"></div>
-          <button class="btn btn-master" onclick="oplStammdaten()" title="Zeiten, Namen und Gültigkeit der Vorlagen">
+          <button class="btn btn-master" onclick="msSeiteAuf()" title="Zeiten, Namen und Gültigkeit der Vorlagen">
               <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.5.66.86 1.19.91H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
               <span class="lbl">Masterschichten bearbeiten</span>
             </button>
@@ -2472,6 +2477,42 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
         <div id="pnKopf"></div>
         <div id="pnListe"></div>
         <div id="pnHinweis"></div>
+      </section>
+
+      <!-- ══════════════════════════ MASTERSCHICHTEN ══════════════════════════
+           Eigene Ansicht statt der Schublade (Skizze 21.08.2026). Die Vorlagen
+           eines Objekts sind Stammdatenpflege mit vielen Feldern nebeneinander;
+           dafuer ist eine 420 px breite Schublade der falsche Ort.
+           Geaendert wird weiterhin ueber "Aendern ab ..." -- eine Vorlage laesst
+           sich nicht einfach ueberschreiben, sonst wuerde sich rueckwirkend
+           aendern, was in vergangenen Monaten galt. -->
+      <section class="view" id="view-masterschichten">
+        <div class="bar-tools">
+          <button class="btn btn-plain btn-sm" onclick="go('planung')">Zurück zur Planung</button>
+          <select class="inp" id="msSeiteObjekt" style="width:auto;max-width:260px" onchange="msSeiteObjektWechsel()" aria-label="Objekt"></select>
+          <span class="wo" id="msSeiteWo"></span>
+          <div class="sp" style="flex:1"></div>
+          <input class="inp search" id="msSeiteSuche" placeholder="Name oder Kürzel" oninput="msSeiteZeichnen()" style="max-width:220px">
+          <button class="btn btn-quiet btn-sm" id="msSeiteAlleBtn" onclick="msSeiteAlleUm()">Auch abgelaufene zeigen</button>
+          <button class="btn btn-quiet btn-sm" onclick="msSeiteCsv()">CSV</button>
+          <button class="btn btn-primary btn-sm" onclick="openMs('neu')">Masterschicht hinzufügen</button>
+        </div>
+
+        <div class="card">
+          <div class="card-hd">
+            <h2>Masterschichten</h2>
+            <span class="note" id="msSeiteAnzahl"></span>
+          </div>
+          <div class="card-bd flush"><div id="msSeiteTabelle"></div></div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-hd">
+            <h2>Benötigte Schichten je Wochentag</h2>
+            <span class="note">Zu ändern über „Ändern ab …“ in der Zeile darüber</span>
+          </div>
+          <div class="card-bd flush"><div id="msSeiteBedarf"></div></div>
+        </div>
       </section>
 
       <!-- ══════════════════════════ BETRIEB ══════════════════════════
@@ -3436,7 +3477,8 @@ const TITLES = {
   mitarbeiter: ['Mitarbeitende', 'Stammdaten'],
   kunden:      ['Kunden', 'Stammdaten'],
   betrieb:     ['Betrieb', 'Einstellungen zum eigenen Unternehmen'],
-  pensen:      ['Pensen', 'Jahresstunden gegen die Anstellungskategorie']
+  pensen:      ['Pensen', 'Jahresstunden gegen die Anstellungskategorie'],
+  masterschichten: ['Masterschichten', 'Vorlagen, aus denen die Schichten entstehen']
 };
 
 // Monatsraster brauchen die volle Fensterbreite, alles andere bleibt auf
@@ -6677,12 +6719,18 @@ function msAlleUm() { msAlle = !msAlle; loadMasterschichten(); }
 function loadMasterschichten() {
   if (!obTarget) return;
   return api('masterschicht_list.php?objekt_id=' + obTarget + (msAlle ? '&alle=1' : '')).then(({ ok, data }) => {
-    if (!$('msListe')) return;
-    if (!ok || data.status !== 'ok') { $('msListe').innerHTML = `<p class="zone-note">${esc(data.message || 'Nicht ladbar.')}</p>`; return; }
+    if (!ok || data.status !== 'ok') {
+      const ziel = $('msListe');
+      if (ziel) ziel.innerHTML = `<p class="zone-note">${esc(data.message || 'Nicht ladbar.')}</p>`;
+      return;
+    }
     masterschichten = data.masterschichten || [];
     const btn = $('msAlleBtn');
     if (btn) btn.textContent = msAlle ? 'Nur laufende zeigen' : 'Auch abgelaufene zeigen';
-    renderMsListe();
+    // Beide Orte zeigen dieselbe Liste: die Schublade am Objekt und die eigene
+    // Ansicht. Welcher davon offen ist, entscheidet die jeweilige Funktion.
+    if ($('msListe')) renderMsListe();
+    msSeiteZeichnen();
   });
 }
 
@@ -6738,6 +6786,153 @@ function askDeleteObjekt() {
         ? `Objekt stillgelegt — ${nf(data.einsaetze)} Einsätze bleiben erhalten.`
         : 'Objekt gelöscht.'));
     }));
+}
+
+// ══════════════════════════════════════════ MASTERSCHICHTEN ALS SEITE
+// Dieselben Daten wie in der Schublade, nur breit genug zum Arbeiten.
+// obTarget wird mitgesetzt, damit die vorhandenen Dialoge (openMs, askDeleteMs)
+// unveraendert weiterlaufen.
+let msSeiteAlle = false;
+
+function msSeiteAuf(id) {
+  const objekt = Number(id || oplId || 0);
+  if (!objekt) { toast('Kein Objekt gewählt.'); return; }
+  obTarget = objekt;
+  msSeiteAlle = false;
+  go('masterschichten');
+  msSeiteObjektAuswahl();
+  loadMasterschichten();
+}
+
+function msSeiteObjektAuswahl() {
+  const sel = $('msSeiteObjekt');
+  if (!sel) return;
+  const liste = objekte.filter(o => o.aktiv || Number(o.id) === Number(obTarget));
+  sel.innerHTML = liste.map(o =>
+    `<option value="${Number(o.id)}"${Number(o.id) === Number(obTarget) ? ' selected' : ''}>${esc(o.name)}</option>`).join('');
+  const o = objekte.find(x => Number(x.id) === Number(obTarget));
+  $('msSeiteWo').textContent = o ? [o.kunde_name, [o.plz, o.ort].filter(Boolean).join(' ')].filter(Boolean).join(' · ') : '';
+  $('pgCrumb').textContent = o ? 'Vorlagen von ' + o.name : TITLES.masterschichten[1];
+}
+
+function msSeiteObjektWechsel() {
+  obTarget = Number($('msSeiteObjekt').value);
+  msSeiteObjektAuswahl();
+  loadMasterschichten();
+}
+
+function msSeiteAlleUm() {
+  msSeiteAlle = !msSeiteAlle;
+  msAlle = msSeiteAlle;
+  loadMasterschichten();
+}
+
+function msSeiteGefiltert() {
+  const q = (($('msSeiteSuche') || {}).value || '').trim().toLowerCase();
+  if (!q) return masterschichten;
+  return masterschichten.filter(m =>
+    (m.name || '').toLowerCase().includes(q) || (m.kuerzel || '').toLowerCase().includes(q));
+}
+
+function msSeiteZeichnen() {
+  if (!$('msSeiteTabelle') || !$('view-masterschichten').classList.contains('on')) return;
+  const btn = $('msSeiteAlleBtn');
+  if (btn) btn.textContent = msSeiteAlle ? 'Nur laufende zeigen' : 'Auch abgelaufene zeigen';
+  const liste = msSeiteGefiltert();
+  $('msSeiteAnzahl').textContent = liste.length === masterschichten.length
+    ? `${nf(liste.length)} ${liste.length === 1 ? 'Vorlage' : 'Vorlagen'}`
+    : `${nf(liste.length)} von ${nf(masterschichten.length)}`;
+
+  if (!liste.length) {
+    $('msSeiteTabelle').innerHTML = `<div class="empty"><h3>Keine Vorlage</h3>
+      <p>Ohne Masterschicht entsteht an diesem Objekt keine Schicht.</p></div>`;
+    $('msSeiteBedarf').innerHTML = '';
+    return;
+  }
+
+  $('msSeiteTabelle').innerHTML = `<table><thead><tr>
+      <th>Kürzel</th><th>Bezeichnung</th><th>Art</th><th>Zeit</th>
+      <th class="num">Pause</th><th class="num">Stunden</th><th>Gültig</th><th>Zustand</th><th></th>
+    </tr></thead><tbody>` + liste.map(m => `<tr${m.laeuft ? '' : ' class="aus"'}>
+      <td>${m.kuerzel ? `<span class="chip chip-a">${esc(m.kuerzel)}</span>` : '<span class="sec">—</span>'}</td>
+      <td class="strong">${esc(m.name)}</td>
+      <td>${m.art === 'fahrtzeit' ? 'Fahrtzeit' : 'Revierdienst'}${m.auf_abruf ? '<div class="sec">auf Abruf</div>' : ''}</td>
+      <td>${hm(m.von)}–${hm(m.bis)}${hm(m.bis) <= hm(m.von) ? '<div class="sec">Folgetag</div>' : ''}</td>
+      <td class="num">${m.pause_min ? nf(m.pause_min) + ' Min.' : '—'}</td>
+      <td class="num strong">${nf(m.arbeitszeit_h, 2)} h</td>
+      <td>ab ${dmy(m.gueltig_ab)}${m.gueltig_bis ? `<div class="sec">bis ${dmy(m.gueltig_bis)}</div>` : ''}</td>
+      <td>${m.laeuft ? '<span class="chip chip-p">läuft</span>' : '<span class="chip chip-n">nicht aktiv</span>'}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn btn-plain btn-sm" onclick="openMs('aenderung',${m.id})">Ändern ab …</button>
+        <button class="btn btn-quiet btn-sm" onclick="openMs('korrektur',${m.id})">Beschriftung</button>
+        <button class="btn btn-quiet btn-sm" onclick="askDeleteMs(${m.id})">Entfernen</button>
+      </td>
+    </tr>`).join('') + '</tbody></table>';
+
+  msSeiteBedarfZeichnen(liste);
+}
+
+// Untere Tabelle: was jede Vorlage an welchem Tag verlangt, mit Summen.
+function msSeiteBedarfZeichnen(liste) {
+  const tage = ['mo', 'di', 'mi', 'do', 'fr', 'sa', 'so'];
+  const namen = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+  const woche = liste.filter(m => m.rhythmus === 'woche');
+  const zyklus = liste.filter(m => m.rhythmus !== 'woche');
+
+  const summeTag = tage.map(t => woche.reduce((a, m) => a + (m['bedarf_' + t] || 0), 0));
+  const summeStd = tage.map((t, i) => woche.reduce((a, m) => a + (m['bedarf_' + t] || 0) * Number(m.arbeitszeit_h || 0), 0));
+  const summeFei = woche.reduce((a, m) => a + (m.bedarf_feiertag || 0), 0);
+  const summeFeiStd = woche.reduce((a, m) => a + (m.bedarf_feiertag || 0) * Number(m.arbeitszeit_h || 0), 0);
+
+  const zeile = m => {
+    const w = tage.reduce((a, t) => a + (m['bedarf_' + t] || 0), 0);
+    return `<tr>
+      <td class="strong">${esc(m.name)}${m.kuerzel ? ` <span class="sec">${esc(m.kuerzel)}</span>` : ''}
+        <div class="sec">${nf(m.arbeitszeit_h, 2)} h · ${hm(m.von)}–${hm(m.bis)}</div></td>
+      ${tage.map(t => `<td class="num${m['bedarf_' + t] ? ' strong' : ' leer'}">${m['bedarf_' + t] || 0}</td>`).join('')}
+      <td class="num strong">${w}</td>
+      <td class="num${m.bedarf_feiertag ? ' strong' : ' leer'}">${m.bedarf_feiertag || 0}</td>
+    </tr>`;
+  };
+
+  $('msSeiteBedarf').innerHTML = `<table><thead><tr>
+      <th>Masterschicht</th>${namen.map(n => `<th class="num">${n}</th>`).join('')}
+      <th class="num">Woche</th><th class="num">Feiertag</th>
+    </tr></thead><tbody>
+      ${woche.map(zeile).join('')}
+      <tr class="summe"><td>Schichten gesamt</td>
+        ${summeTag.map(n => `<td class="num">${n}</td>`).join('')}
+        <td class="num">${summeTag.reduce((a, b) => a + b, 0)}</td>
+        <td class="num">${summeFei}</td></tr>
+      <tr class="summe"><td>Stunden gesamt</td>
+        ${summeStd.map(h => `<td class="num">${nf(h, 2)} h</td>`).join('')}
+        <td class="num">${nf(summeStd.reduce((a, b) => a + b, 0), 2)} h</td>
+        <td class="num">${nf(summeFeiStd, 2)} h</td></tr>
+    </tbody></table>` + (zyklus.length ? `<p class="zone-note" style="margin:14px 18px">
+      ${zyklus.length === 1 ? 'Eine Vorlage folgt' : nf(zyklus.length) + ' Vorlagen folgen'} keinem Wochenrhythmus und
+      ${zyklus.length === 1 ? 'steht' : 'stehen'} darum nicht in dieser Tabelle:
+      ${zyklus.map(m => esc(m.name) + ' (jeden ' + m.intervall_tage + '. Tag)').join(', ')}.</p>` : '');
+}
+
+function msSeiteCsv() {
+  const liste = msSeiteGefiltert();
+  if (!liste.length) { toast('Nichts zu exportieren.'); return; }
+  const tage = ['mo', 'di', 'mi', 'do', 'fr', 'sa', 'so'];
+  const kopf = ['Kuerzel', 'Bezeichnung', 'Art', 'Von', 'Bis', 'Pause Min', 'Stunden',
+                'Gueltig ab', 'Gueltig bis', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So', 'Feiertag'];
+  const feld = w => `"${String(w == null ? '' : w).replace(/"/g, '""')}"`;
+  const zeilen = liste.map(m => [m.kuerzel, m.name, m.art === 'fahrtzeit' ? 'Fahrtzeit' : 'Revierdienst',
+    hm(m.von), hm(m.bis), m.pause_min, m.arbeitszeit_h, m.gueltig_ab, m.gueltig_bis || '',
+    ...tage.map(t => m['bedarf_' + t] || 0), m.bedarf_feiertag || 0].map(feld).join(';'));
+  const o = objekte.find(x => Number(x.id) === Number(obTarget));
+  // Semikolon und BOM, damit Excel die Datei ohne Zutun richtig oeffnet.
+  const blob = new Blob(['\ufeff' + [kopf.map(feld).join(';'), ...zeilen].join('\r\n')],
+    { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'masterschichten-' + (o ? o.name.replace(/[^\wäöüÄÖÜ]+/g, '-').toLowerCase() : 'objekt') + '.csv';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 // ══════════════════════════════════════════ MASTERSCHICHTEN
