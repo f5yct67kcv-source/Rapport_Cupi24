@@ -6,6 +6,7 @@
 // werden.
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 require_once __DIR__ . '/../anmeldung.php';   // passwort_pruefen (ENT-075)
 
 $user = require_session();
@@ -20,7 +21,7 @@ $neu = (string)($in['neu'] ?? '');
 // Die Regel gilt beim SETZEN, nicht beim Anmelden (ENT-075): Wer ein
 // aelteres, kuerzeres Passwort hat, kommt weiterhin rein -- er wird nur
 // hier auf die neue Laenge verpflichtet.
-$pwFehler = passwort_pruefen($neu, (string)$user['name'], (bool)$user['ist_admin']);
+$pwFehler = passwort_pruefen($neu, (string)$user['name'], darf_verwaltung($user));
 if ($pwFehler !== null) {
     json_response(['status' => 'error', 'message' => $pwFehler], 400);
 }

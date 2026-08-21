@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 require_once __DIR__ . '/../anmeldung.php';   // passwort_pruefen (ENT-075)
 require __DIR__ . '/../mitarbeiter.php';
+require_once __DIR__ . '/../logbuch.php';
 
 $user = require_session();
-if (!$user['ist_admin']) {
-    json_response(['status' => 'error', 'message' => 'nur fuer Admin'], 403);
-}
+require_recht($user, 'personal_schreiben');
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['status' => 'error', 'message' => 'nur POST'], 405);
 }
@@ -15,7 +15,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = json_decode(file_get_contents('php://input'), true) ?? [];
 $name = trim((string)($input['name'] ?? ''));
 $password = (string)($input['password'] ?? '');
-$istAdmin = !empty($input['ist_admin']) ? 1 : 0;
+// Rollen statt "Admin ja/nein" (ENT-077). Wer keine Rollen mitschickt oder
+// sie nicht vergeben darf, legt eine mitarbeitende Person an -- die
+// kleinste Rolle. Rechte entstehen so nie aus Versehen, sondern nur, wenn
+// jemand sie ausdruecklich gibt.
+$rollen = [];
+if (is_array($input['rollen'] ?? null) && darf($user, 'rechte')) {
+    $rollen = array_values(array_filter(array_map('strval', $input['rollen']), 'rolle_gueltig'));
+}
+if (!$rollen) { $rollen = [ROLLE_MITARBEITEND]; }
+$istAdmin = in_array(ROLLE_VERWALTUNG, $rollen, true) ? 1 : 0;
 
 if ($name === '') {
     json_response(['status' => 'error', 'message' => 'Name erforderlich'], 400);
@@ -58,5 +67,15 @@ $sql = 'INSERT INTO mitarbeiter (' . implode(', ', array_keys($fest))
 
 $werte = array_merge(array_values($fest), array_values($s));
 db()->prepare($sql)->execute($werte);
+
+// Rollen und Logbuch erst nach dem Anlegen -- vorher gibt es keine ID.
+$neueId = (int)db()->lastInsertId();
+if ($neueId > 0) {
+    rechte_setzen(db(), $neueId, $rollen, $user);
+    // Ein Eintrag ueber das Anlegen selbst. Ohne ihn beginnt der Verlauf
+    // einer Person mit ihrer ersten Aenderung, und wer sie ueberhaupt
+    // erfasst hat, stuende nirgends.
+    logbuch_schreiben(db(), $user, 'mitarbeiter', $neueId, 'angelegt', null, $name);
+}
 
 json_response(['status' => 'ok']);

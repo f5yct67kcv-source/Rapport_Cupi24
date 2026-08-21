@@ -3,13 +3,11 @@ declare(strict_types=1);
 // Einrichtung beginnen: Geheimnis erzeugen und zum Abtippen zurueckgeben.
 // Noch NICHT scharf -- das wird es erst mit zweifaktor_bestaetigen.php.
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 require __DIR__ . '/../zweifaktor.php';
 
 $user = require_session();
-if (!$user['ist_admin']) {
-    json_response(['status' => 'error',
-        'message' => 'Die Zwei-Faktor-Anmeldung gibt es nur für Verwaltungszugänge.'], 403);
-}
+require_verwaltung($user);
 $pdo = db();
 if (!zf_tabellen_da($pdo)) {
     json_response(['status' => 'error',

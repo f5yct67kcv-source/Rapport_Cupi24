@@ -4,6 +4,7 @@ declare(strict_types=1);
 // Immer nur die EIGENE: Die Person kommt aus der Sitzung, nie aus der
 // Anfrage. Sonst liesse sich ausspaehen, wer sie eingeschaltet hat.
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 require __DIR__ . '/../zweifaktor.php';
 
 $user = require_session();
@@ -15,7 +16,7 @@ json_response([
     'eingerichtet' => zf_tabellen_da($pdo),
     // Nur fuer Verwaltungszugaenge (Entscheid des Projektinhabers): In der
     // Mitarbeiter-App sieht jemand nur die eigenen Schichten.
-    'moeglich' => (bool)$user['ist_admin'],
+    'moeglich' => darf_verwaltung($user),
     'an' => $stand !== null && (bool)$stand['aktiv'],
     'angefangen' => $stand !== null && !$stand['aktiv'],
     'notfallcodes_offen' => zf_notfallcodes_offen($pdo, (int)$user['id']),

@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 
 $user = require_session();
 
@@ -11,7 +12,10 @@ $sql = 'SELECT r.id, r.datum, m.name AS mitarbeiter, r.kunde, r.strasse, r.ort, 
                r.einsatzart, r.von, r.bis, r.pause_min, r.netto_h, r.unterzeichner, r.unterschrift, r.bemerkung, r.erfasst_am
         FROM rapporte r JOIN mitarbeiter m ON m.id = r.mitarbeiter_id';
 
-if ($user['ist_admin']) {
+// Wer die Ist-Zeiten abgleicht, sieht alle Rapporte. Alle anderen sehen
+// ausschliesslich die eigenen -- auch die Personalrolle, denn ein Rapport
+// ist Arbeitszeit und keine Personalakte (ENT-077).
+if (darf($user, 'abgleich')) {
     $rows = db()->query($sql . ' ORDER BY r.datum DESC, r.id DESC')->fetchAll();
 } else {
     $stmt = db()->prepare($sql . ' WHERE r.mitarbeiter_id = ? ORDER BY r.datum DESC, r.id DESC');

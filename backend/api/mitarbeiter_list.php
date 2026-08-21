@@ -1,12 +1,11 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 require __DIR__ . '/../mitarbeiter.php';
 
 $user = require_session();
-if (!$user['ist_admin']) {
-    json_response(['status' => 'error', 'message' => 'nur fuer Admin'], 403);
-}
+require_recht($user, 'personal_lesen');
 
 $pdo = db();
 
@@ -39,10 +38,16 @@ foreach (MA_LISTEN as $art => $tabelle) {
     $listen[$art] = array_map(fn($z) => ['id' => (int)$z['id'], 'bezeichnung' => $z['bezeichnung']], $listen[$art]);
 }
 
-$rows = array_map(function ($r) {
+// Rollen aller Personen in einer Abfrage -- eine je Zeile waere bei 40
+// Mitarbeitenden 40 Abfragen fuer eine Liste (ENT-077).
+$rollenKarte = rechte_rollen_alle(db());
+
+$rows = array_map(function ($r) use ($rollenKarte) {
     // id wird fuer die Zuteilung in der Einsatzplanung gebraucht (ENT-020).
     $r['id'] = (int)$r['id'];
     $r['ist_admin'] = (bool)$r['ist_admin'];
+    $r['rollen'] = $rollenKarte[$r['id']]
+        ?? [$r['ist_admin'] ? ROLLE_VERWALTUNG : ROLLE_MITARBEITEND];
     foreach (['funktion_id', 'abteilung_id', 'anstellungsort_id', 'pensum_stunden'] as $z) {
         if (array_key_exists($z, $r)) { $r[$z] = $r[$z] === null ? null : (int)$r[$z]; }
     }
@@ -50,4 +55,6 @@ $rows = array_map(function ($r) {
 }, $rows);
 
 json_response(['status' => 'ok', 'mitarbeiter' => $rows, 'listen' => $listen,
+    'darf_aendern' => darf($user, 'personal_schreiben'),
+    'darf_rollen'  => darf($user, 'rechte'),
     'eingerichtet' => array_key_exists('ahv_nr', $vorhanden)]);

@@ -4,11 +4,10 @@
 // Einsaetze bleiben unveraendert bestehen.
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 
 $user = require_session();
-if (!$user['ist_admin']) {
-    json_response(['status' => 'error', 'message' => 'nur fuer Admin'], 403);
-}
+require_recht($user, 'plan');
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['status' => 'error', 'message' => 'nur POST'], 405);
 }

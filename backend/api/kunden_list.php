@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 require __DIR__ . '/../kunden.php';
 
 $user = require_session(); // jeder eingeloggte Nutzer braucht die Liste zum Ausfuellen des Rapports
@@ -32,7 +33,7 @@ $antwort = ['status' => 'ok', 'kunden' => $rows];
 // Die naechste freie Nummer als Vorschau fuer den Anlegen-Dialog -- dort steht
 // sie ausgegraut, vergeben wird sie weiterhin erst beim Speichern durch
 // kunden_create.php. Nur fuer Admins, alle anderen legen keine Kunden an.
-if ($user['ist_admin']) {
+if (darf($user, 'kunden')) {
     $antwort['naechste_kundennummer'] = naechste_kundennummer($pdo);
 }
 json_response($antwort);

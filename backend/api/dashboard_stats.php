@@ -2,11 +2,10 @@
 // Aggregierte Kennzahlen fuer das Dashboard. Reine Leseoperation.
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 
 $user = require_session();
-if (!$user['ist_admin']) {
-    json_response(['status' => 'error', 'message' => 'nur fuer Admin'], 403);
-}
+require_verwaltung($user);
 
 $monatStart    = date('Y-m-01');
 $vormonatStart = date('Y-m-01', strtotime('first day of last month'));

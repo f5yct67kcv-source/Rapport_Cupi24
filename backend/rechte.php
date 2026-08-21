@@ -132,6 +132,29 @@ function require_recht(array $user, string $recht): void
     ], 403);
 }
 
+// Hat diese Person ueberhaupt Zugang zur Verwaltungsoberflaeche?
+//
+// Fuer die wenigen Endpunkte, die zu keinem einzelnen Fachgebiet gehoeren:
+// die Zahlen auf der Uebersicht und die eigene Zwei-Faktor-Einrichtung. Ein
+// eigenes Recht dafuer waere falsch -- es waere eines, das man vergeben
+// koennte, ohne dass es fuer sich allein etwas bedeutet.
+function darf_verwaltung(array $user): bool
+{
+    if (isset($user['rollen']) && is_array($user['rollen'])) {
+        return rechte_aus_rollen($user['rollen']) !== [];
+    }
+    return !empty($user['ist_admin']);
+}
+
+function require_verwaltung(array $user): void
+{
+    if (darf_verwaltung($user)) { return; }
+    json_response([
+        'status'  => 'error',
+        'message' => 'Dieser Bereich ist der Verwaltung vorbehalten.',
+    ], 403);
+}
+
 // ── Datenbankteil ─────────────────────────────────────────────────────
 function rechte_tabelle_da(PDO $pdo): bool
 {

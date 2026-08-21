@@ -3,11 +3,10 @@
 // Planung. Nur lesend; die Angaben stammen von den Personen selbst.
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 
 $user = require_session();
-if (!$user['ist_admin']) {
-    json_response(['status' => 'error', 'message' => 'nur fuer Admin'], 403);
-}
+require_recht($user, 'plan');
 
 $von = trim((string)($_GET['von'] ?? ''));
 $bis = trim((string)($_GET['bis'] ?? ''));

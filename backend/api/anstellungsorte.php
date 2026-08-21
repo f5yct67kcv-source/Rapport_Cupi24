@@ -11,11 +11,13 @@
 // sondern wuerde die ganze Zonenrechnung auf einen falschen Messpunkt stellen.
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 
 $user = require_session();
-if (!$user['ist_admin']) {
-    json_response(['status' => 'error', 'message' => 'nur fuer Admin'], 403);
-}
+// Lesen darf, wer die Personalakte sieht -- der Anstellungsort steht dort
+// und waere sonst eine leere Zeile. Aendern ist eine Betriebseinstellung
+// und wird weiter unten getrennt geprueft (ENT-077).
+require_recht($user, 'personal_lesen');
 
 function orte_lesen(): array {
     $rows = db()->query(
@@ -33,6 +35,7 @@ function orte_lesen(): array {
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     json_response(['status' => 'ok', 'orte' => orte_lesen()]);
 }
+require_recht($user, 'betrieb');
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['status' => 'error', 'message' => 'nur GET oder POST'], 405);
 }

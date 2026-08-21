@@ -1,12 +1,11 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 require_once __DIR__ . '/../anmeldung.php';   // passwort_pruefen (ENT-075)
 
 $user = require_session();
-if (!$user['ist_admin']) {
-    json_response(['status' => 'error', 'message' => 'nur fuer Admin'], 403);
-}
+require_recht($user, 'personal_schreiben');
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['status' => 'error', 'message' => 'nur POST'], 405);
 }
@@ -20,9 +19,15 @@ if ($name === '') {
 }
 // Fuer wen wird zurueckgesetzt? Ein Verwaltungszugang braucht ein
 // laengeres Passwort -- das steht in der Datenbank, nicht in der Anfrage.
-$ziel = db()->prepare('SELECT ist_admin FROM mitarbeiter WHERE name = ?');
+$ziel = db()->prepare('SELECT id, ist_admin FROM mitarbeiter WHERE name = ?');
 $ziel->execute([$name]);
-$zielIstAdmin = (bool)($ziel->fetchColumn());
+$zielZeile = $ziel->fetch(PDO::FETCH_ASSOC) ?: ['id' => 0, 'ist_admin' => 0];
+$zielId    = (int)$zielZeile['id'];
+// Massgeblich sind die Rollen: Auch Planung und Personal sehen fremde
+// Personendaten und brauchen darum das laengere Passwort, nicht nur die
+// Verwaltung (ENT-077).
+$zielIstAdmin = darf_verwaltung([
+    'rollen' => rechte_rollen(db(), $zielId, (bool)$zielZeile['ist_admin'])]);
 
 $pwFehler = passwort_pruefen($password, $name, $zielIstAdmin);
 if ($pwFehler !== null) {
@@ -36,6 +41,14 @@ $stmt->execute([$hash, $name]);
 
 if ($stmt->rowCount() === 0) {
     json_response(['status' => 'error', 'message' => 'Mitarbeiter nicht gefunden'], 404);
+}
+
+require_once __DIR__ . '/../logbuch.php';
+if ($zielId > 0) {
+    // Ohne Werte: Das Passwort selbst hat im Logbuch nichts verloren, weder
+    // das alte noch das neue. Festgehalten wird, DASS es jemand
+    // zurueckgesetzt hat und wer.
+    logbuch_schreiben(db(), $user, 'mitarbeiter', $zielId, 'passwort', null, null, true);
 }
 
 // Bestehende Sitzungen dieses Mitarbeiters beenden -- altes Passwort war

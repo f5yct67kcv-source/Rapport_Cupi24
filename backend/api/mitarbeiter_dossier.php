@@ -14,12 +14,11 @@ declare(strict_types=1);
 // Sparsamkeit, nicht der Berechtigung -- festgehalten im Entscheidungs-
 // protokoll, damit es niemand fuer geloest haelt.
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 require __DIR__ . '/../mitarbeiter.php';
 
 $user = require_session();
-if (!$user['ist_admin']) {
-    json_response(['status' => 'error', 'message' => 'nur fuer Admin'], 403);
-}
+require_recht($user, 'personal_lesen');
 
 $name = trim((string)($_GET['name'] ?? ''));
 if ($name === '') {
@@ -50,5 +49,21 @@ foreach (['funktion_id', 'abteilung_id', 'anstellungsort_id', 'pensum_stunden'] 
 // Das Passwort verlaesst die Datenbank nie -- auch nicht als Hash.
 unset($row['password_hash']);
 
+// Die vertraulichen Angaben verlassen den Server nur, wenn die Rolle sie
+// sehen darf (ENT-077). Sie werden ENTFERNT, nicht leer geschickt: ein
+// leeres Feld sieht aus wie "nicht erfasst", und "unbekannt" darf nie
+// aussehen wie "keine". Die Oberflaeche erfaehrt ueber "vertraulich",
+// woran sie ist, und schreibt hin, dass etwas ausgeblendet wurde.
+$darfVertraulich = darf($user, 'personal_vertraulich');
+if (!$darfVertraulich) {
+    foreach (ma_vertrauliche_felder() as $feld) { unset($row[$feld]); }
+}
+
+// Die Rollen der Person -- die Oberflaeche zeigt sie im Abschnitt Zugang.
+$row['rollen'] = rechte_rollen($pdo, (int)$row['id'], (bool)$row['ist_admin']);
+
 json_response(['status' => 'ok', 'mitarbeiter' => $row,
+    'vertraulich' => $darfVertraulich,
+    'darf_aendern' => darf($user, 'personal_schreiben'),
+    'darf_rollen'  => darf($user, 'rechte'),
     'eingerichtet' => in_array('ahv_nr', $felder, true)]);

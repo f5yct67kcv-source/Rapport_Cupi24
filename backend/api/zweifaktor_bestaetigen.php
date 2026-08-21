@@ -4,12 +4,11 @@ declare(strict_types=1);
 // Zwei-Faktor-Anmeldung scharf. Sonst sperrt sich aus, wer den Schluessel
 // falsch abgetippt hat.
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../rechte.php';
 require __DIR__ . '/../zweifaktor.php';
 
 $user = require_session();
-if (!$user['ist_admin']) {
-    json_response(['status' => 'error', 'message' => 'nur fuer Verwaltungszugaenge'], 403);
-}
+require_verwaltung($user);
 $pdo = db();
 $in = json_decode(file_get_contents('php://input'), true) ?: [];
 $code = (string)($in['code'] ?? '');
