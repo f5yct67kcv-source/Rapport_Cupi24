@@ -325,6 +325,22 @@ CREATE TABLE IF NOT EXISTS kunden_kontaktweg (
   FOREIGN KEY (person_id) REFERENCES kunden_person(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+// Kurzzeitgedaechtnis der Anmeldebremse (ENT-075).
+//
+// Bewusst KEIN dauerhaftes Protokoll: Es wird nach einem Tag geleert und
+// nach einer erfolgreichen Anmeldung fuer diesen Namen geloescht. Eine
+// Sammlung darueber, wer wann von wo aus etwas versucht hat, waere selbst
+// wieder ein Bestand mit Personenbezug.
+'anmeldeversuche' => "CREATE TABLE anmeldeversuche (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  login_name VARCHAR(100) NOT NULL,
+  adresse VARCHAR(45) NOT NULL,
+  zeitpunkt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_zeitpunkt (zeitpunkt),
+  KEY idx_name (login_name, zeitpunkt),
+  KEY idx_adresse (adresse, zeitpunkt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 // Anordnung der Container je Benutzer und Bereich (ENT-073).
 //
 // Bewusst EINE Tabelle fuer alle Bereiche statt je Bereich eine Spalte

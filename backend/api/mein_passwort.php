@@ -6,6 +6,7 @@
 // werden.
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require_once __DIR__ . '/../anmeldung.php';   // passwort_pruefen (ENT-075)
 
 $user = require_session();
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -16,8 +17,12 @@ $in = json_decode(file_get_contents('php://input'), true) ?? [];
 $alt = (string)($in['alt'] ?? '');
 $neu = (string)($in['neu'] ?? '');
 
-if (strlen($neu) < 6) {
-    json_response(['status' => 'error', 'message' => 'Das neue Passwort braucht mindestens 6 Zeichen'], 400);
+// Die Regel gilt beim SETZEN, nicht beim Anmelden (ENT-075): Wer ein
+// aelteres, kuerzeres Passwort hat, kommt weiterhin rein -- er wird nur
+// hier auf die neue Laenge verpflichtet.
+$pwFehler = passwort_pruefen($neu, (string)$user['name']);
+if ($pwFehler !== null) {
+    json_response(['status' => 'error', 'message' => $pwFehler], 400);
 }
 
 $stmt = db()->prepare('SELECT password_hash FROM mitarbeiter WHERE id = ?');
