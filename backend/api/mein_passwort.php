@@ -20,7 +20,7 @@ $neu = (string)($in['neu'] ?? '');
 // Die Regel gilt beim SETZEN, nicht beim Anmelden (ENT-075): Wer ein
 // aelteres, kuerzeres Passwort hat, kommt weiterhin rein -- er wird nur
 // hier auf die neue Laenge verpflichtet.
-$pwFehler = passwort_pruefen($neu, (string)$user['name']);
+$pwFehler = passwort_pruefen($neu, (string)$user['name'], (bool)$user['ist_admin']);
 if ($pwFehler !== null) {
     json_response(['status' => 'error', 'message' => $pwFehler], 400);
 }
@@ -36,7 +36,7 @@ $pdo = db();
 $pdo->beginTransaction();
 try {
     $pdo->prepare('UPDATE mitarbeiter SET password_hash = ? WHERE id = ?')
-        ->execute([password_hash($neu, PASSWORD_DEFAULT), (int)$user['id']]);
+        ->execute([password_hash($neu, PASSWORD_DEFAULT, ['cost' => PASSWORT_KOSTEN]), (int)$user['id']]);
     // Alle anderen Sitzungen beenden -- die aktuelle bleibt bestehen.
     $token = $_SERVER['HTTP_X_AUTH_TOKEN'] ?? '';
     $pdo->prepare('DELETE FROM sessions WHERE mitarbeiter_id = ? AND token <> ?')
