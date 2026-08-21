@@ -10,11 +10,11 @@
   var FARBE = '#D85A30';
   var WERKZEUGE = [
     { id: 'auswahl',      name: 'Auswählen',   hinweis: 'Element anklicken' },
-    { id: 'verschieben',  name: 'Verschieben', hinweis: 'ziehen oder Pfeiltasten' },
-    { id: 'abstand',      name: 'Abstand',     hinweis: 'Pfeiltasten, Shift = aussen' },
-    { id: 'groesse',      name: 'Grösse',      hinweis: 'Pfeiltasten' },
+    { id: 'verschieben',  name: 'Verschieben', hinweis: 'anklicken, dann ziehen oder ← → ↑ ↓' },
+    { id: 'abstand',      name: 'Abstand',     hinweis: 'anklicken, dann ← → ↑ ↓ · Alt = aussen' },
+    { id: 'groesse',      name: 'Grösse',      hinweis: 'anklicken, dann ← → Breite, ↑ ↓ Höhe' },
     { id: 'text',         name: 'Text',        hinweis: 'anklicken und tippen' },
-    { id: 'reihenfolge',  name: 'Reihenfolge', hinweis: 'Pfeiltasten links/rechts' },
+    { id: 'reihenfolge',  name: 'Reihenfolge', hinweis: 'anklicken, dann ← → tauscht mit Nachbar' },
     { id: 'duplizieren',  name: 'Duplizieren', hinweis: 'Element anklicken' },
     { id: 'ausblenden',   name: 'Ausblenden',  hinweis: 'Element anklicken' },
     { id: 'platzhalter',  name: 'Platzhalter', hinweis: 'Rechteck aufziehen' },
@@ -408,7 +408,9 @@
       b.classList.toggle('an', b.dataset.wz === id);
     });
     var w = WERKZEUGE.filter(function (x) { return x.id === id; })[0];
-    wurzel.getElementById('hinweis').textContent = w ? w.hinweis : '';
+    var text = w ? w.hinweis : '';
+    if (id === 'groesse' || id === 'abstand' || id === 'verschieben') text += ' · Shift = 10 px';
+    wurzel.getElementById('hinweis').textContent = text;
     wurzel.getElementById('farben').classList.toggle('an', id === 'farbe');
     if (id === 'farbe') {
       wurzel.getElementById('hinweis').textContent = 'Klick = Fläche, Shift+Klick = Schrift';
@@ -575,12 +577,32 @@
 
     if (werkzeug === 'groesse') {
       var eigG = richtung[0] ? 'width' : 'height';
+      /* Vor jedem Eingriff messen: sobald das Element nicht mehr mitwaechst,
+         faellt es sonst auf seine Eigenbreite zurueck und springt. */
+      var altG = Math.round(ziel.getBoundingClientRect()[eigG]);
       merkeStil(ziel, eigG);
       /* Ohne border-box zaehlt width nur den Inhalt, der protokollierte Wert
          wuerde dann von der sichtbaren Breite abweichen. */
       merkeStil(ziel, 'boxSizing');
       ziel.style.boxSizing = 'border-box';
-      var altG = Math.round(ziel.getBoundingClientRect()[eigG]);
+      /* In Flex- und Grid-Layouts bestimmt der Container die Groesse. Ein
+         blosses width bleibt dort wirkungslos, solange das Element noch
+         mitwaechst oder auf volle Hoehe gestreckt wird. */
+      var eltern = ziel.parentElement ? getComputedStyle(ziel.parentElement).display : '';
+      if (/flex|grid/.test(eltern)) {
+        if (richtung[0]) {
+          merkeStil(ziel, 'flexGrow');
+          merkeStil(ziel, 'flexShrink');
+          merkeStil(ziel, 'flexBasis');
+          ziel.style.flexGrow = '0';
+          ziel.style.flexShrink = '0';
+          /* flex: 1 setzt flex-basis auf 0% -- das schlaegt width, solange es steht. */
+          ziel.style.flexBasis = 'auto';
+        } else {
+          merkeStil(ziel, 'alignSelf');
+          ziel.style.alignSelf = 'flex-start';
+        }
+      }
       var neuG = Math.max(4, altG + (richtung[0] || richtung[1]) * schritt);
       ziel.style[eigG] = neuG + 'px';
       /* In Tabellen ueberstimmt das Auto-Layout ein blosses width. */
