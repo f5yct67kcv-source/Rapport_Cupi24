@@ -346,6 +346,58 @@ td.num.leer { color: var(--ink-3); }
 tbody tr.summe td { background: var(--surface-2); font-weight: 650; border-top: 1px solid var(--line); }
 tbody tr.aus td { opacity: .55; }
 #msSeiteTabelle td:last-child .btn { margin-left: 6px; }
+
+/* ── Einsatzplan (ENT-076) ──────────────────────────────────────────────
+   Dicht gebaut: bei acht Positionen ueber zwoelf Stunden entscheidet jede
+   eingesparte Zeile darueber, ob der Plan noch auf einen Schirm passt. */
+.ep-raum { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 12px; margin-top: 12px; align-items: start; }
+.ep-leute { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.ep-leute-kopf { padding: 9px; border-bottom: 1px solid var(--line-soft); }
+.ep-leute-kopf .inp { height: 32px; font-size: 12.5px; }
+.ep-ampel { display: flex; gap: 5px; margin-top: 7px; }
+.ep-ampel button { flex: 1; border: 1px solid var(--line); background: transparent; border-radius: var(--r-xs);
+  padding: 3px 0; font: inherit; font-size: 11px; color: var(--ink-3); cursor: pointer; }
+.ep-ampel button.an { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); }
+.ep-ampel i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: 0; }
+#epListe { max-height: 62vh; overflow-y: auto; }
+.ep-p { display: flex; align-items: center; gap: 7px; padding: 6px 9px; border-bottom: 1px solid var(--line-soft);
+  cursor: pointer; font-size: 12.5px; }
+.ep-p:hover { background: var(--surface-3); }
+.ep-p.dabei { background: var(--accent-soft); }
+.ep-p i { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.ep-p .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ep-p .wo { font-size: 10.5px; }
+.ep-plan { overflow: hidden; }
+.ep-plan-kopf { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--line-soft); font-size: 12.5px; }
+.ep-hinweis { font-size: 11.5px; color: var(--ink-3); }
+.ep-soll { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.ep-soll b { color: var(--ink); }
+.ep-scroll { overflow-x: auto; }
+table.ep-gitter { border-collapse: collapse; font-size: 11.5px; }
+table.ep-gitter th, table.ep-gitter td { padding: 0; border: none; }
+table.ep-gitter .fest { padding: 3px 8px; white-space: nowrap; border-right: 1px solid var(--line); }
+table.ep-gitter thead .fest { font-size: 10px; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-3); }
+/* Die Uhrzeit steht senkrecht: 96 Viertelstunden nebeneinander gehen sonst
+   nur mit dreifacher Breite. */
+table.ep-gitter th.uhr { height: 62px; vertical-align: bottom; padding-bottom: 3px; }
+table.ep-gitter th.uhr span { display: block; writing-mode: vertical-rl; transform: rotate(180deg);
+  font-size: 9.5px; font-weight: 500; color: var(--ink-3); letter-spacing: .2px; }
+table.ep-gitter th.uhr.voll span { color: var(--ink-2); }
+table.ep-gitter td.slot, table.ep-gitter th.zahl { border: 1px solid var(--line-soft); text-align: center; }
+table.ep-gitter th.zahl { font-size: 9.5px; font-weight: 600; color: var(--ink-2); background: var(--pos-soft); padding: 1px 0; }
+table.ep-gitter th.zahl.fehlt { background: var(--neg-soft); color: var(--neg); }
+table.ep-gitter tbody tr { height: 26px; }
+table.ep-gitter tbody tr.gewaehlt .fest { background: var(--accent-soft); }
+table.ep-gitter td.raster { position: relative; padding: 0; }
+.ep-balken { position: absolute; top: 3px; bottom: 3px; border-radius: 3px; display: flex; align-items: center;
+  justify-content: center; gap: 6px; font-size: 11px; font-weight: 600; overflow: hidden; white-space: nowrap; padding: 0 6px; }
+.ep-balken.besetzt { background: var(--warn); color: #1a1205; }
+.ep-balken.offen { background: var(--line-soft); color: var(--ink-3); border: 1px dashed var(--line); }
+.ep-balken button { border: none; background: rgba(0,0,0,.18); color: inherit; border-radius: 3px; cursor: pointer;
+  width: 15px; height: 15px; line-height: 13px; font-size: 12px; padding: 0; flex: none; }
+.ep-schloss { background: none; border: none; cursor: pointer; color: var(--ink-3); padding: 0 4px; font-size: 12px; }
+.ep-schloss.zu { color: var(--warn); }
+@media (max-width: 1180px) { .ep-raum { grid-template-columns: 1fr; } #epListe { max-height: 240px; } }
 td .sec { font-size: 11.5px; color: var(--ink-3); }
 .strong { font-weight: 620; }
 .nowrap { white-space: nowrap; }
@@ -2515,6 +2567,44 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
         </div>
       </section>
 
+      <!-- ══════════════════════════ EINSATZPLAN ══════════════════════════
+           Intraday-Planung eines einzelnen Einsatzes (ENT-076). Wer mehrere
+           Leute gestaffelt einteilt, braucht das Raster: eine Liste sagt
+           nicht, ob um 02:00 noch jemand da ist. Links die Personen, rechts
+           die Positionen ueber der Zeitachse. -->
+      <section class="view" id="view-einsatzplan">
+        <div class="bar-tools">
+          <button class="btn btn-plain btn-sm" onclick="go('planung')">Zurück zur Planung</button>
+          <button class="btn btn-quiet btn-sm" onclick="epEinsatzOeffnen()">Einsatz bearbeiten</button>
+          <div class="sp" style="flex:1"></div>
+          <button class="btn btn-quiet btn-sm" onclick="epLaden()">Aktualisieren</button>
+          <button class="btn btn-quiet btn-sm" onclick="window.print()">Drucken</button>
+          <button class="btn btn-primary btn-sm" onclick="epPosNeu()">Position hinzufügen</button>
+        </div>
+
+        <div class="card"><div id="epKopf"></div></div>
+
+        <div class="ep-raum">
+          <aside class="ep-leute">
+            <div class="ep-leute-kopf">
+              <input class="inp" id="epSuche" placeholder="Person suchen" oninput="epLeuteZeichnen()">
+              <div class="ep-ampel" id="epAmpel"></div>
+            </div>
+            <div id="epListe"></div>
+          </aside>
+
+          <div class="card ep-plan">
+            <div class="ep-plan-kopf">
+              <b>Positionen</b>
+              <span class="ep-hinweis" id="epHinweis">Position wählen, dann Person anklicken</span>
+              <div class="sp" style="flex:1"></div>
+              <div class="ep-soll" id="epSoll"></div>
+            </div>
+            <div class="ep-scroll"><div id="epRaster"></div></div>
+          </div>
+        </div>
+      </section>
+
       <!-- ══════════════════════════ BETRIEB ══════════════════════════
            Einstellungen zum eigenen Unternehmen (ENT-056). Bisher lagen die
            Anstellungsorte in einem Dialog unter den Objekten -- das war der
@@ -3478,7 +3568,8 @@ const TITLES = {
   kunden:      ['Kunden', 'Stammdaten'],
   betrieb:     ['Betrieb', 'Einstellungen zum eigenen Unternehmen'],
   pensen:      ['Pensen', 'Jahresstunden gegen die Anstellungskategorie'],
-  masterschichten: ['Masterschichten', 'Vorlagen, aus denen die Schichten entstehen']
+  masterschichten: ['Masterschichten', 'Vorlagen, aus denen die Schichten entstehen'],
+  einsatzplan: ['Einsatz planen', 'Positionen und Zeiten im Detail']
 };
 
 // Monatsraster brauchen die volle Fensterbreite, alles andere bleibt auf
@@ -5711,7 +5802,11 @@ function enGesperrt(e) {
 // Kleines Schloss vor dem Zeitfeld einer Listenzeile.
 const enSchloss = e => enGesperrt(e) ? `<span title="Abgeglichen und festgeschrieben">${SCHLOSS_ZU}</span>` : '';
 
-function openEinsatz(id) {
+function openEinsatz(id) { epAuf(id); }
+
+// Die bisherige Schublade -- weiterhin der Ort fuer Stammdaten des
+// Einsatzes, erreichbar ueber "Einsatz bearbeiten".
+function openEinsatzDrawer(id) {
   const e = einsaetze.find(x => Number(x.id) === Number(id));
   if (!e) { toast('Einsatz nicht gefunden — bitte aktualisieren.'); return; }
   drawerId = null;
@@ -6802,6 +6897,239 @@ function askDeleteObjekt() {
         : 'Objekt gelöscht.'));
     }));
 }
+
+// ══════════════════════════════════════════ EINSATZPLAN (ENT-076)
+// Ein Einsatz im Detail: Positionen mit eigener Zeit, Personen daneben.
+// Der Raster-Takt sind 15 Minuten -- feiner plant hier niemand, groeber
+// verliert die Staffelung.
+const EP_TAKT = 15;
+let epId = null, epEinsatz = null, epPos = [], epGewaehlt = null, epFilter = 'alle';
+
+function epAuf(id) {
+  epId = Number(id);
+  epGewaehlt = null;
+  epFilter = 'alle';
+  go('einsatzplan');
+  epLaden();
+}
+
+function epLaden() {
+  if (!epId) return;
+  const e = einsaetze.find(x => Number(x.id) === epId);
+  if (!e) { toast('Einsatz nicht gefunden.'); go('planung'); return; }
+  epEinsatz = e;
+  $('pgCrumb').textContent = `${dmy(e.datum)} · ${hm(e.von)}–${hm(e.bis)} · ${e.kunde_name || ''}`;
+  return api('einsatz_position.php?einsatz_id=' + epId).then(({ ok, data }) => {
+    epPos = (ok && data.status === 'ok') ? (data.positionen || []) : [];
+    epZeichnen();
+  });
+}
+
+// Minuten seit Einsatzbeginn. Endet die Schicht am Folgetag, laeuft die Achse
+// ueber Mitternacht weiter -- 22:00 bis 06:00 sind acht Stunden, nicht minus 16.
+function epMinuten(zeit, start) {
+  const [h, m] = String(zeit).slice(0, 5).split(':').map(Number);
+  let min = h * 60 + m - start;
+  if (min < 0) min += 1440;
+  return min;
+}
+
+function epAchse() {
+  if (!epEinsatz) return { start: 0, dauer: 0, slots: 0 };
+  const [sh, sm] = hm(epEinsatz.von).split(':').map(Number);
+  const start = sh * 60 + sm;
+  let dauer = epMinuten(epEinsatz.bis, start);
+  if (dauer <= 0) dauer = 1440;
+  // Positionen duerfen ueber das Einsatzende hinausgehen; die Achse waechst mit.
+  epPos.forEach(p => { dauer = Math.max(dauer, epMinuten(p.bis, start) || 1440); });
+  return { start, dauer, slots: Math.ceil(dauer / EP_TAKT) };
+}
+
+function epUhr(minutenAbStart, start) {
+  const t = (start + minutenAbStart) % 1440;
+  return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+}
+
+function epZeichnen() {
+  if (!$('epRaster') || !$('view-einsatzplan').classList.contains('on')) return;
+  epKopfZeichnen();
+  epRasterZeichnen();
+  epLeuteZeichnen();
+}
+
+function epKopfZeichnen() {
+  const e = epEinsatz;
+  if (!e) return;
+  const zu = epPos.filter(p => p.mitarbeiter_id).length;
+  const soll = epPos.length || Number(e.bedarf || 0);
+  const feld = (k, w) => `<div class="ep-kf"><span>${k}</span><b>${w || '—'}</b></div>`;
+  $('epKopf').innerHTML = `<div class="card-bd" style="padding:12px 16px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px 18px;font-size:12.5px">
+      ${feld('Nummer', e.id)}
+      ${feld('Datum', dmy(e.datum))}
+      ${feld('Uhrzeit', hm(e.von) + '–' + hm(e.bis))}
+      ${feld('Besetzung', `${zu} / ${soll}`)}
+      ${feld('Kunde', esc(e.kunde_name || ''))}
+      ${feld('Veranstaltung', esc(e.veranstaltung || e.titel || ''))}
+      ${feld('Ort', esc([e.strasse, e.ort].filter(Boolean).join(', ')))}
+      ${feld('Einsatzart', esc(e.einsatzart || ''))}
+      ${feld('Treffpunkt', esc(e.treffpunkt || ''))}
+      ${feld('Tätigkeit', esc(e.taetigkeit || ''))}
+      ${feld('Qualifikation', esc(e.qualifikation || ''))}
+      ${feld('Bemerkung', esc(e.bemerkung || ''))}
+    </div></div>`;
+}
+
+function epRasterZeichnen() {
+  const { start, slots } = epAchse();
+  if (!epPos.length) {
+    $('epRaster').innerHTML = `<div class="empty" style="padding:34px 24px">
+      <h3>Noch keine Position</h3>
+      <p>Eine Position ist ein Platz mit eigener Zeit. Vier Positionen heissen vier Leute,
+         die sich auch unterschiedlich ablösen dürfen.</p></div>`;
+    $('epSoll').innerHTML = '';
+    return;
+  }
+
+  // Soll und Ist je Viertelstunde: wie viele Plaetze offen sind und wie viele
+  // davon besetzt. Genau daraus liest man, ob um 02:00 noch jemand da ist.
+  const soll = new Array(slots).fill(0), ist = new Array(slots).fill(0);
+  epPos.forEach(p => {
+    const a = Math.floor(epMinuten(p.von, start) / EP_TAKT);
+    const b = Math.ceil((epMinuten(p.bis, start) || 1440) / EP_TAKT);
+    for (let i = a; i < b && i < slots; i++) { soll[i]++; if (p.mitarbeiter_id) ist[i]++; }
+  });
+  const std = n => nf(n * EP_TAKT / 60, 2);
+  $('epSoll').innerHTML = `Soll <b>${std(soll.reduce((a, b) => a + b, 0))} h</b> ·
+    Ist <b>${std(ist.reduce((a, b) => a + b, 0))} h</b>`;
+
+  const kopfUhr = Array.from({ length: slots }, (_, i) => {
+    const u = epUhr(i * EP_TAKT, start);
+    return `<th class="uhr${u.endsWith(':00') ? ' voll' : ''}"><span>${u}</span></th>`;
+  }).join('');
+
+  const zeile = p => {
+    const a = epMinuten(p.von, start) / EP_TAKT;
+    const b = (epMinuten(p.bis, start) || 1440) / EP_TAKT;
+    const links = (a / slots * 100).toFixed(3), breite = ((b - a) / slots * 100).toFixed(3);
+    const name = p.mitarbeiter_id ? esc(([p.vorname, p.nachname].filter(Boolean).join(' ')) || p.mitarbeiter) : 'offen';
+    return `<tr class="${epGewaehlt === p.id ? 'gewaehlt' : ''}" onclick="epWaehlen(${p.id})">
+      <td class="fest">${p.nr}. ${esc(p.funktion || 'Ordnungsdienst')}</td>
+      <td class="fest">${esc(p.position || '—')}</td>
+      <td class="fest" style="text-align:right">${p.pauschal != null ? nf(p.pauschal, 2) + ' pausch.'
+        : (p.std_verrechnung != null ? nf(p.std_verrechnung, 2) + ' CHF' : '—')}</td>
+      <td class="fest">${hm(p.von)}–${hm(p.bis)} <span style="color:var(--ink-3)">(${std(b - a)}h)</span></td>
+      <td class="fest"><button class="ep-schloss${p.gesperrt ? ' zu' : ''}" title="${p.gesperrt ? 'Einteilung steht' : 'Nicht gesperrt'}"
+        onclick="event.stopPropagation();epSperren(${p.id},${p.gesperrt ? 0 : 1})">${p.gesperrt ? '🔒' : '🔓'}</button></td>
+      <td class="raster" colspan="${slots}">
+        <div class="ep-balken ${p.mitarbeiter_id ? 'besetzt' : 'offen'}" style="left:${links}%;width:${breite}%">
+          <span style="overflow:hidden;text-overflow:ellipsis">${name}</span>
+          ${p.mitarbeiter_id ? `<button title="Person entfernen" onclick="event.stopPropagation();epLoesen(${p.id})">×</button>`
+            : `<button title="Position entfernen" onclick="event.stopPropagation();epPosWeg(${p.id})">×</button>`}
+        </div>
+      </td>
+    </tr>`;
+  };
+
+  $('epRaster').innerHTML = `<table class="ep-gitter"><thead>
+      <tr><th class="fest">Funktion</th><th class="fest">Position</th><th class="fest">Verrechnung</th>
+          <th class="fest">Zeit</th><th class="fest"></th>${kopfUhr}</tr>
+      <tr><th class="fest" colspan="5" style="text-align:right">Soll</th>
+          ${soll.map(n => `<th class="zahl">${n || ''}</th>`).join('')}</tr>
+      <tr><th class="fest" colspan="5" style="text-align:right">Ist</th>
+          ${ist.map((n, i) => `<th class="zahl${n < soll[i] ? ' fehlt' : ''}">${n || ''}</th>`).join('')}</tr>
+    </thead><tbody>${epPos.map(zeile).join('')}</tbody></table>`;
+}
+
+function epWaehlen(id) {
+  epGewaehlt = epGewaehlt === id ? null : id;
+  const p = epPos.find(x => x.id === epGewaehlt);
+  $('epHinweis').textContent = p
+    ? `Position ${p.nr} gewählt — jetzt eine Person anklicken`
+    : 'Position wählen, dann Person anklicken';
+  epRasterZeichnen();
+  epLeuteZeichnen();
+}
+
+function epLeuteZeichnen() {
+  if (!$('epListe') || !epEinsatz) return;
+  const q = (($('epSuche') || {}).value || '').trim().toLowerCase();
+  const p = epPos.find(x => x.id === epGewaehlt);
+  // Konflikte und Ruhezeit gegen die Zeit der gewaehlten Position pruefen,
+  // nicht gegen die des Einsatzes -- wer nur bis 02:00 arbeitet, kollidiert
+  // nicht mit dem, was um 05:00 beginnt.
+  const von = p ? hm(p.von) : hm(epEinsatz.von);
+  const bis = p ? hm(p.bis) : hm(epEinsatz.bis);
+  const k = konflikte(epEinsatz.datum, von, bis, epId);
+  const r = ruheLuecken(epEinsatz.datum, von, bis, epId);
+  const drin = new Set(epPos.filter(x => x.mitarbeiter_id).map(x => Number(x.mitarbeiter_id)));
+
+  const zustand = m => (k[m.id] || []).length ? 'rot' : ((r[m.id] || []).length ? 'gelb' : 'gruen');
+  const farbe = { gruen: 'var(--pos)', gelb: 'var(--warn)', rot: 'var(--neg)' };
+  const zaehler = { gruen: 0, gelb: 0, rot: 0 };
+  mitarbeiter.forEach(m => zaehler[zustand(m)]++);
+
+  $('epAmpel').innerHTML = [['alle', 'alle', mitarbeiter.length], ['gruen', 'frei', zaehler.gruen],
+      ['gelb', 'knapp', zaehler.gelb], ['rot', 'belegt', zaehler.rot]]
+    .map(([w, t, n]) => `<button class="${epFilter === w ? 'an' : ''}" onclick="epFilterSetzen('${w}')">
+      ${w === 'alle' ? '' : `<i style="background:${farbe[w]}"></i>`}${t} ${n}</button>`).join('');
+
+  const liste = mitarbeiter.filter(m => {
+    if (epFilter !== 'alle' && zustand(m) !== epFilter) return false;
+    if (!q) return true;
+    return (fullName(m) || m.name || '').toLowerCase().includes(q) || (m.name || '').toLowerCase().includes(q);
+  });
+
+  $('epListe').innerHTML = liste.length ? liste.map(m => {
+    const z = zustand(m);
+    const c = k[m.id] || [];
+    const titel = c.length ? 'Bereits eingeteilt: ' + c.map(x => `${x.titel || x.kunde_name} ${hm(x.von)}–${hm(x.bis)}`).join(', ')
+      : ((r[m.id] || []).length ? 'Knappe Ruhezeit' : 'Verfügbar');
+    return `<div class="ep-p${drin.has(Number(m.id)) ? ' dabei' : ''}" title="${esc(titel)}"
+                 onclick="epZuteilen(${Number(m.id)})">
+      <i style="background:${farbe[z]}"></i>
+      <span class="nm">${esc(fullName(m) || m.name)}</span>
+      ${drin.has(Number(m.id)) ? '<span class="wo">dabei</span>' : ''}
+    </div>`;
+  }).join('') : '<div class="leer" style="padding:16px 10px;font-size:12px">Niemand passt zum Filter.</div>';
+}
+
+function epFilterSetzen(w) { epFilter = w; epLeuteZeichnen(); }
+
+function epSenden(koerper) {
+  return api('einsatz_position.php', { method: 'POST', body: { einsatz_id: epId, ...koerper } })
+    .then(({ ok, data }) => {
+      if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return false; }
+      epPos = data.positionen || [];
+      epZeichnen();
+      // Die Planungsliste zeigt die Besetzung -- ohne Nachladen stuende dort
+      // weiter der alte Stand.
+      loadEinsaetze().then(renderPlanung);
+      return true;
+    });
+}
+
+function epZuteilen(maId) {
+  if (!epGewaehlt) { toast('Erst eine Position wählen.'); return; }
+  epSenden({ aktion: 'zuteilen', position_id: epGewaehlt, mitarbeiter_id: maId });
+}
+
+function epLoesen(posId) { epSenden({ aktion: 'loesen', position_id: posId }); }
+function epSperren(posId, wert) { epSenden({ aktion: 'sperren', id: posId, gesperrt: wert }); }
+
+function epPosNeu() {
+  if (!epEinsatz) return;
+  // Die neue Position uebernimmt die Zeit des Einsatzes; verschoben wird danach.
+  epSenden({ aktion: 'speichern', von: hm(epEinsatz.von), bis: hm(epEinsatz.bis) })
+    .then(gut => { if (gut) toast('Position angelegt — Zeit und Funktion über die Zeile ändern.'); });
+}
+
+function epPosWeg(posId) {
+  askConfirm('Position entfernen?', 'Die Position verschwindet aus dem Raster. Zugeteilte Personen bleiben am Einsatz.',
+    'Entfernen', () => epSenden({ aktion: 'entfernen', id: posId }));
+}
+
+function epEinsatzOeffnen() { if (epId) openEinsatzDrawer(epId); }
 
 // ══════════════════════════════════════════ MASTERSCHICHTEN ALS SEITE
 // Dieselben Daten wie in der Schublade, nur breit genug zum Arbeiten.

@@ -239,6 +239,14 @@ CREATE TABLE IF NOT EXISTS einsaetze (
   abgeglichen_von INT NULL,
   abgeglichen_am DATETIME NULL,
   bemerkung TEXT,
+  -- Felder aus dem Vorbild der Intraday-Planung (ENT-076): der Anlass, zu dem
+  -- der Einsatz gehoert, wo man sich trifft, was zu tun ist und wer den
+  -- Einsatz verantwortet.
+  veranstaltung VARCHAR(200) NULL,
+  treffpunkt VARCHAR(200) NULL,
+  taetigkeit TEXT NULL,
+  qualifikation VARCHAR(200) NULL,
+  zustaendig_id INT NULL,
   erstellt_von INT NULL,
   erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
   KEY idx_datum (datum),
@@ -247,7 +255,40 @@ CREATE TABLE IF NOT EXISTS einsaetze (
   FOREIGN KEY (objekt_id) REFERENCES objekte(id) ON DELETE SET NULL,
   FOREIGN KEY (masterschicht_id) REFERENCES masterschichten(id) ON DELETE SET NULL,
   FOREIGN KEY (erstellt_von) REFERENCES mitarbeiter(id) ON DELETE SET NULL,
+  FOREIGN KEY (zustaendig_id) REFERENCES mitarbeiter(id) ON DELETE SET NULL,
   FOREIGN KEY (abgeglichen_von) REFERENCES mitarbeiter(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+// Positionen eines Einsatzes (ENT-076). Bis hierher hatte ein Einsatz eine
+// Zeit und eine Anzahl -- damit laesst sich nicht abbilden, dass vier Leute
+// gestaffelt arbeiten: einer 21:00-01:00, zwei bis 02:00, einer ab 02:00 bis
+// zum Schluss. Jede Position traegt darum ihre eigene Zeit, Funktion und
+// Verrechnung; die Person haengt an der Position statt am Einsatz.
+//
+// Ein Einsatz ohne Positionen bleibt gueltig: dann gilt seine eigene Zeit fuer
+// alle, und "bedarf" sagt, wie viele gebraucht werden. So laufen alle
+// bestehenden Einsaetze unveraendert weiter.
+'einsatz_position' => "
+CREATE TABLE IF NOT EXISTS einsatz_position (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  einsatz_id INT NOT NULL,
+  nr INT NOT NULL DEFAULT 1,
+  funktion VARCHAR(120) NULL,
+  position VARCHAR(120) NULL,
+  von TIME NOT NULL,
+  bis TIME NOT NULL,
+  -- Verrechnung je Stunde ODER pauschal fuer die ganze Position. Beide NULL
+  -- heisst 'noch nicht entschieden', nicht 'gratis'.
+  std_verrechnung DECIMAL(8,2) NULL,
+  pauschal DECIMAL(8,2) NULL,
+  qualifikation VARCHAR(200) NULL,
+  -- Gesperrt heisst: die Einteilung steht und soll nicht mehr automatisch
+  -- ueberschrieben werden. Es ist ein Hinweis, kein technisches Verbot.
+  gesperrt TINYINT NOT NULL DEFAULT 0,
+  bemerkung TEXT NULL,
+  angelegt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_einsatz (einsatz_id, nr),
+  FOREIGN KEY (einsatz_id) REFERENCES einsaetze(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
 'einsatz_zuteilung' => "
@@ -255,6 +296,9 @@ CREATE TABLE IF NOT EXISTS einsatz_zuteilung (
   einsatz_id INT NOT NULL,
   mitarbeiter_id INT NOT NULL,
   zusage VARCHAR(20) NOT NULL DEFAULT 'offen',
+  -- NULL heisst: die Person deckt den Einsatz in seiner eigenen Zeit ab.
+  -- Sonst haengt sie an genau einer Position und uebernimmt deren Zeit.
+  position_id INT NULL,
   -- Der Abgleich laeuft je Person (ENT-045): eigene Ist-Zeiten und eigener
   -- Status je zugeteilter Person, weil dieselbe Person am selben Tag auf zwei
   -- Objekten unterschiedlich lang gearbeitet haben kann.
@@ -271,7 +315,9 @@ CREATE TABLE IF NOT EXISTS einsatz_zuteilung (
   zugeteilt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (einsatz_id, mitarbeiter_id),
   KEY idx_ma (mitarbeiter_id),
+  KEY idx_position (position_id),
   FOREIGN KEY (einsatz_id) REFERENCES einsaetze(id) ON DELETE CASCADE,
+  FOREIGN KEY (position_id) REFERENCES einsatz_position(id) ON DELETE SET NULL,
   FOREIGN KEY (mitarbeiter_id) REFERENCES mitarbeiter(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
@@ -650,6 +696,15 @@ $spalten = [
     ['einsatz_zuteilung', 'ist_bemerkung',   'ALTER TABLE einsatz_zuteilung ADD COLUMN ist_bemerkung TEXT NULL AFTER ist_pause_bezahlt_kunde'],
     ['einsatz_zuteilung', 'abgeglichen_von', 'ALTER TABLE einsatz_zuteilung ADD COLUMN abgeglichen_von INT NULL AFTER ist_bemerkung'],
     ['einsatz_zuteilung', 'abgeglichen_am',  'ALTER TABLE einsatz_zuteilung ADD COLUMN abgeglichen_am DATETIME NULL AFTER abgeglichen_von'],
+
+    // Intraday-Planung (ENT-076): Positionen mit eigener Zeit, dazu die Felder
+    // aus dem Vorbild. Alles NULL-fähig -- bestehende Einsaetze bleiben gueltig.
+    ['einsatz_zuteilung', 'position_id',   'ALTER TABLE einsatz_zuteilung ADD COLUMN position_id INT NULL AFTER zusage'],
+    ['einsaetze', 'veranstaltung',  'ALTER TABLE einsaetze ADD COLUMN veranstaltung VARCHAR(200) NULL AFTER bemerkung'],
+    ['einsaetze', 'treffpunkt',     'ALTER TABLE einsaetze ADD COLUMN treffpunkt VARCHAR(200) NULL AFTER veranstaltung'],
+    ['einsaetze', 'taetigkeit',     'ALTER TABLE einsaetze ADD COLUMN taetigkeit TEXT NULL AFTER treffpunkt'],
+    ['einsaetze', 'qualifikation',  'ALTER TABLE einsaetze ADD COLUMN qualifikation VARCHAR(200) NULL AFTER taetigkeit'],
+    ['einsaetze', 'zustaendig_id',  'ALTER TABLE einsaetze ADD COLUMN zustaendig_id INT NULL AFTER qualifikation'],
 ];
 foreach ($spalten as [$tabelle, $spalte, $sql]) {
     if (!hat_tabelle_jetzt($pdo, $tabelle) || hat_spalte($pdo, $tabelle, $spalte)) {
