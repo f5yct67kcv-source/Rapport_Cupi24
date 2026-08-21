@@ -433,8 +433,11 @@ th.sortbar.aktiv .pf { opacity: 1; color: var(--accent); }
 .search { position: relative; flex: 1; min-width: 200px; max-width: 340px; }
 .search svg.i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--ink-3); }
 .search .inp { padding-left: 34px; }
-.search-rechts { flex: 0 1 340px; }
-.bar-filter { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+.search-rechts { flex: 1 1 180px; max-width: 340px; min-width: 160px; margin-left: auto; }
+/* Die Filter bekommen ihren Platz zuerst und wachsen nicht. Die Suche nimmt,
+   was uebrig bleibt, hoechstens 340 px -- so draengt sie keinen Filter in
+   eine zweite Zeile. */
+.bar-filter { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; flex: 0 1 auto; min-width: 0; }
 .search-rechts { align-self: center; }
 
 /* Detail-Schublade */
@@ -1301,7 +1304,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
   .search { flex: 1 1 100%; min-width: 0; max-width: none; }
   /* Auf schmalen Schirmen nimmt die Suche wieder die volle Zeile, das
      Rechtshalten aus der Desktop-Regel muss dafuer weichen. */
-  .search-rechts { flex: 1 1 100%; }
+  .search-rechts { flex: 1 1 100%; max-width: none; margin-left: 0; }
   .bar-filter { flex: 1 1 100%; gap: 8px; }
   .bar-tools select.inp, .bar-tools input.inp { flex: 1 1 100%; width: 100% !important; min-width: 0; }
   .bar-tools .btn { flex: 1 1 auto; justify-content: center; }
