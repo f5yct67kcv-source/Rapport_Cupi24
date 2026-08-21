@@ -28,7 +28,13 @@ $token = bin2hex(random_bytes(32));
 require_once __DIR__ . '/../mitarbeiter.php';
 ma_stempel(db(), 'letzter_zugriff', 'id', (int)$user['id']);
 
-$stmt = db()->prepare('INSERT INTO sessions (token, mitarbeiter_id) VALUES (?, ?)');
+// letzte_nutzung gleich mitsetzen (ENT-075): Eine frische Sitzung darf nicht
+// im selben Moment als untaetig gelten, in dem sie entsteht.
+if (hat_spalte(db(), 'sessions', 'letzte_nutzung')) {
+    $stmt = db()->prepare('INSERT INTO sessions (token, mitarbeiter_id, letzte_nutzung) VALUES (?, ?, NOW())');
+} else {
+    $stmt = db()->prepare('INSERT INTO sessions (token, mitarbeiter_id) VALUES (?, ?)');
+}
 $stmt->execute([$token, $user['id']]);
 
 json_response(['status' => 'ok', 'token' => $token, 'name' => $name, 'ist_admin' => (bool)$user['ist_admin']]);

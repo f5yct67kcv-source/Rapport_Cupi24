@@ -364,6 +364,10 @@ $spalten = [
     ['einsatz_zuteilung', 'zusage',   "ALTER TABLE einsatz_zuteilung ADD COLUMN zusage VARCHAR(20) NOT NULL DEFAULT 'offen' AFTER mitarbeiter_id"],
     ['objekte', 'einsatzart',         "ALTER TABLE objekte ADD COLUMN einsatzart VARCHAR(100) NOT NULL DEFAULT 'Revierdienst' AFTER kanton"],
     ['verfuegbarkeiten', 'gesehen_am', 'ALTER TABLE verfuegbarkeiten ADD COLUMN gesehen_am DATETIME NULL AFTER erfasst_am'],
+    // Sitzungsablauf (ENT-075). Ohne diese Spalte greift nur die absolute
+    // Frist -- die Untaetigkeitsfrist braucht einen Stempel.
+    ['sessions', 'letzte_nutzung',
+     'ALTER TABLE sessions ADD COLUMN letzte_nutzung DATETIME NULL AFTER erstellt_am'],
     // PLZ am Objekt (ENT-054). Fuer die Wegstrecke nach Art. 18 braucht es
     // eine eindeutige Adresse; Strasse plus Ort allein ist in der Schweiz
     // nicht immer eindeutig.

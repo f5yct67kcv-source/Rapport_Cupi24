@@ -26,13 +26,50 @@ function json_response($data, int $status = 200): void {
     exit;
 }
 
+// ── Sitzungsdauer (ENT-075) ───────────────────────────────────────────
+// Bis hierher lief eine Sitzung NIE ab: Ein einmal abgegriffener Token galt
+// fuer immer. Jetzt gelten zwei Grenzen gleichzeitig -- ein absolutes Alter
+// und eine Untaetigkeitsfrist.
+//
+// Die Fristen sind fuer Admins kuerzer, weil eine Admin-Sitzung die ganze
+// Personalakte oeffnet: AHV-Nummer, Aufenthaltsstatus, Registerauszuege.
+// Ein Mitarbeitender sieht nur seine eigenen Schichten und meldet sich auf
+// dem Handy im Einsatz an -- da waere eine 12-Stunden-Frist eine Zumutung
+// ohne Sicherheitsgewinn.
+//
+// Beide Werte stehen bewusst hier als Konstanten: Sie treffen den Alltag,
+// und wenn sie sich als unpraktisch erweisen, ist es eine Zeile.
+const SITZUNG_MAX_TAGE       = 30;   // Mitarbeitende: absolut
+const SITZUNG_RUHE_TAGE      = 14;   // Mitarbeitende: ohne Nutzung
+const SITZUNG_ADMIN_MAX_TAGE = 7;    // Verwaltung: absolut
+const SITZUNG_ADMIN_RUHE_STD = 12;   // Verwaltung: ohne Nutzung
+
+// Die Ablaufregel als eigene Funktion, damit sie sich OHNE Datenbank
+// pruefen laesst. Die Browser-Suiten taeuschen die Serverantwort vor und
+// kaemen an dieser Stelle nie vorbei -- und eine Regel, die niemand
+// ausfuehrt, ist eine Behauptung.
+// Alle Zeiten als Unix-Sekunden. Gibt zurueck, ob die Sitzung tot ist.
+function sitzung_abgelaufen(bool $admin, int $geboren, int $gesehen, int $jetzt): bool
+{
+    $maxAlt  = ($admin ? SITZUNG_ADMIN_MAX_TAGE : SITZUNG_MAX_TAGE) * 86400;
+    $maxRuhe = $admin ? SITZUNG_ADMIN_RUHE_STD * 3600 : SITZUNG_RUHE_TAGE * 86400;
+    return ($jetzt - $geboren) > $maxAlt || ($jetzt - $gesehen) > $maxRuhe;
+}
+
 function require_session(): array {
-    $token = $_SERVER['HTTP_X_AUTH_TOKEN'] ?? ($_GET['token'] ?? ($_POST['token'] ?? ''));
+    // NUR aus dem Kopfbereich (ENT-075). In der URL landet ein Token in
+    // Server-Protokollen, im Browserverlauf und in der Adresszeile, die
+    // jemand ueber die Schulter mitliest oder weiterschickt.
+    $token = $_SERVER['HTTP_X_AUTH_TOKEN'] ?? '';
     if (!$token) {
         json_response(['status' => 'error', 'message' => 'kein Token'], 401);
     }
-    $stmt = db()->prepare(
-        'SELECT m.id, m.name, m.ist_admin FROM sessions s
+    $pdo = db();
+    $hatStempel = hat_spalte($pdo, 'sessions', 'letzte_nutzung');
+    $stmt = $pdo->prepare(
+        'SELECT m.id, m.name, m.ist_admin, s.erstellt_am'
+        . ($hatStempel ? ', s.letzte_nutzung' : '') . '
+         FROM sessions s
          JOIN mitarbeiter m ON m.id = s.mitarbeiter_id
          WHERE s.token = ? AND m.aktiv = 1'
     );
@@ -41,6 +78,38 @@ function require_session(): array {
     if (!$row) {
         json_response(['status' => 'error', 'message' => 'ungueltige oder abgelaufene Sitzung'], 401);
     }
+
+    $admin   = (bool)$row['ist_admin'];
+    $jetzt   = time();
+    $geboren = strtotime((string)($row['erstellt_am'] ?? '')) ?: $jetzt;
+    // Ohne Stempelspalte (Einrichtung noch nicht gelaufen) zaehlt nur das
+    // absolute Alter -- lieber eine Grenze als gar keine.
+    $gesehen = $hatStempel
+        ? (strtotime((string)($row['letzte_nutzung'] ?? '')) ?: $geboren)
+        : $jetzt;
+
+    if (sitzung_abgelaufen($admin, $geboren, $gesehen, $jetzt)) {
+        // Die abgelaufene Sitzung wird gleich entfernt, nicht nur abgelehnt.
+        $pdo->prepare('DELETE FROM sessions WHERE token = ?')->execute([$token]);
+        json_response(['status' => 'error',
+            'message' => 'Die Sitzung ist abgelaufen — bitte neu anmelden.'], 401);
+    }
+
+    // Nutzung stempeln, aber nicht bei jedem Klick schreiben: Ein Dashboard
+    // laedt ein Dutzend Endpunkte auf einmal, das waere ein Dutzend
+    // Schreibvorgaenge fuer dieselbe Minute.
+    if ($hatStempel && $jetzt - $gesehen > 300) {
+        $pdo->prepare('UPDATE sessions SET letzte_nutzung = NOW() WHERE token = ?')->execute([$token]);
+    }
+
+    // Gelegentlich aufraeumen. Ohne das waechst die Tabelle mit toten
+    // Sitzungen, und jede davon ist ein Token, der irgendwo noch liegt.
+    if (random_int(1, 50) === 1) {
+        $pdo->exec('DELETE FROM sessions WHERE erstellt_am < DATE_SUB(NOW(), INTERVAL '
+            . SITZUNG_MAX_TAGE . ' DAY)');
+    }
+
+    unset($row['erstellt_am'], $row['letzte_nutzung']);
     return $row;
 }
 
@@ -83,12 +152,20 @@ set_exception_handler(function (Throwable $e): void {
 // "function_exists" davor, weil planung_einrichten.php die Funktion bisher
 // selbst mitbrachte und in fremden Reihenfolgen eingebunden werden kann.
 if (!function_exists('hat_spalte')) {
+    // Das Ergebnis wird gemerkt: Seit ENT-075 fragt jede einzelne Anfrage
+    // beim Pruefen der Sitzung danach, und information_schema ist keine
+    // Abfrage, die man ein Dutzend Mal pro Seitenaufruf stellen will.
     function hat_spalte(PDO $pdo, string $tabelle, string $spalte): bool {
-        $s = $pdo->prepare(
-            'SELECT 1 FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
-        );
-        $s->execute([$tabelle, $spalte]);
-        return (bool)$s->fetchColumn();
+        static $bekannt = [];
+        $schluessel = $tabelle . '.' . $spalte;
+        if (!array_key_exists($schluessel, $bekannt)) {
+            $s = $pdo->prepare(
+                'SELECT 1 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+            );
+            $s->execute([$tabelle, $spalte]);
+            $bekannt[$schluessel] = (bool)$s->fetchColumn();
+        }
+        return $bekannt[$schluessel];
     }
 }
