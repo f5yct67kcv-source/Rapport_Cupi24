@@ -1121,9 +1121,13 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
    warum. Der Innenabstand wird darum genullt -- ohne feste Pixelhoehe, damit
    die Felder auf dem Handy mit der groesseren Schrift mitwachsen. */
 .ma-karten input[type="date"]::-webkit-datetime-edit-fields-wrapper { padding: 0; }
-.ma-karten .card-hd h3 { font-size: 12px; font-weight: 700; letter-spacing: .8px;
-  text-transform: uppercase; color: var(--ink-3); }
-.ma-karten .card-bd { padding: 16px 18px 18px; }
+.ma-karten .card-hd h3, .ma-band .card-hd h3 { font-size: 12px; font-weight: 700;
+  letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); }
+.ma-karten .card-bd, .ma-band .card-bd { padding: 16px 18px 18px; }
+/* Das Pflichtband beim Anlegen steht ueber den Karten und ausserhalb des
+   Spaltenrasters -- es soll aber wie eine von ihnen aussehen, nicht wie ein
+   fremder Kasten. Darum dieselbe Ueberschrift und derselbe Innenabstand. */
+.ma-band { margin-bottom: 16px; }
 /* Ja/Nein-Felder in eigener Zeile, nicht im Raster -- ein Kaestchen neben
    einem Eingabefeld sieht aus wie dessen Beschriftung. */
 .ma-janein { display: flex; flex-wrap: wrap; gap: 14px 22px; margin-top: 4px; }
@@ -2204,7 +2208,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
               <input class="inp" type="search" id="mQ" placeholder="Name, Ort oder Personalnummer …" oninput="renderMitarbeiter()">
             </div>
             <div class="sp" style="flex:1"></div>
-            <button class="btn btn-primary btn-sm" onclick="openMaNeu()">
+            <button class="btn btn-primary btn-sm" onclick="mbNeu()">
               <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Neuer Mitarbeitender
             </button>
@@ -2277,6 +2281,12 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
           <div class="msg-err" id="mbErr" style="display:none"></div>
           <div id="mbKi"></div>
           <div id="mbHinweise"></div>
+          <!-- Beim Anlegen stehen Login-Name und Passwort hier oben und ueber
+               die ganze Breite: Es sind die beiden einzigen Pflichtangaben,
+               und in einer Karte irgendwo zwischen neun anderen waeren sie
+               zu uebersehen. Beim Bearbeiten ist das Band leer -- der Login
+               steht dann als Angabe in der Karte "Zugang". -->
+          <div id="mbNeuKonto"></div>
           <div class="ma-karten" id="mbKarten"></div>
         </div>
       </section>
@@ -2482,48 +2492,11 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 
 <!-- Neuer Mitarbeitender. Dasselbe Formular wird vom Diktat vorausgefuellt --
      der Pruefschritt aus ENT-015 ist damit kein Sonderweg mehr. -->
-<div class="dlg-scrim" id="dlgMaNeu">
-  <div class="dlg">
-    <div class="dlg-hd">
-      <h2 id="maNeuTitel">Neuer Mitarbeitender</h2>
-      <p id="maNeuText">Login-Name und Passwort sind Pflicht, die übrigen Angaben können später ergänzt werden.</p>
-    </div>
-    <div class="dlg-bd">
-      <div class="ki-hint" id="maNeuKiHint">
-        <svg class="i i-sm" viewBox="0 0 24 24" style="margin-top:1px"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-        <span id="maNeuKiText"></span>
-      </div>
-      <div class="msg-err" id="maNeuErr" style="display:none"></div>
-      <div class="form-grid">
-        <div class="f"><label for="maNeuName">Login-Name *</label><input class="inp" id="maNeuName" autocomplete="off"></div>
-        <div class="f"><label for="maNeuPass">Passwort *</label><input class="inp" id="maNeuPass" type="text" placeholder="min. 6 Zeichen" autocomplete="new-password"></div>
-        <div class="f"><label for="maNeuPersonalnummer">Personalnummer</label><input class="inp" id="maNeuPersonalnummer"></div>
-        <div class="f"><label for="maNeuAnrede">Anrede</label><select class="inp" id="maNeuAnrede"><option value="">–</option><option>Herr</option><option>Frau</option><option>Divers</option></select></div>
-        <div class="f"><label for="maNeuVorname">Vorname</label><input class="inp" id="maNeuVorname"></div>
-        <div class="f"><label for="maNeuNachname">Nachname</label><input class="inp" id="maNeuNachname"></div>
-        <div class="f"><label for="maNeuGeburtsdatum">Geburtsdatum</label><input class="inp" id="maNeuGeburtsdatum" type="date"></div>
-        <div class="f"><label for="maNeuOrt">PLZ / Ort</label><input class="inp" id="maNeuOrt"></div>
-        <div class="f wide"><label for="maNeuStrasse">Strasse</label><input class="inp" id="maNeuStrasse"></div>
-        <div class="f"><label for="maNeuTelefon">Telefon</label><input class="inp" id="maNeuTelefon"></div>
-        <div class="f"><label for="maNeuMobil">Mobil</label><input class="inp" id="maNeuMobil"></div>
-        <div class="f wide"><label for="maNeuEmail">E-Mail</label><input class="inp" id="maNeuEmail" type="email"></div>
-        <!-- Anstellung nach Art. 8 GAV (ENT-065). Leer lassen ist erlaubt und
-             sicherer als raten -- die Pensenkontrolle prueft dann schlicht nicht. -->
-        <div class="f"><label for="maNeuAnstellungskategorie">Anstellungskategorie</label>
-          <select class="inp" id="maNeuAnstellungskategorie">
-            <option value="">– keine –</option><option value="A">A</option><option value="B">B</option><option value="C">C</option>
-          </select></div>
-        <div class="f"><label for="maNeuPensum_stunden">Jahrespensum (Std.)</label><input class="inp" id="maNeuPensum_stunden" type="number" min="1" max="3000"></div>
-        <div class="f"><label for="maNeuEintritt">Eintritt</label><input class="inp" id="maNeuEintritt" type="date"></div>
-        <div class="f wide"><label class="check"><input type="checkbox" id="maNeuAdmin"> Darf die Verwaltung benutzen (Admin)</label></div>
-      </div>
-    </div>
-    <div class="dlg-ft">
-      <button class="btn btn-plain" onclick="closeDlg('dlgMaNeu')">Abbrechen</button>
-      <button class="btn btn-primary" id="maNeuBtn" onclick="createMa()">Mitarbeitenden anlegen</button>
-    </div>
-  </div>
-</div>
+<!-- Der frühere Dialog „Neuer Mitarbeitender" ist seit ENT-072 entfallen.
+     Angelegt wird auf derselben Fläche, auf der auch bearbeitet wird — ein
+     zweites, kürzeres Formular für dieselben Daten wäre ein zweiter Ort, an
+     dem ein Feld fehlen kann. Dasselbe Muster wie beim Kundenstamm
+     (ENT-044). -->
 
 <!-- Kunde anlegen und bearbeiten (ENT-044). Ein einziges Formular für beide
      Fälle: die frühere Bearbeiten-Schublade führte dieselben Felder ein
@@ -3137,24 +3110,16 @@ let kuWege = [];            // Kommunikationszeilen der Firma im offenen Dialog
 let kuPersonen = [];        // Ansprechpersonen im offenen Dialog
 let kdId = null;            // id des Kunden auf der Detailseite
 let kdTab = 'uebersicht';   // Detailseite: Übersicht, Rapporte oder Offerten
-const MA_FELDER = ['personalnummer','anrede','vorname','nachname','geburtsdatum','strasse','ort','telefon','mobil','email',
-  // Art. 8 GAV (ENT-065): ohne Kategorie und Pensum gibt es keine Grenze,
-  // gegen die sich Jahresstunden pruefen liessen.
-  'anstellungskategorie','pensum_stunden','eintritt'];
-const MA_LABEL = { personalnummer:'Personalnummer', anrede:'Anrede', vorname:'Vorname', nachname:'Nachname',
-  geburtsdatum:'Geburtsdatum', strasse:'Strasse', ort:'PLZ / Ort', telefon:'Telefon', mobil:'Mobil', email:'E-Mail',
-  anstellungskategorie:'Anstellungskategorie', pensum_stunden:'Jahrespensum (Std.)', eintritt:'Eintritt' };
-// Beschriftung fuer Feldnamen. MA_LABEL deckt den kurzen Anlege-Dialog ab
-// (dort heisst "ort" bewusst "PLZ / Ort", weil ein Feld beides aufnimmt);
-// alles Weitere holt sich den Namen aus den Abschnitten der Bearbeitungs-
-// flaeche, damit ein Diktat-Hinweis auch neue Felder benennen kann.
+// Beschriftung fuer einen Feldnamen -- EINE Quelle, naemlich die Abschnitte
+// der Bearbeitungsflaeche. Bis ENT-072 stand daneben eine zweite Liste fuer
+// den kurzen Anlege-Dialog; den gibt es nicht mehr, und mit ihm ist die
+// Gefahr weg, dass dasselbe Feld an zwei Orten verschieden heisst.
 function mbLabel(f) {
   for (const a of MB_ABSCHNITTE) {
     for (const x of (a.felder || []).concat(a.janein || [])) { if (x[0] === f) { return x[1]; } }
   }
   return f;
 }
-const labelListe = fs => fs.map(f => MA_LABEL[f] || mbLabel(f)).join(', ');
 
 // Ein Sprachmodell haelt sich nicht mit Sicherheit an getrennte Felder: "4632
 // Trimbach" landet gern im reinen Ortsfeld. Der Griff steht serverseitig in
@@ -3166,6 +3131,7 @@ function plzOrtTrennen(felder) {
   const t = String(felder.ort).trim().match(/^(\d{4})\s+(.+)$/);
   return t ? { plz: t[1], ort: t[2].trim() } : null;
 }
+
 const MIC = '<svg class="i i-sm" viewBox="0 0 24 24" style="margin-top:1px;flex:none"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>';
 
 // ── Hilfsfunktionen
@@ -3541,7 +3507,7 @@ function rtDialogOeffnen(data) {
       mbOeffnen(data.mitarbeiter_login_name, data.aenderungen || {});
       return;
     }
-    if (bereich === 'mitarbeiter') { openMaNeu(data.felder || {}); return; }
+    if (bereich === 'mitarbeiter') { go('mitarbeiter'); mbNeu(data.felder || {}); return; }
     if (bereich === 'kunde') { openKundeNeu(data.felder || {}, {}); return; }
     openEinsatzNeu(data.felder || {}, data.mitarbeiter_login_namen || []);
   });
@@ -4167,17 +4133,23 @@ let mdTab = 'uebersicht';
 // stehen dort nicht drin. Wuerde die Seite weiter daraus lesen, zeigte sie
 // ueberall "–" -- und "nicht geladen" saehe aus wie "nicht erfasst".
 let maAkte = null;
+// Fuer wen laeuft gerade ein Ladevorgang? Ohne das wirft die Detailseite
+// waehrend des Ladens in die Liste zurueck, sobald die Person noch nicht in
+// mitarbeiter[] steht -- genau der Fall direkt nach dem Anlegen.
+let maAkteLaedt = null;
 
 // EIN Lader fuer Detailseite und Bearbeitungsflaeche. Zwei Lader waeren zwei
 // Staende derselben Person; einer zeigte dann noch den Wert, den der andere
 // gerade ueberschrieben hat.
 function maAkteLaden(name) {
+  maAkteLaedt = name;
   // Die Anstellungsorte kommen mit: ohne sie stuende im Feld "Standort"
   // "noch keine erfasst", obwohl es nur nicht geladen war.
   return Promise.all([
     api('mitarbeiter_dossier.php?name=' + encodeURIComponent(name)),
     anstellungsorte.length ? Promise.resolve() : ladeAnstellungsorte(),
   ]).then(([{ ok, data }]) => {
+    maAkteLaedt = null;
     if (!ok || data.status !== 'ok') {
       maAkte = null;
       throw new Error(data && data.message ? data.message : 'Der Datensatz liess sich nicht laden.');
@@ -4185,7 +4157,7 @@ function maAkteLaden(name) {
     maAkte = data.mitarbeiter;
     maEingerichtet = data.eingerichtet !== false;
     return maAkte;
-  });
+  }).catch(e => { maAkteLaedt = null; throw e; });
 }
 
 function maGoTab(t) {
@@ -4198,10 +4170,14 @@ function maGoTab(t) {
 function openMaDetail(name) {
   mdName = name;
   maAkte = null;
+  // Der Ladevorgang wird VOR dem ersten Zeichnen angestossen: maAkteLaden()
+  // setzt seine Merkfahne sofort, und nur daran erkennt renderMaDetail, dass
+  // die Person gerade noch kommt und nicht fehlt.
+  const laeuft = maAkteLaden(name);
   if (!$('mdMonat').value) { $('mdMonat').value = isoTag().slice(0, 7); }
   maGoTab('detail');
   mdGoTab(mdTab);
-  maAkteLaden(name).then(() => renderMaDetail())
+  laeuft.then(() => renderMaDetail())
     .catch(e => { $('mdInfo').innerHTML = `<div class="msg-err">${esc(e.message)}</div>`; });
 }
 function mdGoTab(t) {
@@ -4260,8 +4236,19 @@ function mdZeilen() {
 const mdStd = min => `${nf(Math.floor(min / 60))}:${String(Math.round(min % 60)).padStart(2, '0')} h`;
 
 function renderMaDetail() {
-  const p = mitarbeiter.find(x => x.name === mdName);
-  if (!p) { maGoTab('liste'); return; }
+  // Die geladene Akte hat Vorrang vor der Liste: Nach dem Anlegen ist die
+  // Person da, die Liste aber noch nicht neu geholt. Wer hier nur die Liste
+  // befragt, wirft den Benutzer auf die Uebersicht zurueck, obwohl der
+  // Datensatz vorliegt.
+  const p = (maAkte && maAkte.name === mdName) ? maAkte : mitarbeiter.find(x => x.name === mdName);
+  if (!p) {
+    // Laeuft der Ladevorgang noch, ist die Person nicht "weg", sondern nur
+    // noch nicht da. Wer hier in die Liste zurueckwirft, laesst eine gerade
+    // angelegte Person verschwinden, bevor sie ueberhaupt erschienen ist.
+    if (maAkteLaedt === mdName) { $('mdName').textContent = '…'; $('mdSub').textContent = ''; mdUebersicht(); return; }
+    maGoTab('liste');
+    return;
+  }
   $('mdName').textContent = fullName(p) || p.name;
   $('mdSub').textContent = `${p.personalnummer ? 'Pers-Nr. ' + p.personalnummer + ' · ' : ''}${p.name}`
     + (Number(p.ist_admin) ? ' · Verwaltung' : '');
@@ -7798,62 +7785,8 @@ function askConfirm(titel, text, knopf, fn) {
 }
 
 // ══════════════════════════════════════════ MITARBEITENDE ANLEGEN
-// Dasselbe Formular fuer Hand- und Diktateingabe. Beim Diktat sind die
-// uebernommenen Felder blau markiert und nichts ist gespeichert, bevor
-// hier bewusst geklickt wird (ENT-015).
-const maNeuId = f => 'maNeu' + f[0].toUpperCase() + f.slice(1);
-
-function openMaNeu(felder) {
-  felder = felder || {};
-  const ausDiktat = Object.keys(felder).length > 0;
-  const erkannt = MA_FELDER.filter(f => felder[f]);
-
-  $('maNeuTitel').textContent = ausDiktat ? 'Erkannt — bitte prüfen' : 'Neuer Mitarbeitender';
-  $('maNeuText').textContent = ausDiktat
-    ? 'Aus dem Diktat übernommen. Es ist noch nichts gespeichert.'
-    : 'Login-Name und Passwort sind Pflicht, die übrigen Angaben lassen sich später ergänzen.';
-
-  const vorname = (felder.vorname || '').toLowerCase().trim();
-  const nachname = (felder.nachname || '').toLowerCase().trim();
-  $('maNeuName').value = (vorname && nachname) ? `${vorname}.${nachname}`.replace(/\s+/g, '') : '';
-  $('maNeuPass').value = '';
-  $('maNeuAdmin').checked = false;
-  MA_FELDER.forEach(f => {
-    const el = $(maNeuId(f));
-    if (!el) { return; }
-    el.value = felder[f] || '';
-    el.classList.toggle('ki', ausDiktat && !!felder[f]);
-  });
-
-  $('maNeuKiHint').classList.toggle('on', ausDiktat);
-  if (ausDiktat) {
-    $('maNeuKiText').textContent = erkannt.length
-      ? `Blau markiert wurde aus dem Diktat übernommen: ${labelListe(erkannt)}. Der Login-Name ist ein Vorschlag, das Passwort musst du selbst setzen.`
-      : 'Aus dem Diktat liess sich kein Feld zuordnen — bitte von Hand ausfüllen.';
-  }
-  $('maNeuErr').style.display = 'none';
-  openDlg('dlgMaNeu');
-  $('maNeuName').focus();
-}
-
-function createMa() {
-  const err = $('maNeuErr'); err.style.display = 'none';
-  const name = $('maNeuName').value.trim();
-  const password = $('maNeuPass').value;
-  if (!name) { err.textContent = 'Login-Name erforderlich.'; err.style.display = ''; return; }
-  if (password.length < 6) { err.textContent = 'Passwort mindestens 6 Zeichen.'; err.style.display = ''; return; }
-
-  const body = { name, password, ist_admin: $('maNeuAdmin').checked ? 1 : 0 };
-  MA_FELDER.forEach(f => { const el = $(maNeuId(f)); if (el) { body[f] = el.value.trim(); } });
-
-  const b = $('maNeuBtn'); b.disabled = true;
-  api('mitarbeiter_create.php', { method: 'POST', body }).then(({ ok, data }) => {
-    b.disabled = false;
-    if (!ok || data.status !== 'ok') { err.textContent = data.message || 'Anlegen fehlgeschlagen.'; err.style.display = ''; return; }
-    closeDlg('dlgMaNeu');
-    Promise.all([loadMitarbeiter(), loadStats()]).then(() => toast(`„${name}“ angelegt.`));
-  });
-}
+// Angelegt wird seit ENT-072 auf derselben Flaeche wie bearbeitet -- siehe
+// mbNeu() weiter unten. Der frueher hier stehende kurze Dialog ist entfallen.
 
 // ══════════════════════════════════════════ MITARBEITENDE BEARBEITEN
 // Die frueher hier stehende Schublade ist seit ENT-072 ersetzt: bearbeitet
@@ -8637,6 +8570,8 @@ const MB_ABSCHNITTE = [
 
 let mbAend  = {};        // aus dem Diktat uebernommen, noch nicht gespeichert
 let mbListen = {};       // pflegbare Listen aus der Antwort
+let mbNeuModus = false;  // legt die Flaeche eine Person an statt sie zu aendern?
+let mbNameBeruehrt = false;  // hat jemand den Login-Namen selbst angefasst?
 
 function mbAlleFelder() {
   const f = [];
@@ -8647,6 +8582,51 @@ function mbAlleFelder() {
   return f;
 }
 
+// Anlegen. Dieselbe Flaeche, dieselben Felder -- nur ohne Datensatz dahinter
+// und mit Login-Name und Passwort als Pflichtangaben oben.
+//
+// Der Projektinhaber am 2026-08-21: "beim klick auf neuer Mitarbeiter, muss
+// das selbe komen." Zwei Formulare fuer dieselben Daten waeren zwei Orte, an
+// denen ein Feld fehlen kann -- und beim Anlegen faenden sich dann genau die
+// Angaben nicht, die man beim Eintritt einmal beisammen hat.
+function mbNeu(felder) {
+  felder = felder || {};
+  // PLZ und Ort sind seit ENT-072 zwei Felder; ein Sprachmodell liefert sie
+  // trotzdem zusammen.
+  const geteilt = plzOrtTrennen(felder);
+  if (geteilt) { felder = Object.assign({}, felder, geteilt); }
+
+  mbNeuModus = true;
+  mbNameBeruehrt = false;
+  mbAend = felder;                       // Diktiertes wird blau markiert
+  maAkte = { name: '', ist_admin: false };
+  mdName = null;
+  mbFehler('');
+  maGoTab('bearbeiten');
+  $('pgCrumb').textContent = 'Neuer Mitarbeitender';
+  $('mbKarten').innerHTML = '';
+  // Ohne die Anstellungsorte stuende im Feld "Standort" "noch keine erfasst",
+  // obwohl es nur nicht geladen war.
+  (anstellungsorte.length ? Promise.resolve() : ladeAnstellungsorte()).then(() => {
+    mbZeichnen();
+    const n = $('mbNeuName');
+    if (n) { n.focus(); }
+  });
+}
+
+// Vorschlag fuer den Login-Namen, solange ihn niemand selbst angefasst hat.
+// Sobald jemand darin tippt, bleibt sein Wert stehen -- ein Feld, das sich
+// unter der Hand wieder aendert, ist schlimmer als gar kein Vorschlag.
+function mbNameVorschlag() {
+  if (!mbNeuModus || mbNameBeruehrt) { return; }
+  const v = ($('mb_vorname') || {}).value || '';
+  const n = ($('mb_nachname') || {}).value || '';
+  const feld = $('mbNeuName');
+  if (!feld) { return; }
+  feld.value = (v.trim() && n.trim())
+    ? `${v}.${n}`.toLowerCase().trim().replace(/\s+/g, '') : '';
+}
+
 // Einstieg: von der Detailseite aus -- oder aus dem Diktat, dann mit den
 // erkannten Werten, die vorgelegt und blau markiert werden.
 //
@@ -8655,6 +8635,7 @@ function mbAlleFelder() {
 // derselben Person, und einer zeigte dann noch den Wert, den der andere
 // gerade ueberschrieben hat.
 function mbOeffnen(name, aenderungen) {
+  mbNeuModus = false;
   mbAend = aenderungen || {};
   // Seit ENT-072 sind PLZ und Ort zwei Felder. Kommt aus dem Diktat ein
   // gemeinsames "3000 Bern", muss es hier getrennt werden -- sonst schickt
@@ -8681,6 +8662,8 @@ function mbOeffnen(name, aenderungen) {
 
 function mbAbbrechen() {
   mbAend = {};
+  // Beim Anlegen gibt es noch keine Detailseite, auf die man zurueckkoennte.
+  if (mbNeuModus) { mbNeuModus = false; maAkte = null; maGoTab('liste'); return; }
   maGoTab('detail');
   mdGoTab(mdTab);
 }
@@ -8713,9 +8696,13 @@ function mbAuswahl(feld, quelle, wert) {
 
 function mbZeichnen() {
   const m = maAkte || {};
-  $('mbName').textContent = fullName(m) || m.name || '–';
-  $('mbSub').textContent = [m.personalnummer ? 'Pers-Nr. ' + m.personalnummer : '', m.name,
-    m.ist_admin ? 'Verwaltung (Admin)' : 'Mitarbeitende(r)'].filter(Boolean).join(' · ');
+  $('mbName').textContent = mbNeuModus ? 'Neuer Mitarbeitender' : (fullName(m) || m.name || '–');
+  $('mbSub').textContent = mbNeuModus
+    ? 'Login-Name und Passwort sind Pflicht, alles Weitere lässt sich später ergänzen.'
+    : [m.personalnummer ? 'Pers-Nr. ' + m.personalnummer : '', m.name,
+       m.ist_admin ? 'Verwaltung (Admin)' : 'Mitarbeitende(r)'].filter(Boolean).join(' · ');
+  $('mbSpeichern').textContent = mbNeuModus ? 'Mitarbeitenden anlegen' : 'Angaben speichern';
+  $('mbNeuKonto').innerHTML = mbNeuModus ? mbNeuKonto() : '';
 
   // Ein Diktat-Wert schlaegt den gespeicherten -- er steht ja zur Pruefung da.
   const wert = f => {
@@ -8731,8 +8718,9 @@ function mbZeichnen() {
       steuer = `<select class="inp${mark(f)}" id="${id}">${mbAuswahl(f, quelle, wert(f))}</select>`;
     } else {
       const t = typ === 'd' ? 'date' : typ === 'z' ? 'number' : 'text';
+      const horcher = (f === 'vorname' || f === 'nachname') ? ' oninput="mbNameVorschlag()"' : '';
       steuer = `<input class="inp${mark(f)}" id="${id}" type="${t}" value="${esc(wert(f))}"`
-             + (hinweis ? ` placeholder="${esc(hinweis)}"` : '') + '>';
+             + (hinweis ? ` placeholder="${esc(hinweis)}"` : '') + horcher + '>';
     }
     return `<div class="f${breit ? ' wide' : ''}"><label for="${id}">${esc(label)}</label>${steuer}</div>`;
   };
@@ -8745,7 +8733,7 @@ function mbZeichnen() {
         ${(a.janein || []).length ? `<div class="ma-janein">${a.janein.map(([f, label]) =>
           `<label><input type="checkbox" id="mb_${f}"${Number(wert(f)) ? ' checked' : ''}> ${esc(label)}</label>`
         ).join('')}</div>` : ''}
-        ${a.konto ? mbKonto() : ''}
+        ${a.konto && !mbNeuModus ? mbKonto() : ''}
       </div>
     </div>`).join('');
 
@@ -8753,12 +8741,41 @@ function mbZeichnen() {
   // nicht, wonach man suchen soll, wenn neun Karten offen sind.
   const alle = mbAlleFelder();
   const erkannt = Object.keys(mbAend).filter(f => alle.includes(f));
-  $('mbKi').innerHTML = erkannt.length
-    ? `<div class="ki-hint on ma-regel">${MIC}<span>Blau markiert wurde aus dem Diktat
-       übernommen: ${esc(erkannt.map(mbLabel).join(', '))}. Es ist noch nichts gespeichert —
-       bitte prüfen und oben speichern.</span></div>` : '';
+  const kiText = erkannt.length
+    ? `Blau markiert wurde aus dem Diktat übernommen: ${esc(erkannt.map(mbLabel).join(', '))}. `
+      + (mbNeuModus
+         ? 'Der Login-Name ist ein Vorschlag, das Passwort musst du selbst setzen.'
+         : 'Es ist noch nichts gespeichert — bitte prüfen und oben speichern.')
+    : (mbNeuModus && Object.keys(mbAend).length
+       ? 'Aus dem Diktat liess sich kein Feld zuordnen — bitte von Hand ausfüllen.' : '');
+  $('mbKi').innerHTML = kiText
+    ? `<div class="ki-hint on ma-regel">${MIC}<span>${kiText}</span></div>` : '';
 
+  // Erst jetzt, nachdem die Felder stehen: Ein Diktat liefert Vor- und
+  // Nachnamen mit, der Login-Name soll dann schon vorgeschlagen sein.
+  mbNameVorschlag();
   mbHinweise();
+}
+
+// Pflichtangaben beim Anlegen. Eigenes Band ueber die ganze Breite statt
+// einer Zeile in der Karte "Zugang": Diese beiden Felder sind die einzigen,
+// ohne die nichts geht -- zwischen neun Karten waeren sie zu uebersehen.
+function mbNeuKonto() {
+  return `
+    <div class="card ma-band">
+      <div class="card-hd"><h3>Zugang anlegen</h3></div>
+      <div class="card-bd">
+        <div class="form-grid">
+          <div class="f"><label for="mbNeuName">Login-Name *</label>
+            <input class="inp" id="mbNeuName" autocomplete="off" oninput="mbNameBeruehrt = true"></div>
+          <div class="f"><label for="mbNeuPass">Passwort *</label>
+            <input class="inp" id="mbNeuPass" type="text" placeholder="min. 6 Zeichen" autocomplete="new-password"></div>
+        </div>
+        <div class="ma-janein">
+          <label><input type="checkbox" id="mbNeuAdmin"> Darf die Verwaltung benutzen (Admin)</label>
+        </div>
+      </div>
+    </div>`;
 }
 
 // Der Kontoteil der Zugang-Karte. Er steht IN dieser Karte und nicht daneben:
@@ -8808,7 +8825,10 @@ function mbHinweise() {
       eidgenössischen Fachausweis der Branche hat, muss sie nicht absolvieren.
       Das Feld darf leer bleiben.`);
   }
-  if (!m.fachausweis && !m.basisausbildung_am) {
+  // Nicht beim Anlegen: Auf einem leeren Formular ist noch nichts "offen" --
+  // das waere ein Befund ueber ein Arbeitsverhaeltnis, das es noch gar nicht
+  // gibt. Sobald die Person angelegt ist, steht der Hinweis beim Bearbeiten.
+  if (!mbNeuModus && !m.fachausweis && !m.basisausbildung_am) {
     teile.push(`<b>Basisausbildung offen.</b> Art. 10 verlangt mindestens 20 Stunden
       während der Probezeit; die Bestätigung ist nach Ziff. 3 im Personaldossier
       abzulegen.`);
@@ -8826,22 +8846,49 @@ function mbHinweise() {
 
 function mbSpeichern() {
   if (!maAkte) { return; }
-  const body = { name: maAkte.name };
+  const body = {};
   mbAlleFelder().forEach(f => {
     const el = $('mb_' + f);
     if (!el) { return; }
     body[f] = el.type === 'checkbox' ? (el.checked ? '1' : '') : (el.value || '').trim();
   });
+
+  // Fehlerband statt Toast: Bei einer Pruefziffer oder einem Datum will man
+  // den Text stehen sehen, waehrend man das Feld sucht.
+  const scheitern = text => {
+    mbFehler(text);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  if (mbNeuModus) {
+    body.name = ($('mbNeuName').value || '').trim();
+    body.password = $('mbNeuPass').value || '';
+    body.ist_admin = $('mbNeuAdmin').checked ? 1 : 0;
+    if (!body.name) { scheitern('Login-Name erforderlich.'); $('mbNeuName').focus(); return; }
+    if (body.password.length < 6) { scheitern('Passwort mindestens 6 Zeichen.'); $('mbNeuPass').focus(); return; }
+  } else {
+    body.name = maAkte.name;
+  }
+
   const knopf = $('mbSpeichern');
   knopf.disabled = true;
   mbFehler('');
-  api('mitarbeiter_update.php', { method: 'POST', body }).then(({ ok, data }) => {
+  api(mbNeuModus ? 'mitarbeiter_create.php' : 'mitarbeiter_update.php', { method: 'POST', body })
+    .then(({ ok, data }) => {
     knopf.disabled = false;
     if (!ok || data.status !== 'ok') {
-      // Fehlerband statt Toast: Bei einer Prueffziffer oder einem Datum will
-      // man den Text stehen sehen, waehrend man das Feld sucht.
-      mbFehler(data && data.message ? data.message : 'Speichern fehlgeschlagen.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scheitern(data && data.message ? data.message
+        : (mbNeuModus ? 'Anlegen fehlgeschlagen.' : 'Speichern fehlgeschlagen.'));
+      return;
+    }
+    if (mbNeuModus) {
+      const name = body.name;
+      mbNeuModus = false;
+      mbAend = {};
+      // Auf die neu angelegte Person, nicht in die Liste: Man sieht sofort,
+      // was tatsaechlich gespeichert wurde -- der Server formt Werte um.
+      Promise.all([loadMitarbeiter(), loadStats()])
+        .then(() => { openMaDetail(name); toast(`„${name}“ angelegt.`); });
       return;
     }
     toast('Angaben gespeichert.');
