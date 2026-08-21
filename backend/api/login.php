@@ -23,6 +23,11 @@ if (!$user || !password_verify($password, $user['password_hash'])) {
 }
 
 $token = bin2hex(random_bytes(32));
+// Wann war diese Person zuletzt da? Die Angabe steht im Mitarbeiterbereich
+// (ENT-072) und ist die einzige Spur, ob ein Zugang ueberhaupt genutzt wird.
+require_once __DIR__ . '/../mitarbeiter.php';
+ma_stempel(db(), 'letzter_zugriff', 'id', (int)$user['id']);
+
 $stmt = db()->prepare('INSERT INTO sessions (token, mitarbeiter_id) VALUES (?, ?)');
 $stmt->execute([$token, $user['id']]);
 

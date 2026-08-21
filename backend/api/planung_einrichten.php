@@ -36,14 +36,8 @@ function hat_tabelle(PDO $pdo, string $tabelle): bool {
     $s->execute([$tabelle]);
     return (bool)$s->fetchColumn();
 }
-function hat_spalte(PDO $pdo, string $tabelle, string $spalte): bool {
-    $s = $pdo->prepare(
-        'SELECT 1 FROM information_schema.COLUMNS
-         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
-    );
-    $s->execute([$tabelle, $spalte]);
-    return (bool)$s->fetchColumn();
-}
+// hat_spalte() steht seit dem Ausbau des Mitarbeiterstamms in db.php,
+// damit auch andere Endpunkte sie benutzen koennen.
 function hat_fremdschluessel(PDO $pdo, string $tabelle, string $spalte): bool {
     $s = $pdo->prepare(
         'SELECT 1 FROM information_schema.KEY_COLUMN_USAGE
@@ -70,6 +64,32 @@ $tabellen = [
 // ('ein Parkplatz ohne Adresse ist als vertraglich definierter
 // Anstellungsort nicht zulaessig') -- darum ist strasse hier NOT NULL,
 // anders als bei den Objekten.
+// Pflegbare Listen am Mitarbeiterstamm (ENT-072). Funktion und Abteilung
+// sind betriebliche Begriffe, die sich aendern -- der Projektinhaber soll sie
+// selbst anlegen koennen, ohne dass jemand den Code anfasst. Bewusst ZWEI
+// gleich gebaute Tabellen statt einer generischen "Listen"-Tabelle mit
+// Typspalte: Zwei kurze Tabellen sind leichter zu lesen als eine, die alles
+// kann, und eine Fremdschluesselpruefung greift nur bei getrennten Tabellen.
+// Beide starten LEER -- erfundene Funktionsbezeichnungen waeren Inhalte, die
+// niemand entschieden hat.
+'ma_funktion' => "
+CREATE TABLE IF NOT EXISTS ma_funktion (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  bezeichnung VARCHAR(100) NOT NULL,
+  sortierung INT NOT NULL DEFAULT 0,
+  aktiv TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY uniq_funktion (bezeichnung)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+'ma_abteilung' => "
+CREATE TABLE IF NOT EXISTS ma_abteilung (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  bezeichnung VARCHAR(100) NOT NULL,
+  sortierung INT NOT NULL DEFAULT 0,
+  aktiv TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY uniq_abteilung (bezeichnung)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 'anstellungsorte' => "
 CREATE TABLE IF NOT EXISTS anstellungsorte (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -334,6 +354,78 @@ $spalten = [
     ['mitarbeiter', 'pensum_stunden',      "ALTER TABLE mitarbeiter ADD COLUMN pensum_stunden INT NULL"],
     // Eintrittsdatum fuer die Pro-rata-Regel aus Art. 8 Ziff. 1b.
     ['mitarbeiter', 'eintritt',            "ALTER TABLE mitarbeiter ADD COLUMN eintritt DATE NULL"],
+
+    // ── Ausbau des Mitarbeiterstamms (ENT-072) ───────────────────────────
+    // Vorlage war eine bestehende HR-Loesung; der Projektinhaber wollte den
+    // Inhalt deckungsgleich, in eigener Gestaltung. Alle Felder sind NULL-
+    // faehig: Der Bestand ist gewachsen, und ein Pflichtfeld, das man mit
+    // einem Strich fuellt, ist keine Pruefung (gleiche Ueberlegung wie
+    // ENT-044 beim Kundenstamm).
+    //
+    // Adresse. Bis hierher stand die PLZ mit dem Ort zusammen in einem Feld,
+    // genau wie frueher bei den Kunden. Getrennt wird weiter unten, wo das
+    // Muster eindeutig ist.
+    ['mitarbeiter', 'geschlecht',       "ALTER TABLE mitarbeiter ADD COLUMN geschlecht VARCHAR(10) NULL AFTER anrede"],
+    ['mitarbeiter', 'adresszusatz',     "ALTER TABLE mitarbeiter ADD COLUMN adresszusatz VARCHAR(200) NULL AFTER strasse"],
+    ['mitarbeiter', 'hausnummer',       "ALTER TABLE mitarbeiter ADD COLUMN hausnummer VARCHAR(20) NULL AFTER strasse"],
+    ['mitarbeiter', 'plz',              "ALTER TABLE mitarbeiter ADD COLUMN plz VARCHAR(10) NULL AFTER adresszusatz"],
+    ['mitarbeiter', 'land',             "ALTER TABLE mitarbeiter ADD COLUMN land VARCHAR(100) NULL AFTER ort"],
+    //
+    // Kontaktwege. Geschaeftlich und privat getrennt: Wer eine Person am
+    // Wochenende erreichen muss, braucht eine andere Nummer als der Kunde.
+    ['mitarbeiter', 'email_privat',     "ALTER TABLE mitarbeiter ADD COLUMN email_privat VARCHAR(200) NULL AFTER email"],
+    ['mitarbeiter', 'telefon_geschaeft',"ALTER TABLE mitarbeiter ADD COLUMN telefon_geschaeft VARCHAR(50) NULL AFTER telefon"],
+    ['mitarbeiter', 'mobil_geschaeft',  "ALTER TABLE mitarbeiter ADD COLUMN mobil_geschaeft VARCHAR(50) NULL AFTER mobil"],
+    // In der Vorlage heisst dieses Feld "Kontakt fuer Fahrorganisation" --
+    // ein Begriff aus deren Fahrdienst. Fuer einen Sicherheitsbetrieb ist der
+    // gleichwertige Zweck ein Notfallkontakt: wen man anruft, wenn auf Schicht
+    // etwas passiert. Bewusst umbenannt statt woertlich uebernommen.
+    ['mitarbeiter', 'notfallkontakt',   "ALTER TABLE mitarbeiter ADD COLUMN notfallkontakt VARCHAR(200) NULL"],
+    //
+    // Betriebliches. Funktion und Abteilung verweisen auf pflegbare Listen,
+    // der Standort auf die ohnehin vorhandenen Anstellungsorte -- eine zweite
+    // Ortsliste daneben wuerde davonlaufen (Entscheid des Projektinhabers).
+    ['mitarbeiter', 'kurzzeichen',      "ALTER TABLE mitarbeiter ADD COLUMN kurzzeichen VARCHAR(10) NULL"],
+    ['mitarbeiter', 'funktion_id',      "ALTER TABLE mitarbeiter ADD COLUMN funktion_id INT NULL"],
+    ['mitarbeiter', 'abteilung_id',     "ALTER TABLE mitarbeiter ADD COLUMN abteilung_id INT NULL"],
+    ['mitarbeiter', 'anstellungsort_id',"ALTER TABLE mitarbeiter ADD COLUMN anstellungsort_id INT NULL"],
+    ['mitarbeiter', 'beruf',            "ALTER TABLE mitarbeiter ADD COLUMN beruf VARCHAR(200) NULL"],
+    // Austritt gehoert neben den Eintritt. Die Vorlage kennt ihn nicht, aber
+    // ohne ihn laesst sich nicht sagen, wer noch beschaeftigt ist -- und die
+    // Jahresstunden nach Art. 8 haengen am Zeitraum.
+    ['mitarbeiter', 'austritt',         "ALTER TABLE mitarbeiter ADD COLUMN austritt DATE NULL AFTER eintritt"],
+    //
+    // Personenstand und Versicherung.
+    ['mitarbeiter', 'ahv_nr',           "ALTER TABLE mitarbeiter ADD COLUMN ahv_nr VARCHAR(16) NULL"],
+    ['mitarbeiter', 'nationalitaet',    "ALTER TABLE mitarbeiter ADD COLUMN nationalitaet VARCHAR(100) NULL"],
+    ['mitarbeiter', 'heimatort',        "ALTER TABLE mitarbeiter ADD COLUMN heimatort VARCHAR(200) NULL"],
+    ['mitarbeiter', 'geburtsort',       "ALTER TABLE mitarbeiter ADD COLUMN geburtsort VARCHAR(200) NULL"],
+    ['mitarbeiter', 'zivilstand',       "ALTER TABLE mitarbeiter ADD COLUMN zivilstand VARCHAR(30) NULL"],
+    ['mitarbeiter', 'heiratsdatum',     "ALTER TABLE mitarbeiter ADD COLUMN heiratsdatum DATE NULL"],
+    //
+    // Bewilligungen und Auszuege. Gespeichert wird jeweils die ART und das
+    // DATUM, nicht das Dokument -- die Dateiablage ist ein eigener Schritt
+    // mit eigener Zugriffsbeschraenkung.
+    ['mitarbeiter', 'aufenthaltsbewilligung',   "ALTER TABLE mitarbeiter ADD COLUMN aufenthaltsbewilligung VARCHAR(20) NULL"],
+    ['mitarbeiter', 'aufenthalt_gueltig_bis',   "ALTER TABLE mitarbeiter ADD COLUMN aufenthalt_gueltig_bis DATE NULL"],
+    ['mitarbeiter', 'arbeitsbewilligung',       "ALTER TABLE mitarbeiter ADD COLUMN arbeitsbewilligung VARCHAR(100) NULL"],
+    ['mitarbeiter', 'arbeit_gueltig_bis',       "ALTER TABLE mitarbeiter ADD COLUMN arbeit_gueltig_bis DATE NULL"],
+    ['mitarbeiter', 'zemis_nr',                 "ALTER TABLE mitarbeiter ADD COLUMN zemis_nr VARCHAR(30) NULL"],
+    ['mitarbeiter', 'strafregister_datum',      "ALTER TABLE mitarbeiter ADD COLUMN strafregister_datum DATE NULL"],
+    ['mitarbeiter', 'betreibung_datum',         "ALTER TABLE mitarbeiter ADD COLUMN betreibung_datum DATE NULL"],
+    // Dienstausweis. In der Vorlage ein eigener Abschnitt, im Bildschirmfoto
+    // abgeschnitten -- uebernommen wird das Nachpruefbare: Nummer und
+    // Gueltigkeit.
+    ['mitarbeiter', 'dienstausweis_nr',         "ALTER TABLE mitarbeiter ADD COLUMN dienstausweis_nr VARCHAR(50) NULL"],
+    ['mitarbeiter', 'dienstausweis_gueltig_bis',"ALTER TABLE mitarbeiter ADD COLUMN dienstausweis_gueltig_bis DATE NULL"],
+    //
+    // Zugang. "Hat Systemzugriff" und "Systemfunktion" der Vorlage decken
+    // sich mit den vorhandenen Spalten aktiv und ist_admin -- dafuer braucht
+    // es keine neuen Felder. Neu sind die drei Angaben rund um den Zugang.
+    ['mitarbeiter', 'sprache',               "ALTER TABLE mitarbeiter ADD COLUMN sprache VARCHAR(10) NULL"],
+    ['mitarbeiter', 'zugang_bis',            "ALTER TABLE mitarbeiter ADD COLUMN zugang_bis DATE NULL"],
+    ['mitarbeiter', 'letzter_zugriff',       "ALTER TABLE mitarbeiter ADD COLUMN letzter_zugriff DATETIME NULL"],
+    ['mitarbeiter', 'passwort_geaendert_am', "ALTER TABLE mitarbeiter ADD COLUMN passwort_geaendert_am DATETIME NULL"],
     // Sparte (ENT-037). Der Bestand ist ausnahmslos Sicherheit -- die Reinigung
     // kommt erst mit diesem Schritt dazu. Die Vorgabe traegt die Altdaten also
     // richtig, ohne dass etwas von Hand nachgetragen werden muss.
@@ -460,6 +552,29 @@ if (hat_tabelle($pdo, 'anstellungsorte')) {
             $ins->execute(['Standort Gelterkinden', 'nao', 'Rünenbergerstrasse 44', '4460', 'Gelterkinden', 18.0,
                 'Nebenanstellungsort nach Art. 18 Ziff. 2 GAV (ENT-055). Erzeugt das Nebenanstellungsgebiet.']);
             $getan[] = 'Anstellungsorte Trimbach (HAO) und Gelterkinden (NAO) hinterlegt, 18.0 km auseinander';
+        }
+    }
+}
+
+// ── 2b3. Dasselbe fuer Mitarbeitende (ENT-072). Bis hierher stand auch dort
+// die PLZ mit dem Ort zusammen in einem Feld. Getrennt wird nur, wo das
+// Muster eindeutig ist -- lieber ungetrennt als falsch zerlegt. Laeuft nur
+// ueber Personen, deren plz noch leer ist, und ist beliebig wiederholbar.
+if (hat_spalte($pdo, 'mitarbeiter', 'plz')) {
+    $ungetrenntMa = $pdo->query(
+        "SELECT id, ort FROM mitarbeiter
+         WHERE (plz IS NULL OR plz = '') AND ort REGEXP '^[0-9]{4}[[:space:]]' ORDER BY id"
+    )->fetchAll();
+    if ($ungetrenntMa) {
+        if ($nurPruefen) {
+            $getan[] = count($ungetrenntMa) . ' Mitarbeitende(r) mit PLZ und Ort in einem Feld';
+        } else {
+            $sm = $pdo->prepare('UPDATE mitarbeiter SET plz = ?, ort = ? WHERE id = ?');
+            foreach ($ungetrenntMa as $m) {
+                [$plz, $ort] = plz_ort_trennen((string)$m['ort']);
+                $sm->execute([$plz, $ort, (int)$m['id']]);
+            }
+            $getan[] = count($ungetrenntMa) . ' Mitarbeiteradresse(n) in PLZ und Ort getrennt';
         }
     }
 }

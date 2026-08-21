@@ -72,3 +72,23 @@ set_exception_handler(function (Throwable $e): void {
     // Bewusst ohne technische Einzelheiten: die Meldung geht an den Browser.
     json_response(['status' => 'error', 'message' => $meldung], 500);
 });
+
+// Gibt es diese Spalte? Steht hier und nicht mehr nur im Einrichtungsskript
+// (gefunden beim Ausbau des Mitarbeiterstamms): pensen.php ruft die Funktion
+// auf, bindet das Einrichtungsskript aber nicht ein -- und lief damit auf
+// "Call to undefined function". Die Pensen-Seite war produktiv kaputt, ohne
+// dass eine Pruefung es gemerkt haette, weil alle Suiten die Schnittstelle
+// nachbilden statt PHP auszufuehren.
+//
+// "function_exists" davor, weil planung_einrichten.php die Funktion bisher
+// selbst mitbrachte und in fremden Reihenfolgen eingebunden werden kann.
+if (!function_exists('hat_spalte')) {
+    function hat_spalte(PDO $pdo, string $tabelle, string $spalte): bool {
+        $s = $pdo->prepare(
+            'SELECT 1 FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+        );
+        $s->execute([$tabelle, $spalte]);
+        return (bool)$s->fetchColumn();
+    }
+}

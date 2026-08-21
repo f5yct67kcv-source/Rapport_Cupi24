@@ -82,7 +82,7 @@ if ($einsatz) {
 }
 
 // Umplanung (ENT-060) -- dieselbe Regel wie in einsatz_save.php.
-$umplanen = array_values(array_unique(array_map('intval', (array)($input['umplanen'] ?? []))));
+$umplanen = array_values(array_unique(array_map('intval', (array)($in['umplanen'] ?? []))));
 
 if ($zuteilung) {
     $doppelt = doppelbelegungen($id, $datum, $von, $bis, $zuteilung);

@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+require __DIR__ . '/../mitarbeiter.php';
 
 $user = require_session();
 if (!$user['ist_admin']) {
@@ -16,33 +17,28 @@ if ($name === '') {
     json_response(['status' => 'error', 'message' => 'Name erforderlich'], 400);
 }
 
-$fields = [
-    'personalnummer' => trim((string)($input['personalnummer'] ?? '')) ?: null,
-    'anrede' => trim((string)($input['anrede'] ?? '')) ?: null,
-    'anstellungskategorie' => kategorie_pruefen($input['anstellungskategorie'] ?? null),
-    'pensum_stunden' => pensum_pruefen($input['pensum_stunden'] ?? null),
-    'eintritt' => trim((string)($input['eintritt'] ?? '')) ?: null,
-    'vorname' => trim((string)($input['vorname'] ?? '')) ?: null,
-    'nachname' => trim((string)($input['nachname'] ?? '')) ?: null,
-    'geburtsdatum' => trim((string)($input['geburtsdatum'] ?? '')) ?: null,
-    'strasse' => trim((string)($input['strasse'] ?? '')) ?: null,
-    'ort' => trim((string)($input['ort'] ?? '')) ?: null,
-    'telefon' => trim((string)($input['telefon'] ?? '')) ?: null,
-    'mobil' => trim((string)($input['mobil'] ?? '')) ?: null,
-    'email' => trim((string)($input['email'] ?? '')) ?: null,
-];
+// Bestand laden, damit nicht mitgeschickte Felder ihren Wert behalten. Ein
+// Formular, das nur einen Abschnitt sendet, darf den Rest nicht leeren.
+$vorher = db()->prepare('SELECT * FROM mitarbeiter WHERE name = ?');
+$vorher->execute([$name]);
+$bestand = $vorher->fetch(PDO::FETCH_ASSOC);
+if (!$bestand) {
+    json_response(['status' => 'error', 'message' => 'Mitarbeitende(r) nicht gefunden'], 404);
+}
 
-$stmt = db()->prepare(
-    'UPDATE mitarbeiter SET personalnummer = ?, anrede = ?, vorname = ?, nachname = ?, geburtsdatum = ?,
-            strasse = ?, ort = ?, telefon = ?, mobil = ?, email = ?,
-            anstellungskategorie = ?, pensum_stunden = ?, eintritt = ?
-     WHERE name = ?'
-);
-$stmt->execute([
-    $fields['personalnummer'], $fields['anrede'], $fields['vorname'], $fields['nachname'], $fields['geburtsdatum'],
-    $fields['strasse'], $fields['ort'], $fields['telefon'], $fields['mobil'], $fields['email'],
-    $fields['anstellungskategorie'], $fields['pensum_stunden'], $fields['eintritt'],
-    $name,
-]);
+$gelesen = ma_eingabe_lesen($input, $bestand, db());
+if ($gelesen['fehler']) {
+    json_response(['status' => 'error', 'message' => implode('; ', $gelesen['fehler'])], 400);
+}
+$s = $gelesen['spalten'];
+if (!$s) {
+    json_response(['status' => 'ok', 'geaendert' => 0]);
+}
 
-json_response(['status' => 'ok']);
+// Auch hier aus der Feldliste gebaut statt von Hand -- siehe
+// mitarbeiter_create.php.
+$sql = 'UPDATE mitarbeiter SET ' . implode(', ', array_map(fn($f) => "$f = ?", array_keys($s)))
+     . ' WHERE name = ?';
+db()->prepare($sql)->execute(array_merge(array_values($s), [$name]));
+
+json_response(['status' => 'ok', 'geaendert' => count($s)]);

@@ -1,0 +1,355 @@
+<?php
+declare(strict_types=1);
+// Fachlogik rund um Mitarbeitende (ENT-072).
+//
+// Diese Datei ist die EINZIGE Stelle, an der entschieden wird, welche Felder
+// ein Mitarbeitender hat, welche Werte zulaessig sind und wie eine Eingabe
+// aufbereitet wird. Anlegen und Bearbeiten laufen beide hier durch. Der
+// Grund ist derselbe wie beim Kundenimport (ENT-066): Zwei Wege in dieselbe
+// Tabelle sind zwei Regelwerke, die irgendwann auseinanderlaufen -- und der
+// Mitarbeiterstamm traegt seit diesem Ausbau Angaben, bei denen ein
+// stillschweigender Unterschied teuer wird.
+//
+// plz_ort_trennen() kommt aus kunden.php und wird hier mitbenutzt statt
+// nachgebaut: Es ist dieselbe Aufgabe an einer anderen Tabelle.
+require_once __DIR__ . '/kunden.php';
+// kategorie_pruefen() und pensum_pruefen() stehen seit ENT-065 in planung.php,
+// wo auch die Pensen-Kontrolle sie benutzt. Hier werden sie AUFGERUFEN und
+// nicht nachgebaut -- sonst gaebe es zwei Meinungen darueber, was eine
+// gueltige Anstellungskategorie ist.
+require_once __DIR__ . '/planung.php';
+
+// ── Zulaessige Werte ─────────────────────────────────────────────────────
+// Feste Listen, weil es feste Begriffe sind: Der Zivilstand und die
+// Ausweiskategorien stehen im Gesetz beziehungsweise beim Bund, sie sind
+// keine Betriebssache. Funktion, Abteilung und Standort sind das Gegenteil
+// und liegen darum in eigenen Tabellen (Entscheid des Projektinhabers).
+
+const MA_ANREDEN = ['Herr', 'Frau', 'Divers'];
+
+// Getrennt von der Anrede, weil es zwei verschiedene Dinge sind: die Anrede
+// ist die Ansprache, das Geschlecht die Angabe fuer AHV und Versicherung.
+const MA_GESCHLECHTER = ['weiblich', 'maennlich', 'unbestimmt'];
+
+// Zivilstaende nach dem Schweizer Zivilgesetzbuch, in der Fassung, die auch
+// der eCH-0011-Standard fuehrt -- eingetragene Partnerschaften eingeschlossen.
+const MA_ZIVILSTAENDE = [
+    'ledig', 'verheiratet', 'verwitwet', 'geschieden',
+    'eingetragene Partnerschaft', 'aufgeloeste Partnerschaft',
+];
+
+// Auslaenderausweise des Bundes. Bewusst nur das Kuerzel gespeichert -- die
+// Bedeutung steht in der Oberflaeche, damit sie sich aendern kann, ohne dass
+// gespeicherte Werte ungueltig werden.
+const MA_AUSWEISE = ['B', 'C', 'Ci', 'G', 'L', 'F', 'N', 'S'];
+
+const MA_SPRACHEN = ['de', 'fr', 'it', 'en'];
+
+// ── Feldliste ────────────────────────────────────────────────────────────
+// Reihenfolge und Typ an EINER Stelle. Wer ein Feld ergaenzt, ergaenzt es
+// hier -- Endpunkte und Pruefungen ziehen daraus.
+//   text   beliebiger Text
+//   datum  YYYY-MM-DD oder leer
+//   zahl   ganze Zahl oder leer
+//   liste  einer der oben erlaubten Werte oder leer
+//   id     Verweis auf eine andere Tabelle oder leer
+function ma_felder(): array
+{
+    return [
+        // Personalien
+        'personalnummer' => 'text',
+        'anrede'         => 'liste',
+        'geschlecht'     => 'liste',
+        'vorname'        => 'text',
+        'nachname'       => 'text',
+        'geburtsdatum'   => 'datum',
+        'geburtsort'     => 'text',
+        'heimatort'      => 'text',
+        'nationalitaet'  => 'text',
+        'zivilstand'     => 'liste',
+        'heiratsdatum'   => 'datum',
+        'ahv_nr'         => 'text',
+        // Adresse
+        'strasse'        => 'text',
+        'hausnummer'     => 'text',
+        'adresszusatz'   => 'text',
+        'plz'            => 'text',
+        'ort'            => 'text',
+        'land'           => 'text',
+        // Kontakt
+        'telefon'           => 'text',
+        'telefon_geschaeft' => 'text',
+        'mobil'             => 'text',
+        'mobil_geschaeft'   => 'text',
+        'email'             => 'text',
+        'email_privat'      => 'text',
+        'notfallkontakt'    => 'text',
+        // Betriebliches
+        'kurzzeichen'          => 'text',
+        'funktion_id'          => 'id',
+        'abteilung_id'         => 'id',
+        'anstellungsort_id'    => 'id',
+        'beruf'                => 'text',
+        'eintritt'             => 'datum',
+        'austritt'             => 'datum',
+        'anstellungskategorie' => 'text',
+        'pensum_stunden'       => 'zahl',
+        // Ausweise und Bewilligungen
+        'aufenthaltsbewilligung'    => 'liste',
+        'aufenthalt_gueltig_bis'    => 'datum',
+        'arbeitsbewilligung'        => 'text',
+        'arbeit_gueltig_bis'        => 'datum',
+        'zemis_nr'                  => 'text',
+        'strafregister_datum'       => 'datum',
+        'betreibung_datum'          => 'datum',
+        'dienstausweis_nr'          => 'text',
+        'dienstausweis_gueltig_bis' => 'datum',
+        // Zugang
+        'sprache'    => 'liste',
+        'zugang_bis' => 'datum',
+    ];
+}
+
+// ── Was darf wohin? ──────────────────────────────────────────────────────
+// Die Liste aller Mitarbeitenden wird bei JEDEM Laden des Dashboards geholt.
+// Was hier drinsteht, liegt danach im Browser -- fuer alle Personen
+// gleichzeitig. Darum traegt die Liste nur, was die Liste auch anzeigt; die
+// uebrigen Angaben kommen einzeln ueber mitarbeiter_dossier.php, wenn jemand
+// wirklich einen Datensatz oeffnet.
+//
+// Das ist kein Rollenmodell -- ein solches gibt es hier bis heute nicht, es
+// kennt nur "Admin ja/nein". Es ist die schlichte Regel, nicht auszuliefern,
+// was niemand anzeigt. Die Frage, wer welche Feldgruppe sehen darf, bleibt
+// offen und ist im Protokoll festgehalten.
+function ma_listenfelder(): array
+{
+    return [
+        'personalnummer', 'anrede', 'vorname', 'nachname',
+        'strasse', 'hausnummer', 'plz', 'ort',
+        'telefon', 'mobil', 'email',
+        'kurzzeichen', 'funktion_id', 'abteilung_id', 'anstellungsort_id',
+        'eintritt', 'austritt', 'anstellungskategorie', 'pensum_stunden',
+    ];
+}
+
+// Angaben, die nie in einer Sammelabfrage auftauchen. Ausdruecklich benannt
+// statt "alles ausser der Liste", damit ein neues Feld nicht versehentlich
+// mitfaehrt: Wer hier etwas ergaenzt, entscheidet es bewusst.
+function ma_vertrauliche_felder(): array
+{
+    return [
+        'ahv_nr', 'nationalitaet', 'heimatort', 'geburtsort', 'zivilstand',
+        'heiratsdatum', 'geburtsdatum', 'geschlecht',
+        'aufenthaltsbewilligung', 'aufenthalt_gueltig_bis',
+        'arbeitsbewilligung', 'arbeit_gueltig_bis', 'zemis_nr',
+        'strafregister_datum', 'betreibung_datum',
+        'dienstausweis_nr', 'dienstausweis_gueltig_bis',
+    ];
+}
+
+// Welche der Felder gibt es in der Datenbank wirklich? Der Nachtrag laeuft
+// erst, wenn der Projektinhaber "Einrichtung" drueckt -- bis dahin fehlen die
+// neuen Spalten. Ohne diese Pruefung wuerde ein INSERT ueber die volle
+// Feldliste komplett scheitern, statt die neuen Angaben bloss zu uebergehen:
+// Man koennte also niemanden mehr anlegen, weil ein Feld fehlt, das man gar
+// nicht ausgefuellt hat. Das Ergebnis wird je Anfrage gemerkt.
+function ma_vorhandene_felder(PDO $pdo): array
+{
+    static $spalten = null;
+    if ($spalten === null) {
+        $spalten = [];
+        foreach ($pdo->query('SHOW COLUMNS FROM mitarbeiter')->fetchAll(PDO::FETCH_ASSOC) as $z) {
+            $spalten[$z['Field']] = true;
+        }
+    }
+    return array_filter(ma_felder(), fn($f) => isset($spalten[$f]), ARRAY_FILTER_USE_KEY);
+}
+
+function ma_spalte_da(PDO $pdo, string $spalte): bool
+{
+    return array_key_exists($spalte, ma_vorhandene_felder($pdo))
+        || in_array($spalte, ['passwort_geaendert_am', 'letzter_zugriff'], true)
+           && (bool)$pdo->query("SHOW COLUMNS FROM mitarbeiter LIKE " . $pdo->quote($spalte))->fetch();
+}
+
+// ── AHV-Nummer ───────────────────────────────────────────────────────────
+// Die 13-stellige Versichertennummer beginnt mit 756 und traegt an letzter
+// Stelle eine Pruefziffer nach EAN-13. Geprueft wird sie deshalb wirklich
+// und nicht bloss auf Laenge: Eine vertippte AHV-Nummer faellt sonst erst
+// bei der Ausgleichskasse auf, und dann ist sie in mehreren Meldungen drin.
+function ahv_ziffern(string $wert): string
+{
+    return preg_replace('/\D/', '', $wert) ?? '';
+}
+
+function ahv_gueltig(string $wert): bool
+{
+    $z = ahv_ziffern($wert);
+    if (strlen($z) !== 13 || substr($z, 0, 3) !== '756') { return false; }
+    // EAN-13: Ziffern von links, abwechselnd mit 1 und 3 gewichtet; die
+    // Pruefziffer ergaenzt die Summe auf das naechste Vielfache von zehn.
+    $summe = 0;
+    for ($i = 0; $i < 12; $i++) {
+        $summe += ((int)$z[$i]) * ($i % 2 === 0 ? 1 : 3);
+    }
+    return ((10 - ($summe % 10)) % 10) === (int)$z[12];
+}
+
+// Einheitliche Schreibweise 756.XXXX.XXXX.XX. Gespeichert wird die
+// formatierte Fassung, damit sie ueberall gleich aussieht; unlesbare
+// Eingaben bleiben unveraendert stehen und werden von der Pruefung erwischt.
+function ahv_formatieren(string $wert): string
+{
+    $z = ahv_ziffern($wert);
+    if (strlen($z) !== 13) { return trim($wert); }
+    return substr($z, 0, 3) . '.' . substr($z, 3, 4) . '.' . substr($z, 7, 4) . '.' . substr($z, 11, 2);
+}
+
+// ── Eingabe lesen ────────────────────────────────────────────────────────
+// Gibt die Spaltenwerte zurueck, die geschrieben werden sollen, sowie eine
+// Liste von Beanstandungen. Nicht mitgeschickte Felder bleiben beim
+// Bestandswert -- so kann ein Formular auch nur einen Teil senden, ohne den
+// Rest zu leeren.
+function ma_eingabe_lesen(array $input, array $bestand = [], ?PDO $pdo = null): array
+{
+    $fehler = [];
+    $spalten = [];
+
+    // Mit PDO nur die Felder, die es in der Datenbank auch gibt; ohne PDO
+    // die volle Liste (so koennen Pruefungen die Logik ohne Datenbank testen).
+    $felder = $pdo ? ma_vorhandene_felder($pdo) : ma_felder();
+    foreach ($felder as $feld => $typ) {
+        if (!array_key_exists($feld, $input)) {
+            if (array_key_exists($feld, $bestand)) { $spalten[$feld] = $bestand[$feld]; }
+            continue;
+        }
+        $roh = trim((string)($input[$feld] ?? ''));
+
+        if ($roh === '') {
+            // Leer heisst leer -- und bei Verweisen und Zahlen NULL, nicht 0.
+            $spalten[$feld] = ($typ === 'id' || $typ === 'zahl') ? null : '';
+            continue;
+        }
+
+        switch ($typ) {
+            case 'datum':
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $roh)) {
+                    $fehler[] = "$feld: kein gueltiges Datum";
+                    $spalten[$feld] = null;
+                } else {
+                    $spalten[$feld] = $roh;
+                }
+                break;
+            case 'zahl':
+                $spalten[$feld] = (int)$roh;
+                break;
+            case 'id':
+                $spalten[$feld] = (int)$roh > 0 ? (int)$roh : null;
+                break;
+            case 'liste':
+                $erlaubt = ma_erlaubte_werte($feld);
+                if ($erlaubt !== null && !in_array($roh, $erlaubt, true)) {
+                    $fehler[] = "$feld: unzulaessiger Wert";
+                    $spalten[$feld] = '';
+                } else {
+                    $spalten[$feld] = $roh;
+                }
+                break;
+            default:
+                $spalten[$feld] = $roh;
+        }
+    }
+
+    // PLZ und Ort. Schickt der Aufrufer beide getrennt, gilt seine Aufteilung.
+    // Schickt er nur den Ort, wird getrennt -- gleiches Verhalten wie beim
+    // Kundenstamm, damit ein Formular mit einem gemeinsamen Feld weiterhin
+    // funktioniert.
+    if (!array_key_exists('plz', $input) && array_key_exists('ort', $input)) {
+        [$gPlz, $gOrt] = plz_ort_trennen((string)($spalten['ort'] ?? ''));
+        if ($gPlz !== '') { $spalten['plz'] = $gPlz; $spalten['ort'] = $gOrt; }
+    }
+
+    // Anstellungskategorie und Pensum laufen durch die Pruefungen aus
+    // planung.php -- dieselben, gegen die die Pensen-Kontrolle rechnet.
+    if (array_key_exists('anstellungskategorie', $spalten)) {
+        $vorher = trim((string)$spalten['anstellungskategorie']);
+        $spalten['anstellungskategorie'] = kategorie_pruefen($vorher);
+        if ($vorher !== '' && $spalten['anstellungskategorie'] === null) {
+            $fehler[] = 'Anstellungskategorie: nur A, B oder C';
+        }
+    }
+    if (array_key_exists('pensum_stunden', $spalten)) {
+        $vorher = $spalten['pensum_stunden'];
+        $spalten['pensum_stunden'] = pensum_pruefen($vorher);
+        if ($vorher !== null && $vorher !== '' && $spalten['pensum_stunden'] === null) {
+            $fehler[] = 'Jahrespensum: nur 1 bis 3000 Stunden';
+        }
+    }
+
+    // AHV-Nummer: einheitlich schreiben und wirklich pruefen.
+    if (array_key_exists('ahv_nr', $spalten) && (string)$spalten['ahv_nr'] !== '') {
+        if (!ahv_gueltig((string)$spalten['ahv_nr'])) {
+            $fehler[] = 'AHV-Nummer: Pruefziffer stimmt nicht oder Format ist falsch (756.XXXX.XXXX.XX)';
+        } else {
+            $spalten['ahv_nr'] = ahv_formatieren((string)$spalten['ahv_nr']);
+        }
+    }
+
+    // Austritt vor Eintritt ist keine Kleinigkeit: Daran haengen die
+    // Jahresstunden nach Art. 8 GAV.
+    $ein = (string)($spalten['eintritt'] ?? $bestand['eintritt'] ?? '');
+    $aus = (string)($spalten['austritt'] ?? $bestand['austritt'] ?? '');
+    if ($ein !== '' && $aus !== '' && $aus < $ein) {
+        $fehler[] = 'Austritt liegt vor dem Eintritt';
+    }
+
+    return ['spalten' => $spalten, 'fehler' => $fehler];
+}
+
+// Welche Werte sind fuer ein Listenfeld erlaubt? null heisst: keine feste
+// Liste (die Pruefung laesst dann alles durch).
+function ma_erlaubte_werte(string $feld): ?array
+{
+    switch ($feld) {
+        case 'anrede':                 return MA_ANREDEN;
+        case 'geschlecht':             return MA_GESCHLECHTER;
+        case 'zivilstand':             return MA_ZIVILSTAENDE;
+        case 'aufenthaltsbewilligung': return MA_AUSWEISE;
+        case 'sprache':                return MA_SPRACHEN;
+        default:                       return null;
+    }
+}
+
+// ── Pflegbare Listen ─────────────────────────────────────────────────────
+// Funktion und Abteilung sind gleich gebaut; der Tabellenname wird darum
+// gegen eine feste Liste geprueft und nie aus der Eingabe uebernommen --
+// sonst waere er ein Einfallstor in beliebige Tabellen.
+const MA_LISTEN = ['funktion' => 'ma_funktion', 'abteilung' => 'ma_abteilung'];
+
+function ma_listen_tabelle(string $art): ?string
+{
+    return MA_LISTEN[$art] ?? null;
+}
+
+// Eigene kleine Pruefung: hat_tabelle() lebt im Einrichtungsskript und steht
+// den Endpunkten nicht zur Verfuegung. Solange die Einrichtung nicht gelaufen
+// ist, gibt es die Listentabellen nicht -- die Oberflaeche bekommt dann eine
+// leere Liste statt eines Fehlers.
+function hat_tabelle_ma(PDO $pdo, string $name): bool
+{
+    static $bekannt = [];
+    if (!array_key_exists($name, $bekannt)) {
+        $bekannt[$name] = (bool)$pdo->query('SHOW TABLES LIKE ' . $pdo->quote($name))->fetch();
+    }
+    return $bekannt[$name];
+}
+
+// Setzt einen Zeitstempel am Mitarbeitenden, sofern die Spalte existiert
+// (ENT-072). Ohne die Pruefung wuerde das Anmelden scheitern, solange die
+// Einrichtung noch nicht gelaufen ist -- ein Zeitstempel ist das nicht wert.
+function ma_stempel(PDO $pdo, string $spalte, string $wo, $wert): void
+{
+    if (!in_array($spalte, ['letzter_zugriff', 'passwort_geaendert_am'], true)) { return; }
+    if (!$pdo->query('SHOW COLUMNS FROM mitarbeiter LIKE ' . $pdo->quote($spalte))->fetch()) { return; }
+    $pdo->prepare("UPDATE mitarbeiter SET $spalte = NOW() WHERE $wo = ?")->execute([$wert]);
+}
