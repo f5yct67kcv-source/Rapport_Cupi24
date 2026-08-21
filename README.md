@@ -117,6 +117,12 @@ festzuhalten, was sich ändern soll, statt es in Prosa zu beschreiben.
 Einschalten mit `Alt+S`, oder `?skizze=1` an die URL hängen. `Esc` beendet.
 Werkzeuge über die Zahlen `1` bis `9`, `Cmd+Z` nimmt den letzten Schritt zurück.
 
+Mehrere Elemente auf einmal: `Shift`+Klick nimmt eines dazu oder raus, `G` wählt
+alles auf derselben Ebene — alle Filter einer Leiste, alle Spalten einer Zeile.
+Die Änderung wirkt dann auf alle gleichzeitig und steht als ein Eintrag im
+Protokoll. Gilt für Verschieben, Abstand, Grösse, Farbe, Ausblenden und
+Duplizieren.
+
 Auswählen zeigt Selektor und Masse. Verschieben, Abstand, Grösse und Reihenfolge
 arbeiten mit den Pfeiltasten, `Shift` macht Zehnerschritte, `Alt` schaltet beim
 Abstand von innen auf aussen. Dazu Text ändern, Duplizieren, Ausblenden, Farbe,

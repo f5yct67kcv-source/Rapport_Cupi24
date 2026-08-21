@@ -1,6 +1,9 @@
 /* Skizzenmodus - visuelle Aenderungswuensche direkt auf der laufenden Seite festhalten.
    Aktivierung: Alt+S, oder ?skizze=1 an die URL haengen.
-   Aendert nichts dauerhaft. Neuladen setzt alles zurueck. */
+   Aendert nichts dauerhaft. Neuladen setzt alles zurueck.
+
+   Quelle dieser Datei ist skizze.js; in dashboard.html steht eine inline
+   eingebettete Kopie. Nach jeder Aenderung: python3 skizze-einbetten.py */
 
 (function () {
   'use strict';
@@ -10,27 +13,31 @@
   var FARBE = '#D85A30';
   var WERKZEUGE = [
     { id: 'auswahl',      name: 'Auswählen',   hinweis: 'Element anklicken' },
-    { id: 'verschieben',  name: 'Verschieben', hinweis: 'anklicken, dann ziehen oder ← → ↑ ↓' },
-    { id: 'abstand',      name: 'Abstand',     hinweis: 'anklicken, dann ← → ↑ ↓ · Alt = aussen' },
-    { id: 'groesse',      name: 'Grösse',      hinweis: 'anklicken, dann ← → Breite, ↑ ↓ Höhe' },
+    { id: 'verschieben',  name: 'Verschieben', hinweis: 'ziehen oder ← → ↑ ↓' },
+    { id: 'abstand',      name: 'Abstand',     hinweis: '← → ↑ ↓ · Alt = aussen' },
+    { id: 'groesse',      name: 'Grösse',      hinweis: '← → Breite, ↑ ↓ Höhe' },
     { id: 'text',         name: 'Text',        hinweis: 'anklicken und tippen' },
-    { id: 'reihenfolge',  name: 'Reihenfolge', hinweis: 'anklicken, dann ← → tauscht mit Nachbar' },
+    { id: 'reihenfolge',  name: 'Reihenfolge', hinweis: '← → tauscht mit Nachbar' },
     { id: 'duplizieren',  name: 'Duplizieren', hinweis: 'Element anklicken' },
     { id: 'ausblenden',   name: 'Ausblenden',  hinweis: 'Element anklicken' },
     { id: 'platzhalter',  name: 'Platzhalter', hinweis: 'Rechteck aufziehen' },
-    { id: 'farbe',        name: 'Farbe',       hinweis: 'Element wählen, dann Farbe' },
+    { id: 'farbe',        name: 'Farbe',       hinweis: 'wählen, dann Farbe klicken' },
     { id: 'messen',       name: 'Messen',      hinweis: 'zwei Elemente anklicken' },
     { id: 'notiz',        name: 'Notiz',       hinweis: 'Element anklicken' }
   ];
+  /* Werkzeuge, die auf mehrere Elemente gleichzeitig wirken. */
+  var MEHRFACH = /^(verschieben|abstand|groesse|farbe|ausblenden|duplizieren)$/;
 
   var aktiv = false;
   var werkzeug = 'auswahl';
-  var ziel = null;
+  var auswahl = [];
   var messZiel = null;
   var eintraege = [];
   var zaehler = 0;
-  var host, wurzel, panel, liste, zielzeile, umriss, marke, messlinie, ziehflaeche;
+  var host, wurzel, panel, liste, zielzeile, hover, umrisse, marke, ziehflaeche;
   var zieht = null;
+
+  function erstes() { return auswahl[0] || null; }
 
   /* ---------- Selektor ---------- */
 
@@ -95,9 +102,38 @@
     return txt ? t + ' „' + txt + '“' : t;
   }
 
+  /* ---------- Auswahl ---------- */
+
+  function setzeAuswahl(els) {
+    auswahl = els.filter(function (e) { return e && !istEigen(e); });
+    zeichneAuswahl();
+    zeigeZiel();
+  }
+
+  function schalteAuswahl(el) {
+    var i = auswahl.indexOf(el);
+    if (i >= 0) auswahl.splice(i, 1);
+    else auswahl.push(el);
+    zeichneAuswahl();
+    zeigeZiel();
+  }
+
+  /* Alles auf derselben Ebene: gleiche Eltern, gleiches Tag. Trifft der Filter
+     nur das Element selbst, werden alle Geschwister genommen. */
+  function ganzeEbene() {
+    var el = erstes();
+    if (!el || !el.parentElement) return;
+    var kinder = Array.prototype.slice.call(el.parentElement.children)
+      .filter(function (k) { return !istEigen(k); });
+    var gleiche = kinder.filter(function (k) { return k.tagName === el.tagName; });
+    setzeAuswahl(gleiche.length > 1 ? gleiche : kinder);
+    melde(auswahl.length + ' Elemente auf dieser Ebene gewählt');
+  }
+
   /* ---------- Protokoll ---------- */
 
-  function notiere(el, art, was, vorher, nachher, extra) {
+  function notiere(els, art, was, vorher, nachher, extra) {
+    els = [].concat(els).filter(Boolean);
     zaehler++;
     var e = {
       nr: zaehler,
@@ -105,35 +141,41 @@
       was: was,
       vorher: vorher,
       nachher: nachher,
-      selektor: el ? selektor(el) : null,
-      element: el ? kurz(el) : null,
+      selektor: els.length ? selektor(els[0]) : null,
+      element: els.length ? kurz(els[0]) : null,
       ansicht: (location.hash || '#start').replace('#', '')
     };
+    if (els.length > 1) {
+      e.anzahl = els.length;
+      e.selektoren = els.map(selektor);
+    }
     if (extra) Object.keys(extra).forEach(function (k) { e[k] = extra[k]; });
-    e._el = el;
+    e._els = els;
     eintraege.push(e);
     zeichneListe();
     sichere();
     return e;
   }
 
-  function letzterFuer(el, was) {
-    for (var i = eintraege.length - 1; i >= 0; i--) {
-      if (eintraege[i]._el === el && eintraege[i].was === was) return eintraege[i];
-    }
-    return null;
+  function gleicheMenge(a, b) {
+    if (a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
   }
 
-  /* Wiederholte Aenderungen am selben Element buendeln: nur der Endwert zaehlt. */
-  function notiereGebuendelt(el, art, was, vorher, nachher) {
-    var vor = letzterFuer(el, was);
-    if (vor && vor.art === art) {
-      vor.nachher = nachher;
-      zeichneListe();
-      sichere();
-      return vor;
+  /* Wiederholte Aenderungen an derselben Menge buendeln: nur der Endwert zaehlt. */
+  function notiereGebuendelt(els, art, was, vorher, nachher) {
+    els = [].concat(els).filter(Boolean);
+    for (var i = eintraege.length - 1; i >= 0; i--) {
+      var e = eintraege[i];
+      if (e.art === art && e.was === was && gleicheMenge(e._els, els)) {
+        e.nachher = nachher;
+        zeichneListe();
+        sichere();
+        return e;
+      }
     }
-    return notiere(el, art, was, vorher, nachher);
+    return notiere(els, art, was, vorher, nachher);
   }
 
   function sichere() {
@@ -148,6 +190,7 @@
         nr: e.nr, art: e.art, was: e.was,
         selektor: e.selektor, element: e.element, ansicht: e.ansicht
       };
+      if (e.anzahl) { d.anzahl = e.anzahl; d.selektoren = e.selektoren; }
       if (e.vorher !== undefined && e.vorher !== null) d.vorher = e.vorher;
       if (e.nachher !== undefined && e.nachher !== null) d.nachher = e.nachher;
       if (e.form) d.form = e.form;
@@ -166,41 +209,36 @@
     if (!(eigenschaft in m)) m[eigenschaft] = el.style[eigenschaft] || '';
   }
 
-  function stelleHer() {
-    eintraege.forEach(function (e) {
-      var el = e._el;
+  function machRueckgaengig(e) {
+    (e._els || []).forEach(function (el) {
       if (!el) return;
       var m = vorherStile.get(el);
       if (m) Object.keys(m).forEach(function (k) { el.style[k] = m[k]; });
       if (e.art === 'text' && e.vorher != null) el.textContent = e.vorher;
-      if (e.art === 'dupliziert' && e.kopie && e.kopie.parentElement) e.kopie.remove();
-      el.removeAttribute('data-skizze-markiert');
     });
+    (e.kopien || []).forEach(function (k) { if (k.parentElement) k.remove(); });
+    if (e.knoten && e.knoten.parentElement) e.knoten.remove();
+  }
+
+  function stelleHer() {
+    eintraege.forEach(machRueckgaengig);
     document.querySelectorAll('[data-skizze-platzhalter]').forEach(function (p) { p.remove(); });
     eintraege = [];
     zaehler = 0;
-    ziel = null;
+    setzeAuswahl([]);
     try { sessionStorage.removeItem(SPEICHER); } catch (e) { /* egal */ }
     zeichneListe();
-    zeigeZiel();
-    setzeUmriss(null);
+    zeichnePins();
   }
 
   function nimmZurueck() {
     var e = eintraege.pop();
     if (!e) return;
-    var el = e._el;
-    if (el) {
-      var m = vorherStile.get(el);
-      if (m) Object.keys(m).forEach(function (k) { el.style[k] = m[k]; });
-      if (e.art === 'text' && e.vorher != null) el.textContent = e.vorher;
-      if (e.art === 'dupliziert' && e.kopie && e.kopie.parentElement) e.kopie.remove();
-      el.removeAttribute('data-skizze-markiert');
-    }
-    if (e.art === 'platzhalter' && e.knoten && e.knoten.parentElement) e.knoten.remove();
+    machRueckgaengig(e);
     zeichneListe();
     sichere();
     zeichnePins();
+    zeichneAuswahl();
   }
 
   /* ---------- Ausgabe ---------- */
@@ -211,8 +249,11 @@
     eintraege.forEach(function (e) {
       var z = e.nr + '. ' + e.art;
       if (e.was) z += ' · ' + e.was;
+      if (e.anzahl) z += ' (' + e.anzahl + ' Elemente)';
       zeilen.push(z);
-      if (e.selektor) zeilen.push('   ' + e.selektor);
+      (e.selektoren || [e.selektor]).forEach(function (s) {
+        if (s) zeilen.push('   ' + s);
+      });
       if (e.vorher != null && e.nachher != null) zeilen.push('   ' + e.vorher + ' -> ' + e.nachher);
       else if (e.nachher != null) zeilen.push('   ' + e.nachher);
       if (e.form) zeilen.push('   Rechteck ' + e.form.w + ' x ' + e.form.h + ' bei ' + e.form.x + ',' + e.form.y);
@@ -267,6 +308,7 @@
     '#hinweis{padding:6px 12px;font-size:11px;color:#8b8b88;border-bottom:1px solid #3a3a3d;min-height:26px}' +
     '#ziel{padding:8px 12px;border-bottom:1px solid #3a3a3d;font-size:11px;color:#8b8b88;word-break:break-all;min-height:34px}' +
     '#ziel b{color:#e8e8e6;font-weight:400;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}' +
+    '#ziel .mehr{color:#c9c9c6;display:block;margin-top:3px}' +
     '#farben{display:none;gap:4px;padding:8px 12px;border-bottom:1px solid #3a3a3d;flex-wrap:wrap}' +
     '#farben.an{display:flex}' +
     '.fb{width:22px;height:22px;border-radius:4px;border:1px solid #4a4a4d;cursor:pointer}' +
@@ -286,17 +328,16 @@
     'color:#c9c9c6;font-size:11px;cursor:pointer}' +
     '#fuss button:hover{background:#2a2a2d}' +
     '#fuss button.haupt{background:' + FARBE + ';border-color:' + FARBE + ';color:#fff}' +
-    '#umriss{position:fixed;pointer-events:none;border:1.5px solid ' + FARBE + ';border-radius:3px;' +
+    '#hoverUmriss{position:fixed;pointer-events:none;border:1px dashed ' + FARBE + ';border-radius:3px;' +
     'z-index:2147482000;display:none}' +
+    '.aus{position:fixed;pointer-events:none;border:1.5px solid ' + FARBE + ';border-radius:3px;' +
+    'z-index:2147482050;background:rgba(216,90,48,.10)}' +
     '#marke{position:fixed;pointer-events:none;background:' + FARBE + ';color:#fff;font-size:11px;' +
     'padding:2px 6px;border-radius:4px;z-index:2147482100;display:none;white-space:nowrap}' +
     '#zieh{position:fixed;pointer-events:none;border:1.5px dashed ' + FARBE + ';background:rgba(216,90,48,.12);' +
     'border-radius:4px;z-index:2147482000;display:none}' +
-    '#mess{position:fixed;pointer-events:none;z-index:2147482100;display:none;font-size:11px}' +
     '#meldung{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1b1b1d;color:#e8e8e6;' +
-    'border:1px solid #3a3a3d;border-radius:8px;padding:8px 14px;font-size:12px;z-index:2147483100;display:none}' +
-    '.pin{position:absolute;width:20px;height:20px;border-radius:50%;background:' + FARBE + ';color:#fff;' +
-    'font-size:11px;line-height:20px;text-align:center;z-index:2147481000;pointer-events:none}';
+    'border:1px solid #3a3a3d;border-radius:8px;padding:8px 14px;font-size:12px;z-index:2147483100;display:none}';
 
   function baue() {
     host = document.createElement('div');
@@ -326,11 +367,11 @@
       '</div>';
     wurzel.appendChild(panel);
 
-    umriss = element('div', 'umriss');
+    hover = element('div', 'hoverUmriss');
     marke = element('div', 'marke');
     ziehflaeche = element('div', 'zieh');
-    messlinie = element('div', 'mess');
     element('div', 'meldung');
+    umrisse = [];
 
     var wz = wurzel.getElementById('wz');
     WERKZEUGE.forEach(function (w) {
@@ -393,6 +434,7 @@
   }
 
   function melde(text) {
+    if (!wurzel) return;
     var m = wurzel.getElementById('meldung');
     m.textContent = text;
     m.style.display = 'block';
@@ -403,33 +445,56 @@
   function waehleWerkzeug(id) {
     werkzeug = id;
     messZiel = null;
-    messlinie.style.display = 'none';
     wurzel.querySelectorAll('.wz').forEach(function (b) {
       b.classList.toggle('an', b.dataset.wz === id);
     });
     var w = WERKZEUGE.filter(function (x) { return x.id === id; })[0];
     var text = w ? w.hinweis : '';
-    if (id === 'groesse' || id === 'abstand' || id === 'verschieben') text += ' · Shift = 10 px';
+    if (/^(groesse|abstand|verschieben)$/.test(id)) text += ' · Shift = 10 px';
+    if (MEHRFACH.test(id)) text += ' · Shift+Klick wählt mehrere, G die ganze Ebene';
+    if (id === 'farbe') text = 'Klick = Fläche, Shift+Klick = Schrift · G die ganze Ebene';
     wurzel.getElementById('hinweis').textContent = text;
     wurzel.getElementById('farben').classList.toggle('an', id === 'farbe');
-    if (id === 'farbe') {
-      wurzel.getElementById('hinweis').textContent = 'Klick = Fläche, Shift+Klick = Schrift';
-    }
     document.body.style.cursor = (id === 'platzhalter' || id === 'messen') ? 'crosshair' : '';
   }
 
   function zeigeZiel() {
-    if (!ziel) { zielzeile.textContent = 'Kein Element gewählt'; return; }
-    var r = ziel.getBoundingClientRect();
-    zielzeile.innerHTML = '<b>' + selektor(ziel).replace(/</g, '&lt;') + '</b><br>' +
-      Math.round(r.width) + ' × ' + Math.round(r.height) + ' px';
+    if (!auswahl.length) { zielzeile.textContent = 'Kein Element gewählt'; return; }
+    if (auswahl.length === 1) {
+      var r = auswahl[0].getBoundingClientRect();
+      zielzeile.innerHTML = '<b>' + esc(selektor(auswahl[0])) + '</b><br>' +
+        Math.round(r.width) + ' × ' + Math.round(r.height) + ' px';
+      return;
+    }
+    var namen = auswahl.slice(0, 4).map(function (el) { return esc(selektor(el)); });
+    if (auswahl.length > 4) namen.push('… und ' + (auswahl.length - 4) + ' weitere');
+    zielzeile.innerHTML = '<b>' + auswahl.length + ' Elemente gewählt</b>' +
+      '<span class="mehr">' + namen.join('<br>') + '</span>';
   }
 
-  function setzeUmriss(el) {
-    if (!el) { umriss.style.display = 'none'; marke.style.display = 'none'; return; }
+  function zeichneAuswahl() {
+    umrisse.forEach(function (u) { u.remove(); });
+    umrisse = auswahl.map(function (el) {
+      var r = el.getBoundingClientRect();
+      var d = document.createElement('div');
+      d.className = 'aus';
+      d.style.left = r.left + 'px';
+      d.style.top = r.top + 'px';
+      d.style.width = r.width + 'px';
+      d.style.height = r.height + 'px';
+      wurzel.appendChild(d);
+      return d;
+    });
+  }
+
+  function zeigeHover(el) {
+    if (!el) { hover.style.display = 'none'; marke.style.display = 'none'; return; }
     var r = el.getBoundingClientRect();
-    umriss.style.cssText += ';display:block;left:' + r.left + 'px;top:' + r.top + 'px;width:' +
-      r.width + 'px;height:' + r.height + 'px';
+    hover.style.display = 'block';
+    hover.style.left = r.left + 'px';
+    hover.style.top = r.top + 'px';
+    hover.style.width = r.width + 'px';
+    hover.style.height = r.height + 'px';
     marke.textContent = el.tagName.toLowerCase() + ' · ' + Math.round(r.width) + '×' + Math.round(r.height);
     marke.style.display = 'block';
     marke.style.left = r.left + 'px';
@@ -446,9 +511,16 @@
       var wert = '';
       if (e.vorher != null && e.nachher != null) wert = e.vorher + ' → ' + e.nachher;
       else if (e.nachher != null) wert = String(e.nachher);
+      var titel = e.art + (e.was ? ' · ' + e.was : '');
+      if (e.anzahl) titel += ' · ' + e.anzahl + ' Elemente';
+      var sel = e.anzahl
+        ? e.selektoren.slice(0, 3).join('<br>') + (e.anzahl > 3 ? '<br>… und ' + (e.anzahl - 3) + ' weitere' : '')
+        : esc(e.selektor || '');
+      if (e.anzahl) sel = e.selektoren.slice(0, 3).map(esc).join('<br>') +
+        (e.anzahl > 3 ? '<br>… und ' + (e.anzahl - 3) + ' weitere' : '');
       return '<div class="ae"><div class="k"><span class="n">' + e.nr + '</span>' +
-        '<span class="t">' + esc(e.art + (e.was ? ' · ' + e.was : '')) + '</span></div>' +
-        (e.selektor ? '<div class="s">' + esc(e.selektor) + '</div>' : '') +
+        '<span class="t">' + esc(titel) + '</span></div>' +
+        (sel ? '<div class="s">' + sel + '</div>' : '') +
         (wert ? '<div class="w">' + esc(wert) + '</div>' : '') + '</div>';
     }).join('');
     liste.scrollTop = liste.scrollHeight;
@@ -461,8 +533,9 @@
   function zeichnePins() {
     document.querySelectorAll('[data-skizze-pin]').forEach(function (p) { p.remove(); });
     eintraege.forEach(function (e) {
-      if (e.art !== 'notiz' || !e._el || !e._el.isConnected) return;
-      var r = e._el.getBoundingClientRect();
+      var el = (e._els || [])[0];
+      if (e.art !== 'notiz' || !el || !el.isConnected) return;
+      var r = el.getBoundingClientRect();
       var p = document.createElement('div');
       p.setAttribute('data-skizze-pin', '');
       p.setAttribute('data-skizze-eigen', '');
@@ -482,29 +555,43 @@
     return Math.round(parseFloat(getComputedStyle(el)[eigenschaft]) || 0);
   }
 
+  /* Welche Elemente eine Handlung trifft: die ganze Auswahl, wenn das
+     angeklickte Element dazugehoert, sonst nur das angeklickte. */
+  function betroffene(el) {
+    return auswahl.indexOf(el) >= 0 ? auswahl.slice() : [el];
+  }
+
   function setzeFarbe(c, schrift) {
-    if (!ziel) { melde('Erst ein Element wählen'); return; }
+    if (!auswahl.length) { melde('Erst ein Element wählen'); return; }
     var eig = schrift ? 'color' : 'backgroundColor';
-    merkeStil(ziel, eig);
-    var alt = getComputedStyle(ziel)[eig];
-    ziel.style[eig] = c;
-    notiereGebuendelt(ziel, 'farbe', schrift ? 'Schrift' : 'Fläche', alt, c);
+    var alt = getComputedStyle(auswahl[0])[eig];
+    auswahl.forEach(function (el) {
+      merkeStil(el, eig);
+      el.style[eig] = c;
+    });
+    notiereGebuendelt(auswahl.slice(), 'farbe', schrift ? 'Schrift' : 'Fläche', alt, c);
   }
 
-  function dupliziere(el) {
-    var kopie = el.cloneNode(true);
-    kopie.setAttribute('data-skizze-kopie', '');
-    kopie.style.outline = '1.5px dashed ' + FARBE;
-    el.parentElement.insertBefore(kopie, el.nextSibling);
-    var e = notiere(el, 'dupliziert', '', null, 'Kopie direkt dahinter eingefügt');
-    e.kopie = kopie;
+  function dupliziere(els) {
+    var kopien = els.map(function (el) {
+      var k = el.cloneNode(true);
+      k.setAttribute('data-skizze-kopie', '');
+      k.style.outline = '1.5px dashed ' + FARBE;
+      el.parentElement.insertBefore(k, el.nextSibling);
+      return k;
+    });
+    var e = notiere(els, 'dupliziert', '', null, 'Kopie direkt dahinter eingefügt');
+    e.kopien = kopien;
   }
 
-  function blendeAus(el) {
-    merkeStil(el, 'display');
-    el.style.display = 'none';
-    notiere(el, 'ausgeblendet', '', null, 'soll hier weg');
-    setzeUmriss(null);
+  function blendeAus(els) {
+    els.forEach(function (el) {
+      merkeStil(el, 'display');
+      el.style.display = 'none';
+    });
+    notiere(els, 'ausgeblendet', '', null, 'soll hier weg');
+    setzeAuswahl([]);
+    zeigeHover(null);
   }
 
   function bearbeiteText(el) {
@@ -515,7 +602,7 @@
       el.removeAttribute('contenteditable');
       el.removeEventListener('blur', fertig);
       var neu = el.textContent;
-      if (neu !== alt) notiere(el, 'text', '', alt.trim().slice(0, 60), neu.trim().slice(0, 60));
+      if (neu !== alt) notiere([el], 'text', '', alt.trim().slice(0, 60), neu.trim().slice(0, 60));
     };
     el.addEventListener('blur', fertig);
   }
@@ -523,7 +610,7 @@
   function setzeNotiz(el) {
     var t = prompt('Was soll hier passieren?');
     if (!t) return;
-    notiere(el, 'notiz', '', null, t);
+    notiere([el], 'notiz', '', null, t);
     zeichnePins();
   }
 
@@ -540,24 +627,30 @@
     var dy = b.top > a.bottom ? Math.round(b.top - a.bottom)
            : a.top > b.bottom ? Math.round(a.top - b.bottom) : 0;
     melde('Abstand: ' + dx + ' px waagrecht, ' + dy + ' px senkrecht');
-    notiere(messZiel, 'gemessen', 'Abstand zu ' + kurz(el), null, dx + ' px / ' + dy + ' px');
+    notiere([messZiel], 'gemessen', 'Abstand zu ' + kurz(el), null, dx + ' px / ' + dy + ' px');
     messZiel = null;
   }
 
   function pfeil(e) {
-    if (!ziel) return false;
+    if (!auswahl.length) return false;
     var schritt = e.shiftKey ? 10 : 1;
     var richtung = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
     if (!richtung) return false;
+    var delta = richtung[0] || richtung[1];
 
     if (werkzeug === 'verschieben') {
-      merkeStil(ziel, 'transform');
-      var m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/.exec(ziel.style.transform || '');
-      var x = (m ? parseFloat(m[1]) : 0) + richtung[0] * schritt;
-      var y = (m ? parseFloat(m[2]) : 0) + richtung[1] * schritt;
-      ziel.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
-      notiereGebuendelt(ziel, 'verschoben', '', 'ursprüngliche Position',
-        (x >= 0 ? '+' : '') + x + ' px waagrecht, ' + (y >= 0 ? '+' : '') + y + ' px senkrecht');
+      var xs = [], ys = [];
+      auswahl.forEach(function (el) {
+        merkeStil(el, 'transform');
+        var m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/.exec(el.style.transform || '');
+        var x = (m ? parseFloat(m[1]) : 0) + richtung[0] * schritt;
+        var y = (m ? parseFloat(m[2]) : 0) + richtung[1] * schritt;
+        el.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+        xs.push(x); ys.push(y);
+      });
+      notiereGebuendelt(auswahl.slice(), 'verschoben', '', 'ursprüngliche Position',
+        (xs[0] >= 0 ? '+' : '') + xs[0] + ' px waagrecht, ' + (ys[0] >= 0 ? '+' : '') + ys[0] + ' px senkrecht');
+      zeichneAuswahl();
       return true;
     }
 
@@ -565,70 +658,77 @@
       var aussen = e.altKey;
       var seite = richtung[0] ? 'Inline' : 'Block';
       var eig = (aussen ? 'margin' : 'padding') + seite;
-      merkeStil(ziel, eig);
-      var jetzt = px(ziel, richtung[0] ? (aussen ? 'marginLeft' : 'paddingLeft')
-                                       : (aussen ? 'marginTop' : 'paddingTop'));
-      var neu = Math.max(0, jetzt + (richtung[0] || richtung[1]) * schritt);
-      ziel.style[eig] = neu + 'px';
-      notiereGebuendelt(ziel, aussen ? 'margin' : 'padding',
-        richtung[0] ? 'links und rechts' : 'oben und unten', jetzt + 'px', neu + 'px');
+      var lese = richtung[0] ? (aussen ? 'marginLeft' : 'paddingLeft')
+                             : (aussen ? 'marginTop' : 'paddingTop');
+      var altA = px(auswahl[0], lese), neuA = 0;
+      auswahl.forEach(function (el) {
+        merkeStil(el, eig);
+        neuA = Math.max(0, px(el, lese) + delta * schritt);
+        el.style[eig] = neuA + 'px';
+      });
+      notiereGebuendelt(auswahl.slice(), aussen ? 'margin' : 'padding',
+        richtung[0] ? 'links und rechts' : 'oben und unten', altA + 'px', neuA + 'px');
+      zeichneAuswahl();
       return true;
     }
 
     if (werkzeug === 'groesse') {
       var eigG = richtung[0] ? 'width' : 'height';
-      /* Vor jedem Eingriff messen: sobald das Element nicht mehr mitwaechst,
-         faellt es sonst auf seine Eigenbreite zurueck und springt. */
-      var altG = Math.round(ziel.getBoundingClientRect()[eigG]);
-      merkeStil(ziel, eigG);
-      /* Ohne border-box zaehlt width nur den Inhalt, der protokollierte Wert
-         wuerde dann von der sichtbaren Breite abweichen. */
-      merkeStil(ziel, 'boxSizing');
-      ziel.style.boxSizing = 'border-box';
-      /* In Flex- und Grid-Layouts bestimmt der Container die Groesse. Ein
-         blosses width bleibt dort wirkungslos, solange das Element noch
-         mitwaechst oder auf volle Hoehe gestreckt wird. */
-      var eltern = ziel.parentElement ? getComputedStyle(ziel.parentElement).display : '';
-      if (/flex|grid/.test(eltern)) {
-        if (richtung[0]) {
-          merkeStil(ziel, 'flexGrow');
-          merkeStil(ziel, 'flexShrink');
-          merkeStil(ziel, 'flexBasis');
-          ziel.style.flexGrow = '0';
-          ziel.style.flexShrink = '0';
-          /* flex: 1 setzt flex-basis auf 0% -- das schlaegt width, solange es steht. */
-          ziel.style.flexBasis = 'auto';
-        } else {
-          merkeStil(ziel, 'alignSelf');
-          ziel.style.alignSelf = 'flex-start';
+      var altG = Math.round(auswahl[0].getBoundingClientRect()[eigG]);
+      var neuG = 0;
+      auswahl.forEach(function (el) {
+        /* Vor jedem Eingriff messen: sobald das Element nicht mehr mitwaechst,
+           faellt es sonst auf seine Eigenbreite zurueck und springt. */
+        var vor = Math.round(el.getBoundingClientRect()[eigG]);
+        merkeStil(el, eigG);
+        merkeStil(el, 'boxSizing');
+        el.style.boxSizing = 'border-box';
+        /* In Flex- und Grid-Layouts bestimmt der Container die Groesse. Ein
+           blosses width bleibt dort wirkungslos. */
+        var eltern = el.parentElement ? getComputedStyle(el.parentElement).display : '';
+        if (/flex|grid/.test(eltern)) {
+          if (richtung[0]) {
+            merkeStil(el, 'flexGrow');
+            merkeStil(el, 'flexShrink');
+            merkeStil(el, 'flexBasis');
+            el.style.flexGrow = '0';
+            el.style.flexShrink = '0';
+            /* flex: 1 setzt flex-basis auf 0% -- das schlaegt width, solange es steht. */
+            el.style.flexBasis = 'auto';
+          } else {
+            merkeStil(el, 'alignSelf');
+            el.style.alignSelf = 'flex-start';
+          }
         }
-      }
-      var neuG = Math.max(4, altG + (richtung[0] || richtung[1]) * schritt);
-      ziel.style[eigG] = neuG + 'px';
-      /* In Tabellen ueberstimmt das Auto-Layout ein blosses width. */
-      if (/^(TD|TH)$/.test(ziel.tagName)) {
-        var eigMin = richtung[0] ? 'minWidth' : 'minHeight';
-        merkeStil(ziel, eigMin);
-        ziel.style[eigMin] = neuG + 'px';
-      }
-      notiereGebuendelt(ziel, 'grösse', eigG === 'width' ? 'Breite' : 'Höhe', altG + 'px', neuG + 'px');
-      setzeUmriss(ziel);
+        neuG = Math.max(4, vor + delta * schritt);
+        el.style[eigG] = neuG + 'px';
+        /* In Tabellen ueberstimmt das Auto-Layout ein blosses width. */
+        if (/^(TD|TH)$/.test(el.tagName)) {
+          var eigMin = richtung[0] ? 'minWidth' : 'minHeight';
+          merkeStil(el, eigMin);
+          el.style[eigMin] = neuG + 'px';
+        }
+      });
+      notiereGebuendelt(auswahl.slice(), 'grösse', eigG === 'width' ? 'Breite' : 'Höhe',
+        altG + 'px', neuG + 'px');
+      zeichneAuswahl();
       return true;
     }
 
     if (werkzeug === 'reihenfolge' && richtung[0]) {
-      var p = ziel.parentElement;
+      var el0 = auswahl[0];
+      var p = el0.parentElement;
       if (!p) return true;
-      var alt = Array.prototype.indexOf.call(p.children, ziel);
-      if (richtung[0] < 0 && ziel.previousElementSibling) {
-        p.insertBefore(ziel, ziel.previousElementSibling);
-      } else if (richtung[0] > 0 && ziel.nextElementSibling) {
-        p.insertBefore(ziel.nextElementSibling, ziel);
+      var alt = Array.prototype.indexOf.call(p.children, el0);
+      if (richtung[0] < 0 && el0.previousElementSibling) {
+        p.insertBefore(el0, el0.previousElementSibling);
+      } else if (richtung[0] > 0 && el0.nextElementSibling) {
+        p.insertBefore(el0.nextElementSibling, el0);
       } else return true;
-      var neu = Array.prototype.indexOf.call(p.children, ziel);
-      notiereGebuendelt(ziel, 'umsortiert', 'Position im Container',
+      var neu = Array.prototype.indexOf.call(p.children, el0);
+      notiereGebuendelt([el0], 'umsortiert', 'Position im Container',
         'Stelle ' + (alt + 1), 'Stelle ' + (neu + 1));
-      setzeUmriss(ziel);
+      zeichneAuswahl();
       return true;
     }
 
@@ -646,8 +746,7 @@
 
   function beiBewegung(e) {
     if (!aktiv || zieht) return;
-    var el = unterMaus(e);
-    if (el) setzeUmriss(el);
+    zeigeHover(unterMaus(e));
   }
 
   function beiKlick(e) {
@@ -657,34 +756,44 @@
     var el = unterMaus(e);
     if (!el) return;
 
-    if (werkzeug === 'duplizieren') { dupliziere(el); return; }
-    if (werkzeug === 'ausblenden') { blendeAus(el); return; }
+    if (werkzeug === 'duplizieren') { dupliziere(betroffene(el)); return; }
+    if (werkzeug === 'ausblenden') { blendeAus(betroffene(el)); return; }
     if (werkzeug === 'notiz') { setzeNotiz(el); return; }
     if (werkzeug === 'messen') { messe(el); return; }
 
-    ziel = el;
-    zeigeZiel();
-    setzeUmriss(el);
+    if ((e.shiftKey || e.metaKey || e.ctrlKey) && MEHRFACH.test(werkzeug)) {
+      schalteAuswahl(el);
+      return;
+    }
+
+    setzeAuswahl([el]);
     if (werkzeug === 'text') bearbeiteText(el);
   }
 
   function beiRunter(e) {
     if (!aktiv || istEigen(e.target)) return;
+    /* Immer abfangen: ein <select> oeffnet sein Menue schon bei mousedown, und
+       Eingabefelder wuerden den Fokus greifen. Beides macht die Elemente sonst
+       unbearbeitbar. */
+    e.preventDefault();
+    e.stopPropagation();
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+
     if (werkzeug === 'platzhalter') {
       zieht = { x: e.clientX, y: e.clientY, unter: unterMaus(e) };
       ziehflaeche.style.display = 'block';
-      e.preventDefault();
       return;
     }
     if (werkzeug === 'verschieben') {
       var el = unterMaus(e);
       if (!el) return;
-      ziel = el;
-      zeigeZiel();
-      merkeStil(el, 'transform');
-      var m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/.exec(el.style.transform || '');
-      zieht = { x: e.clientX, y: e.clientY, el: el, dx: m ? parseFloat(m[1]) : 0, dy: m ? parseFloat(m[2]) : 0 };
-      e.preventDefault();
+      if (!(e.shiftKey || e.metaKey || e.ctrlKey) && auswahl.indexOf(el) < 0) setzeAuswahl([el]);
+      var start = auswahl.map(function (k) {
+        merkeStil(k, 'transform');
+        var m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/.exec(k.style.transform || '');
+        return { el: k, dx: m ? parseFloat(m[1]) : 0, dy: m ? parseFloat(m[2]) : 0 };
+      });
+      zieht = { x: e.clientX, y: e.clientY, start: start };
     }
   }
 
@@ -698,11 +807,13 @@
       ziehflaeche.style.height = Math.abs(e.clientY - zieht.y) + 'px';
       return;
     }
-    if (zieht.el) {
-      var x = zieht.dx + e.clientX - zieht.x;
-      var y = zieht.dy + e.clientY - zieht.y;
-      zieht.el.style.transform = 'translate(' + Math.round(x) + 'px, ' + Math.round(y) + 'px)';
-      setzeUmriss(zieht.el);
+    if (zieht.start) {
+      zieht.start.forEach(function (s) {
+        var x = Math.round(s.dx + e.clientX - zieht.x);
+        var y = Math.round(s.dy + e.clientY - zieht.y);
+        s.el.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+      });
+      zeichneAuswahl();
     }
   }
 
@@ -713,13 +824,22 @@
       var w = Math.abs(e.clientX - zieht.x), h = Math.abs(e.clientY - zieht.y);
       ziehflaeche.style.display = 'none';
       if (w > 8 && h > 8) legePlatzhalter(l, t, w, h, zieht.unter);
-    } else if (zieht.el) {
-      var m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/.exec(zieht.el.style.transform || '');
+    } else if (zieht.start) {
+      var s0 = zieht.start[0];
+      var m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/.exec(s0.el.style.transform || '');
       var x = m ? Math.round(parseFloat(m[1])) : 0;
       var y = m ? Math.round(parseFloat(m[2])) : 0;
-      if (x !== zieht.dx || y !== zieht.dy) {
-        notiereGebuendelt(zieht.el, 'verschoben', '', 'ursprüngliche Position',
+      /* Ein, zwei Pixel beim Anklicken sind keine Absicht und wuerden das
+         Protokoll mit Nichtigkeiten fuellen. */
+      if (Math.abs(x - s0.dx) >= 3 || Math.abs(y - s0.dy) >= 3) {
+        notiereGebuendelt(zieht.start.map(function (s) { return s.el; }), 'verschoben', '',
+          'ursprüngliche Position',
           (x >= 0 ? '+' : '') + x + ' px waagrecht, ' + (y >= 0 ? '+' : '') + y + ' px senkrecht');
+      } else {
+        zieht.start.forEach(function (s) {
+          s.el.style.transform = s.dx || s.dy ? 'translate(' + s.dx + 'px, ' + s.dy + 'px)' : '';
+        });
+        zeichneAuswahl();
       }
     }
     zieht = null;
@@ -737,12 +857,11 @@
       ';border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;' +
       'z-index:2147481500;pointer-events:none;font-family:-apple-system,sans-serif;text-align:center;padding:2px';
     document.body.appendChild(d);
-    var e = notiere(unter || document.body, 'platzhalter', text, null,
+    var e = notiere([unter || document.body], 'platzhalter', text, null,
       Math.round(w) + ' × ' + Math.round(h) + ' px');
     e.form = { x: Math.round(l), y: Math.round(t), w: Math.round(w), h: Math.round(h) };
     e.text = text;
     e.knoten = d;
-    e.art = 'platzhalter';
     zeichneListe();
   }
 
@@ -758,6 +877,12 @@
     if (e.key === 'Escape') { aus(); return; }
     if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); nimmZurueck(); return; }
 
+    if (!e.metaKey && !e.ctrlKey && (e.key === 'g' || e.key === 'G')) {
+      e.preventDefault();
+      ganzeEbene();
+      return;
+    }
+
     var nr = parseInt(e.key, 10);
     if (!e.metaKey && !e.ctrlKey && nr >= 1 && nr <= 9 && WERKZEUGE[nr - 1]) {
       waehleWerkzeug(WERKZEUGE[nr - 1].id);
@@ -768,7 +893,7 @@
 
   function beiScroll() {
     if (!aktiv) return;
-    if (ziel) setzeUmriss(ziel);
+    zeichneAuswahl();
     zeichnePins();
   }
 
@@ -786,7 +911,7 @@
     document.addEventListener('mouseup', beiHoch, true);
     window.addEventListener('scroll', beiScroll, true);
     window.addEventListener('resize', beiScroll);
-    melde('Skizzenmodus an · Zahlen 1–9 wählen Werkzeuge');
+    melde('Skizzenmodus an · Zahlen 1–9 wählen Werkzeuge, G die ganze Ebene');
   }
 
   function aus() {
@@ -800,7 +925,7 @@
     window.removeEventListener('scroll', beiScroll, true);
     window.removeEventListener('resize', beiScroll);
     document.body.style.cursor = '';
-    setzeUmriss(null);
+    zeigeHover(null);
     if (host) host.style.display = 'none';
   }
 
