@@ -8002,7 +8002,9 @@ function resetMaPw() {
   const name = maAkte && maAkte.name;
   if (!name) return;
   const password = $('maPw').value;
-  if (password.length < 12) { toast('Passwort mindestens 12 Zeichen.'); return; }
+  // Fuer einen Verwaltungszugang gilt die laengere Grenze (ENT-075).
+  const min = (maAkte && Number(maAkte.ist_admin)) ? PW_MIN_ADMIN : PW_MIN;
+  if (password.length < min) { toast(`Passwort mindestens ${min} Zeichen.`); return; }
   api('mitarbeiter_reset_password.php', { method: 'POST', body: { name, password } }).then(({ ok, data }) => {
     if (!ok || data.status !== 'ok') { toast(data.message || 'Fehlgeschlagen.'); return; }
     $('maPw').value = '';
@@ -8820,9 +8822,23 @@ function mbNeu(felder) {
   // obwohl es nur nicht geladen war.
   (anstellungsorte.length ? Promise.resolve() : ladeAnstellungsorte()).then(() => {
     mbZeichnen();
+    mbPwLaenge();
     const n = $('mbNeuName');
     if (n) { n.focus(); }
   });
+}
+
+// Ein Verwaltungszugang braucht ein laengeres Passwort (ENT-075). Das muss
+// man sehen, BEVOR man abgewiesen wird -- eine Regel, die erst beim Klick
+// auftaucht, wirkt wie ein Fehler.
+const PW_MIN = 12, PW_MIN_ADMIN = 16;
+function mbPwMin() {
+  const h = $('mbNeuAdmin');
+  return (h && h.checked) ? PW_MIN_ADMIN : PW_MIN;
+}
+function mbPwLaenge() {
+  const feld = $('mbNeuPass');
+  if (feld) { feld.placeholder = `mind. ${mbPwMin()} Zeichen`; }
 }
 
 // Vorschlag fuer den Login-Namen, solange ihn niemand selbst angefasst hat.
@@ -8986,7 +9002,8 @@ function mbNeuKonto() {
             <input class="inp" id="mbNeuPass" type="text" placeholder="mind. 12 Zeichen" autocomplete="new-password"></div>
         </div>
         <div class="ma-janein">
-          <label><input type="checkbox" id="mbNeuAdmin"> Darf die Verwaltung benutzen (Admin)</label>
+          <label><input type="checkbox" id="mbNeuAdmin" onchange="mbPwLaenge()">
+            Darf die Verwaltung benutzen (Admin)</label>
         </div>
       </div>
     </div>`;
@@ -9090,7 +9107,12 @@ function mbSpeichern() {
     body.password = $('mbNeuPass').value || '';
     body.ist_admin = $('mbNeuAdmin').checked ? 1 : 0;
     if (!body.name) { scheitern('Login-Name erforderlich.'); $('mbNeuName').focus(); return; }
-    if (body.password.length < 12) { scheitern('Passwort mindestens 12 Zeichen.'); $('mbNeuPass').focus(); return; }
+    if (body.password.length < mbPwMin()) {
+      scheitern(`Passwort mindestens ${mbPwMin()} Zeichen`
+        + (mbPwMin() > PW_MIN ? ' für Verwaltungszugänge.' : '.'));
+      $('mbNeuPass').focus();
+      return;
+    }
   } else {
     body.name = maAkte.name;
   }

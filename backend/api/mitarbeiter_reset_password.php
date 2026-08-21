@@ -18,12 +18,18 @@ $password = (string)($input['password'] ?? '');
 if ($name === '') {
     json_response(['status' => 'error', 'message' => 'Name erforderlich'], 400);
 }
-$pwFehler = passwort_pruefen($password, $name);
+// Fuer wen wird zurueckgesetzt? Ein Verwaltungszugang braucht ein
+// laengeres Passwort -- das steht in der Datenbank, nicht in der Anfrage.
+$ziel = db()->prepare('SELECT ist_admin FROM mitarbeiter WHERE name = ?');
+$ziel->execute([$name]);
+$zielIstAdmin = (bool)($ziel->fetchColumn());
+
+$pwFehler = passwort_pruefen($password, $name, $zielIstAdmin);
 if ($pwFehler !== null) {
     json_response(['status' => 'error', 'message' => $pwFehler], 400);
 }
 
-$hash = password_hash($password, PASSWORD_DEFAULT);
+$hash = password_hash($password, PASSWORD_DEFAULT, ['cost' => PASSWORT_KOSTEN]);
 require_once __DIR__ . '/../mitarbeiter.php';
 $stmt = db()->prepare('UPDATE mitarbeiter SET password_hash = ? WHERE name = ?');
 $stmt->execute([$hash, $name]);

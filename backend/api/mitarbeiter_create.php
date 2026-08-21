@@ -20,7 +20,7 @@ $istAdmin = !empty($input['ist_admin']) ? 1 : 0;
 if ($name === '') {
     json_response(['status' => 'error', 'message' => 'Name erforderlich'], 400);
 }
-$pwFehler = passwort_pruefen($password, $name);
+$pwFehler = passwort_pruefen($password, $name, (bool)$istAdmin);
 if ($pwFehler !== null) {
     json_response(['status' => 'error', 'message' => $pwFehler], 400);
 }
@@ -47,7 +47,7 @@ $s = $gelesen['spalten'];
 $felder = array_keys($s);
 // passwort_geaendert_am gehoert nicht in die Feldliste -- es wird vom System
 // gesetzt, nicht vom Formular. Es kommt nur mit, wenn die Spalte schon da ist.
-$fest = ['name' => $name, 'password_hash' => password_hash($password, PASSWORD_DEFAULT), 'ist_admin' => $istAdmin];
+$fest = ['name' => $name, 'password_hash' => password_hash($password, PASSWORD_DEFAULT, ['cost' => PASSWORT_KOSTEN]), 'ist_admin' => $istAdmin];
 $jetzt = ma_spalte_da(db(), 'passwort_geaendert_am');
 $sql = 'INSERT INTO mitarbeiter (' . implode(', ', array_keys($fest))
      . ($jetzt ? ', passwort_geaendert_am' : '')

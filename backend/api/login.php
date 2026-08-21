@@ -41,6 +41,15 @@ if (!$user || !password_verify($password, $user['password_hash'])) {
 // Geschafft -- die Fehlversuche dieses Namens sind erledigt.
 anmeld_zuruecksetzen(db(), $name);
 
+// Aeltere Passwoerter still auf den neuen Aufwand heben (ENT-075). Das
+// Klartextpasswort liegt genau hier EINMAL vor -- ein spaeterer Zeitpunkt
+// koennte es gar nicht mehr. Bestehende Konten werden dadurch nicht
+// ausgesperrt: Sie behalten ihr Passwort, es wird nur besser verwahrt.
+if (password_needs_rehash($user['password_hash'], PASSWORD_DEFAULT, ['cost' => PASSWORT_KOSTEN])) {
+    db()->prepare('UPDATE mitarbeiter SET password_hash = ? WHERE id = ?')
+        ->execute([password_hash($password, PASSWORD_DEFAULT, ['cost' => PASSWORT_KOSTEN]), (int)$user['id']]);
+}
+
 $token = bin2hex(random_bytes(32));
 // Wann war diese Person zuletzt da? Die Angabe steht im Mitarbeiterbereich
 // (ENT-072) und ist die einzige Spur, ob ein Zugang ueberhaupt genutzt wird.

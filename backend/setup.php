@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/db.php';
+require_once __DIR__ . '/anmeldung.php';   // PASSWORT_KOSTEN (ENT-075)
 
 // Einmaliges Bootstrap: legt den ersten Admin-Account an. Sperrt sich danach
 // selbst -- sobald ein Mitarbeiter existiert, tut dieses Skript nichts mehr.
@@ -24,7 +25,7 @@ if ($name === '' || strlen($password) < 6) {
     json_response(['status' => 'error', 'message' => 'Name erforderlich, Passwort mindestens 6 Zeichen'], 400);
 }
 
-$hash = password_hash($password, PASSWORD_DEFAULT);
+$hash = password_hash($password, PASSWORD_DEFAULT, ['cost' => PASSWORT_KOSTEN]);
 $stmt = db()->prepare('INSERT INTO mitarbeiter (name, password_hash, ist_admin) VALUES (?, ?, 1)');
 $stmt->execute([$name, $hash]);
 

@@ -97,6 +97,38 @@ function anmeld_fehlversuch(PDO $pdo, string $name, string $adresse): void
 // schlagartig alle Konten ausgesperrt.
 const PASSWORT_MIN = 12;
 
+// Fuer Verwaltungszugaenge mehr. Dieselbe Ueberlegung wie bei den
+// Sitzungsfristen: Ein Admin-Zugang oeffnet die ganze Personalakte, ein
+// Mitarbeitenden-Zugang die eigenen Schichten. Unterschiedliches Risiko,
+// unterschiedliche Anforderung. Solange es kein Rollenmodell gibt (OP-59),
+// haengt am Admin-Passwort buchstaeblich alles.
+const PASSWORT_MIN_ADMIN = 16;
+
+// Wie aufwendig das Verschluesseln des Passworts ist. Jede Stufe verdoppelt
+// den Aufwand -- fuer das Anmelden ein paar Hundertstelsekunden, fuer
+// jemanden mit einer gestohlenen Datenbank die doppelte Rechenzeit pro
+// Versuch.
+//
+// GEMESSEN, nicht angenommen: Neuere PHP-Fassungen setzen von sich aus
+// schon 12; aeltere setzen 10. Der Wert steht hier AUSDRUECKLICH, damit er
+// nicht davon abhaengt, welche PHP-Fassung auf dem Server laeuft -- sonst
+// waere derselbe Code je nach Hoster verschieden gut verwahrt.
+// Gemessene Dauer bei 12: rund 0,2 Sekunden je Anmeldung.
+const PASSWORT_KOSTEN = 12;
+
+// Tastaturreihen und Folgen. Wer zwoelf Zeichen braucht, nimmt sonst gern
+// die naechstliegende Reihe -- "qwertzuiop" ist lang und trotzdem in
+// Sekunden geraten.
+const PASSWORT_REIHEN = [
+    'qwertzuiopue',      // Schweizer Tastatur, obere Reihe
+    'asdfghjkloeae',     // mittlere Reihe
+    'yxcvbnm',           // untere Reihe
+    'qwertyuiop',        // englische Belegung
+    'abcdefghijklmnopqrstuvwxyz',
+    '01234567890',
+];
+const PASSWORT_FOLGE_MAX = 4;   // ab fuenf Zeichen aus einer Reihe wird abgewiesen
+
 // Was offensichtlich zu schwach ist, auch wenn es lang genug waere.
 // Kurze Liste mit Absicht: Sie soll die naheliegenden Faelle fangen, nicht
 // eine Passwortpruefung ersetzen.
@@ -105,13 +137,54 @@ const PASSWORT_VERBOTEN = [
     'cupi24', 'sicherheit', 'admin', 'willkommen', 'schweiz',
 ];
 
+// Steckt eine Tastaturreihe oder eine Buchstaben-/Zahlenfolge darin?
+// Vorwaerts wie rueckwaerts -- "poiuztrewq" ist dasselbe Muster.
+function passwort_folge(string $klein): bool
+{
+    $laenge = mb_strlen($klein);
+    for ($i = 0; $i + PASSWORT_FOLGE_MAX < $laenge; $i++) {
+        $stueck = mb_substr($klein, $i, PASSWORT_FOLGE_MAX + 1);
+        foreach (PASSWORT_REIHEN as $reihe) {
+            if (str_contains($reihe, $stueck) || str_contains($reihe, strrev($stueck))) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Ist das Passwort nur ein kurzer Block, der sich wiederholt?
+// "123412341234" ist zwoelf Zeichen lang und vier Zeichen wert.
+function passwort_wiederholung(string $klein): bool
+{
+    $laenge = mb_strlen($klein);
+    for ($block = 1; $block <= intdiv($laenge, 2); $block++) {
+        if ($laenge % $block !== 0) { continue; }
+        if (str_repeat(mb_substr($klein, 0, $block), intdiv($laenge, $block)) === $klein) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Prueft ein NEUES Passwort. Gibt null zurueck, wenn es taugt, sonst den
 // Grund im Klartext -- der Grund geht an die Oberflaeche und muss ohne
 // Nachschlagen verstaendlich sein.
-function passwort_pruefen(string $passwort, string $loginName = ''): ?string
+//
+// BEWUSST KEINE ZEICHENVORSCHRIFT (kein Zwang zu Grossbuchstabe und Zahl):
+// Sie erzeugt fast immer dasselbe Muster -- Grossbuchstabe vorne, Zahl
+// hinten, "Sommer2026" -- und genau das probieren Knackwerkzeuge zuerst.
+// Der rechnerische Zugewinn ist gross, der tatsaechliche klein. Zwoelf
+// Kleinbuchstaben haben rund 400-mal mehr Moeglichkeiten als acht Zeichen
+// mit Gross, Klein und Zahl. Laenge schlaegt Zeichensalat -- solange die
+// Laenge nicht aus EINEM bekannten Wort oder einer Tastaturreihe kommt,
+// und dagegen laufen die Pruefungen unten.
+function passwort_pruefen(string $passwort, string $loginName = '', bool $istAdmin = false): ?string
 {
-    if (mb_strlen($passwort) < PASSWORT_MIN) {
-        return 'Passwort mindestens ' . PASSWORT_MIN . ' Zeichen. '
+    $min = $istAdmin ? PASSWORT_MIN_ADMIN : PASSWORT_MIN;
+    if (mb_strlen($passwort) < $min) {
+        return 'Passwort mindestens ' . $min . ' Zeichen'
+             . ($istAdmin ? ' für Verwaltungszugänge' : '') . '. '
              . 'Lieber eine merkbare Wortfolge als ein kurzes mit Sonderzeichen.';
     }
     $klein = mb_strtolower($passwort);
@@ -128,6 +201,13 @@ function passwort_pruefen(string $passwort, string $loginName = ''): ?string
     // Ein einziges wiederholtes Zeichen ist lang, aber nicht schwer.
     if (count(array_unique(mb_str_split($klein))) < 5) {
         return 'Das Passwort besteht aus zu wenigen verschiedenen Zeichen.';
+    }
+    if (passwort_wiederholung($klein)) {
+        return 'Das Passwort ist nur eine Wiederholung derselben Zeichenfolge.';
+    }
+    if (passwort_folge($klein)) {
+        return 'Das Passwort enthält eine Tastaturreihe oder eine fortlaufende Folge '
+             . '(z. B. „qwertz" oder „12345").';
     }
     return null;
 }
