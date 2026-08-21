@@ -1115,25 +1115,47 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
    der erste Entwurf. Mit Spalten fliessen die Karten nach unten weiter und
    der Browser gleicht die Spaltenhoehen selbst aus.
    break-inside verhindert, dass eine Karte mitten im Feld umbricht. */
-.ma-karten { column-width: 380px; column-gap: 16px; }
-.ma-karten > .card { break-inside: avoid; margin: 0 0 16px; }
+/* ERFASSEN UND NACHSCHLAGEN: drei feste Spalten, flach (ENT-074)
+   Davor standen hier zehn verschieden hohe Karten. Der Projektinhaber am
+   2026-08-21: "grafisch und anzeigetechnisch nicht sehr gut ... keinen roten
+   Faden und wirkt zusammengewuerfelt." Stimmt: Ein Kasten sagt, dass etwas
+   zusammengehoert -- zehn Kaesten nebeneinander sagen gar nichts mehr, und
+   eine Leserichtung hatte das Ganze nicht.
+   Vorbild ist die vom Projektinhaber gelieferte Referenz: keine Rahmen, je
+   Abschnitt eine Ueberschrift mit feiner Linie, drei Spalten, in denen die
+   Abschnitte untereinander durchlaufen. Die Spalten sind voneinander
+   unabhaengig -- so entstehen keine Loecher, wo ein Abschnitt kuerzer ist
+   als sein Nachbar. */
+.ma-spalten { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 0 40px; align-items: start; }
+.ma-spalte { min-width: 0; }
+.ma-block { margin-bottom: 28px; }
+.ma-block:last-child { margin-bottom: 0; }
+/* Ueberschrift plus Linie ueber die volle Spaltenbreite -- sie trennt die
+   Abschnitte, ohne sie einzurahmen. */
+.ma-block > h3 { font-size: 13.5px; font-weight: 650; color: var(--ink); margin: 0 0 12px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--line); letter-spacing: .1px; }
 /* Faellt ein Etikett auf zwei Zeilen ("Betreibungsregisterauszug vom"), soll
    trotzdem das EINGABEFELD mit dem daneben fluchten und nicht die Ueber-
    schrift -- sonst steht ein Feld sichtbar tiefer als sein Nachbar. */
-.ma-karten .form-grid { align-items: end; }
+.ma-spalten .form-grid { align-items: end; }
 /* Ein Datumsfeld ist in Chromium zwei Pixel hoeher als ein Textfeld: die
    innere Feldgruppe des Kalenders bringt eigenen Innenabstand mit. Auf dieser
    Flaeche steht fast ueberall ein Datum neben einem Textfeld, und zwei Pixel
    Versatz ueber vierzig Felder sieht unruhig aus, ohne dass man sagen kann
    warum. Der Innenabstand wird darum genullt -- ohne feste Pixelhoehe, damit
    die Felder auf dem Handy mit der groesseren Schrift mitwachsen. */
-.ma-karten input[type="date"]::-webkit-datetime-edit-fields-wrapper { padding: 0; }
-/* Uebersicht und Personaldossier sind zwei Reiter DERSELBEN Seite. Sie
-   muessen darum dieselbe Ueberschriftform tragen -- zwei Muster nebeneinander
-   wirken unruhig, ohne dass man sagen kann warum. */
-.ma-karten .card-hd h3, .ma-band .card-hd h3, #mdFlow .card-hd h3 { font-size: 12px;
-  font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); }
-.ma-karten .card-bd, .ma-band .card-bd, #mdFlow .card-bd { padding: 16px 18px 18px; }
+.ma-spalten input[type="date"]::-webkit-datetime-edit-fields-wrapper { padding: 0; }
+.ma-block .ku-detail-info { margin: 0; }
+/* EINE Ueberschriftform im ganzen Mitarbeitendenbereich -- Abschnitt,
+   Pflichtband und Uebersichts-Kachel. Drei verschiedene Formen auf
+   denselben Seiten sind genau das, was der Projektinhaber mit
+   "zusammengewuerfelt" gemeint hat. Der Kasten unterscheidet die Kachel
+   vom Abschnitt; die Schrift muss es nicht auch noch tun. */
+.ma-band .card-hd h3, #mdFlow .card-hd h3 { font-size: 13.5px; font-weight: 650;
+  letter-spacing: .1px; text-transform: none; color: var(--ink); }
+.ma-band .card-bd, #mdFlow .card-bd { padding: 16px 18px 18px; }
+
 /* Das Pflichtband beim Anlegen steht ueber den Karten und ausserhalb des
    Spaltenrasters -- es soll aber wie eine von ihnen aussehen, nicht wie ein
    fremder Kasten. Darum dieselbe Ueberschrift und derselbe Innenabstand. */
@@ -2218,7 +2240,7 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
                zu uebersehen. Beim Bearbeiten ist das Band leer -- der Login
                steht dann als Angabe in der Karte "Zugang". -->
           <div id="mbNeuKonto"></div>
-          <div class="ma-karten" id="mbKarten"></div>
+          <div class="ma-spalten" id="mbKarten"></div>
         </div>
       </section>
 
@@ -4370,7 +4392,11 @@ const MD_WICHTIG = [
 // Die ids stehen in der gespeicherten Anordnung und duerfen sich nie aendern.
 // `standard: false` heisst: gibt es, ist aber zunaechst ausgeblendet.
 const MD_CONTAINER = [
-  { id: 'person', titel: 'Person', abschnitte: ['personalien', 'adresse', 'kontakt'], felder: MD_WICHTIG },
+  // Abschnitts-ids seit ENT-074: person, kontakt, betrieb, personendaten,
+  // dienstausweis, zugang, qualifikation, anstellung. "betrieb" ist hier
+  // dabei, weil die Personalnummer dorthin gewandert ist -- die Feldliste
+  // MD_WICHTIG laesst davon nur sie durch.
+  { id: 'person', titel: 'Person', abschnitte: ['person', 'kontakt', 'betrieb'], felder: MD_WICHTIG },
   // Steht oben und zeigt sich nur, wenn es etwas zu sagen gibt. Eine
   // abgelaufene Bewilligung darf nicht erst auffallen, wenn jemand den
   // richtigen Container einblendet -- damit darf niemand eingeteilt werden.
@@ -4378,9 +4404,8 @@ const MD_CONTAINER = [
   { id: 'betrieb', titel: 'Betriebliches', abschnitte: ['betrieb'] },
   { id: 'qualifikation', titel: 'Qualifikationen mit Lohnfolge', abschnitte: ['qualifikation'], standard: false },
   { id: 'anstellung', titel: 'Anstellung nach Art. 8 GAV', abschnitte: ['anstellung'], standard: false },
-  { id: 'ausweise', titel: 'Ausweise und Bewilligungen', abschnitte: ['ausweise'], standard: false },
-  { id: 'herkunft', titel: 'Herkunft und Zivilstand', abschnitte: ['herkunft'], standard: false },
-  { id: 'nachweise', titel: 'Nachweise', abschnitte: ['nachweise'], standard: false },
+  { id: 'personendaten', titel: 'Personendaten und Bewilligungen', abschnitte: ['personendaten'], standard: false },
+  { id: 'dienstausweis', titel: 'Dienstausweis', abschnitte: ['dienstausweis'], standard: false },
   { id: 'zugang', titel: 'Zugang', abschnitte: ['zugang'], standard: false },
 ];
 
@@ -4520,15 +4545,17 @@ function mdDossier() {
     return;
   }
   const m = maAkte;
-  const karten = MB_ABSCHNITTE.map(a => {
+  // Dieselbe Anordnung wie beim Erfassen: Wer eine Angabe im Formular links
+  // oben eintraegt, sucht sie beim Nachschlagen auch links oben.
+  const spalten = mbSpalten(a => {
     const zeilen = mdAbschnittZeilen(m, a);
     if (!zeilen) { return ''; }              // Leere Abschnitte fallen weg
-    return `<div class="card"><div class="card-hd"><h3>${esc(a.titel)}</h3></div>
-      <div class="card-bd"><dl class="ku-detail-info">${zeilen}</dl></div></div>`;
-  }).join('');
+    return `<div class="ma-block" data-abschnitt="${esc(a.id)}">
+      <h3>${esc(a.titel)}</h3><dl class="ku-detail-info">${zeilen}</dl></div>`;
+  });
 
-  $('mdDossier').innerHTML = mdEinrichtungshinweis() + (karten
-    ? `<div class="ma-karten">${karten}</div>`
+  $('mdDossier').innerHTML = mdEinrichtungshinweis() + (spalten
+    ? `<div class="ma-spalten">${spalten}</div>`
     : EMPTY('Noch nichts erfasst', 'Über „Bearbeiten“ lassen sich die Angaben zu dieser Person eintragen.'));
 }
 
@@ -8659,94 +8686,96 @@ const kuId = f => 'ku_' + f;
 // f  = einzeilig | d = Datum | z = Zahl | a = Auswahl | j = Ja/Nein
 // b  = breit (ganze Zeile)
 const MB_ABSCHNITTE = [
-  { id: 'personalien', titel: 'Personalien', felder: [
-    ['personalnummer', 'Personalnummer', 'f'],
-    ['kurzzeichen',    'Kurzzeichen',    'f'],
+  // ── Spalte 1: wer die Person ist und wie man sie erreicht ────────────
+  { id: 'person', spalte: 1, titel: 'Person und Adresse', felder: [
     ['anrede',         'Anrede',         'a', ['Herr', 'Frau', 'Divers']],
     ['geschlecht',     'Geschlecht',     'a', ['weiblich', 'maennlich', 'unbestimmt']],
     ['vorname',        'Vorname',        'f'],
     ['nachname',       'Nachname',       'f'],
-    ['geburtsdatum',   'Geburtsdatum',   'd'],
-    ['ahv_nr',         'AHV-Nummer',     'f', null, '756.XXXX.XXXX.XX'],
+    ['adresszusatz',   'Adresszusatz',   'f', null, null, true],
+    // Strasse+Nummer und PLZ+Ort stehen je als Paar nebeneinander -- in der
+    // Leseansicht werden genau diese Paare zu einer Zeile zusammengefasst.
+    ['strasse',        'Strasse',        'f'],
+    ['hausnummer',     'Nummer',         'f'],
+    ['plz',            'PLZ',            'f'],
+    ['ort',            'Ort',            'f'],
+    ['land',           'Land',           'f'],
   ]},
-  // Eigener Abschnitt statt dreizehn Felder unter einer Ueberschrift: Herkunft
-  // und Zivilstand werden aus anderem Anlass nachgefuehrt als der Name.
-  { id: 'herkunft', titel: 'Herkunft und Zivilstand', felder: [
-    ['geburtsort',     'Geburtsort',     'f'],
-    ['heimatort',      'Heimatort',      'f'],
-    ['nationalitaet',  'Nationalität',   'f'],
-    ['zivilstand',     'Zivilstand',     'a',
-      ['ledig', 'verheiratet', 'verwitwet', 'geschieden',
-       'eingetragene Partnerschaft', 'aufgeloeste Partnerschaft']],
-    ['heiratsdatum',   'Heiratsdatum',   'd'],
-  ]},
-  { id: 'adresse', titel: 'Adresse', felder: [
-    ['strasse',      'Strasse',       'f', null, null, true],
-    ['hausnummer',   'Nummer',        'f'],
-    ['adresszusatz', 'Adresszusatz',  'f'],
-    ['plz',          'PLZ',           'f'],
-    ['ort',          'Ort',           'f'],
-    ['land',         'Land',          'f'],
-  ]},
-  { id: 'kontakt', titel: 'Kontakt', felder: [
+  { id: 'kontakt', spalte: 1, titel: 'Kontakt', felder: [
+    ['email',             'E-Mail Geschäft',  'f', null, null, true],
+    ['email_privat',      'E-Mail privat',    'f', null, null, true],
     ['telefon',           'Telefon privat',   'f'],
     ['telefon_geschaeft', 'Telefon Geschäft', 'f'],
     ['mobil',             'Mobil privat',     'f'],
     ['mobil_geschaeft',   'Mobil Geschäft',   'f'],
-    ['email',             'E-Mail Geschäft',  'f', null, null, true],
-    ['email_privat',      'E-Mail privat',    'f', null, null, true],
     ['notfallkontakt',    'Notfallkontakt',   'f', null,
       'Wen anrufen, wenn auf Schicht etwas passiert', true],
   ]},
-  { id: 'betrieb', titel: 'Betriebliches', felder: [
-    ['funktion_id',       'Funktion',   'a', 'funktion'],
-    ['abteilung_id',      'Abteilung',  'a', 'abteilung'],
-    ['anstellungsort_id', 'Standort',   'a', 'anstellungsort'],
-    ['beruf',             'Beruf',      'f'],
-    ['eintritt',          'Eintritt',   'd'],
-    ['austritt',          'Austritt',   'd'],
+
+  // ── Spalte 2: was die Person im Betrieb ist und was hinterlegt ist ───
+  { id: 'betrieb', spalte: 2, titel: 'Betriebliches', felder: [
+    ['personalnummer',    'Personalnummer', 'f'],
+    ['kurzzeichen',       'Kurzzeichen',    'f'],
+    ['funktion_id',       'Funktion',       'a', 'funktion'],
+    ['abteilung_id',      'Abteilung',      'a', 'abteilung'],
+    ['anstellungsort_id', 'Standort',       'a', 'anstellungsort'],
+    ['beruf',             'Beruf',          'f'],
+    ['eintritt',          'Eintritt',       'd'],
+    ['austritt',          'Austritt',       'd'],
   ]},
-  { id: 'anstellung', titel: 'Anstellung nach Art. 8 GAV', felder: [
-    ['anstellungskategorie', 'Kategorie',           'a', ['A', 'B', 'C']],
-    ['pensum_stunden',       'Jahrespensum (Std.)', 'z'],
+  // Personenstand, Herkunft, Bewilligungen und Registerauszüge in EINEM
+  // Block -- so wie es die Referenz des Projektinhabers unter
+  // "Versicherungsdaten" führt. Es ist dieselbe Frage: was liegt über
+  // diese Person amtlich vor.
+  { id: 'personendaten', spalte: 2, titel: 'Personendaten und Bewilligungen', felder: [
+    ['ahv_nr',         'AHV-Nummer',     'f', null, '756.XXXX.XXXX.XX', true],
+    ['geburtsdatum',   'Geburtsdatum',   'd'],
+    ['nationalitaet',  'Nationalität',   'f'],
+    ['heimatort',      'Heimatort',      'f'],
+    ['geburtsort',     'Geburtsort',     'f'],
+    ['zivilstand',     'Zivilstand',     'a',
+      ['ledig', 'verheiratet', 'verwitwet', 'geschieden',
+       'eingetragene Partnerschaft', 'aufgeloeste Partnerschaft']],
+    ['heiratsdatum',   'Heiratsdatum',   'd'],
+    // Reihenfolge ist hier keine Geschmacksfrage: In einem zweispaltigen
+    // Raster steht jedes "gültig bis" nur dann neben seinem Ausweis, wenn
+    // davor eine gerade Zahl Felder liegt.
+    ['aufenthaltsbewilligung', 'Ausweiskategorie', 'a',
+      ['B', 'C', 'Ci', 'G', 'L', 'F', 'N', 'S']],
+    ['aufenthalt_gueltig_bis', 'gültig bis',         'd'],
+    ['arbeitsbewilligung',     'Arbeitsbewilligung', 'f'],
+    ['arbeit_gueltig_bis',     'gültig bis',         'd'],
+    ['zemis_nr',               'ZEMIS-Nummer',       'f', null, null, true],
+    ['strafregister_datum',    'Auszug Strafregister',   'd'],
+    ['betreibung_datum',       'Auszug Betreibungsreg.', 'd'],
   ]},
-  { id: 'qualifikation', titel: 'Qualifikationen mit Lohnfolge', gav: true, felder: [
+  { id: 'dienstausweis', spalte: 2, titel: 'Dienstausweis', felder: [
+    ['dienstausweis_nr',          'Dienstausweis-Nr.', 'f'],
+    ['dienstausweis_gueltig_bis', 'gültig bis',        'd'],
+  ]},
+
+  // ── Spalte 3: Zugang und was Lohnfolge hat ───────────────────────────
+  { id: 'zugang', spalte: 3, konto: true, titel: 'Zugang', felder: [
+    ['sprache',    'Sprache',                'a', ['de', 'fr', 'it', 'en']],
+    ['zugang_bis', 'Zugang deaktivieren per', 'd'],
+  ]},
+  // Drittes Feld bei Ja/Nein = Kurzform. In der Eingabe braucht es den ganzen
+  // Satz, damit ein Kaestchen eindeutig ist; in Liste und Leseansicht steht
+  // dieselbe Berechtigung als Marke.
+  { id: 'qualifikation', spalte: 3, gav: true, titel: 'Qualifikationen mit Lohnfolge', felder: [
     ['fachausweis',    'Eidg. Fachausweis', 'a',
       ['Personenschutz', 'Bewachung', 'Anlaesse', 'Zentralendienste']],
     ['fachausweis_am', 'erworben am',       'd'],
     ['basisausbildung_am', 'Basisausbildung absolviert am', 'd', null, null, true],
     ['diensthund_bewilligung_bis', 'Diensthundeführer-Bewilligung gültig bis', 'd'],
     ['waffe_bewilligung_bis',      'Waffentragbewilligung gültig bis',        'd'],
-  // Drittes Feld = Kurzform. In der Eingabe braucht es den ganzen Satz, damit
-  // ein Kaestchen eindeutig ist; in Liste und Leseansicht steht dieselbe
-  // Berechtigung als Marke, und "Darf mit Diensthund eingesetzt werden: ja"
-  // waere dort eine Zeile, die sich selbst wiederholt.
   ], janein: [
     ['diensthundefuehrer',   'Darf mit Diensthund eingesetzt werden',  'Diensthund'],
     ['waffentragberechtigt', 'Darf mit Schusswaffe eingesetzt werden', 'Schusswaffe'],
   ]},
-  // Reihenfolge ist hier keine Geschmacksfrage: In einem zweispaltigen Raster
-  // steht jedes "gültig bis" nur dann neben seinem Ausweis, wenn davor eine
-  // gerade Zahl Felder liegt. ZEMIS nimmt darum die ganze Zeile -- sonst
-  // rutscht das dritte "gültig bis" unter die ZEMIS-Nummer und sieht aus,
-  // als gehoerte es dorthin.
-  { id: 'ausweise', titel: 'Ausweise und Bewilligungen', felder: [
-    ['aufenthaltsbewilligung', 'Ausweiskategorie', 'a',
-      ['B', 'C', 'Ci', 'G', 'L', 'F', 'N', 'S']],
-    ['aufenthalt_gueltig_bis', 'gültig bis',       'd'],
-    ['arbeitsbewilligung',     'Arbeitsbewilligung', 'f'],
-    ['arbeit_gueltig_bis',     'gültig bis',       'd'],
-    ['zemis_nr',               'ZEMIS-Nummer',     'f', null, null, true],
-    ['dienstausweis_nr',       'Dienstausweis-Nr.', 'f'],
-    ['dienstausweis_gueltig_bis', 'gültig bis',    'd'],
-  ]},
-  { id: 'nachweise', titel: 'Nachweise', felder: [
-    ['strafregister_datum', 'Strafregisterauszug vom',      'd'],
-    ['betreibung_datum',    'Betreibungsregisterauszug vom', 'd'],
-  ]},
-  { id: 'zugang', titel: 'Zugang', konto: true, felder: [
-    ['sprache',    'Sprache',              'a', ['de', 'fr', 'it', 'en']],
-    ['zugang_bis', 'Zugang deaktivieren per', 'd'],
+  { id: 'anstellung', spalte: 3, titel: 'Anstellung nach Art. 8 GAV', felder: [
+    ['anstellungskategorie', 'Kategorie',           'a', ['A', 'B', 'C']],
+    ['pensum_stunden',       'Jahrespensum (Std.)', 'z'],
   ]},
 ];
 
@@ -8911,17 +8940,16 @@ function mbZeichnen() {
     return `<div class="f${breit ? ' wide' : ''}"><label for="${id}">${esc(label)}</label>${steuer}</div>`;
   };
 
-  $('mbKarten').innerHTML = MB_ABSCHNITTE.map(a => `
-    <div class="card">
-      <div class="card-hd"><h3>${esc(a.titel)}</h3></div>
-      <div class="card-bd">
-        <div class="form-grid">${(a.felder || []).map(feld).join('')}</div>
-        ${(a.janein || []).length ? `<div class="ma-janein">${a.janein.map(([f, label]) =>
-          `<label><input type="checkbox" id="mb_${f}"${Number(wert(f)) ? ' checked' : ''}> ${esc(label)}</label>`
-        ).join('')}</div>` : ''}
-        ${a.konto && !mbNeuModus ? mbKonto() : ''}
-      </div>
-    </div>`).join('');
+  const block = a => `
+    <div class="ma-block" data-abschnitt="${esc(a.id)}">
+      <h3>${esc(a.titel)}</h3>
+      <div class="form-grid">${(a.felder || []).map(feld).join('')}</div>
+      ${(a.janein || []).length ? `<div class="ma-janein">${a.janein.map(([f, label]) =>
+        `<label><input type="checkbox" id="mb_${f}"${Number(wert(f)) ? ' checked' : ''}> ${esc(label)}</label>`
+      ).join('')}</div>` : ''}
+      ${a.konto && !mbNeuModus ? mbKonto() : ''}
+    </div>`;
+  $('mbKarten').innerHTML = mbSpalten(block);
 
   // Was aus dem Diktat kam, wird benannt -- eine blaue Umrandung allein sagt
   // nicht, wonach man suchen soll, wenn neun Karten offen sind.
@@ -8962,6 +8990,17 @@ function mbNeuKonto() {
         </div>
       </div>
     </div>`;
+}
+
+// Das Spaltengeruest. Die Zuordnung Abschnitt -> Spalte steht in
+// MB_ABSCHNITTE und wird hier nur ausgefuehrt -- Erfassungs- und
+// Leseansicht ordnen darum garantiert gleich an. Eine Spalte, die
+// keinen einzigen Block traegt, faellt weg, statt als leere Luecke
+// dazustehen.
+function mbSpalten(bausteinFn) {
+  const spalten = [1, 2, 3].map(nr => MB_ABSCHNITTE.filter(a => (a.spalte || 1) === nr)
+    .map(bausteinFn).filter(Boolean).join(''));
+  return spalten.filter(Boolean).map(inhalt => `<div class="ma-spalte">${inhalt}</div>`).join('');
 }
 
 // Der Kontoteil der Zugang-Karte. Er steht IN dieser Karte und nicht daneben:
