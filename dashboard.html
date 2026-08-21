@@ -3138,7 +3138,12 @@ const MIC = '<svg class="i i-sm" viewBox="0 0 24 24" style="margin-top:1px;flex:
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf = (n, d) => Number(n || 0).toLocaleString('de-CH', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
-const dmy = d => d ? String(d).slice(0, 10).split('-').reverse().join('.') : '–';
+// Ein Nulldatum ist KEIN Datum. MySQL legt ausserhalb des strengen Modus
+// '0000-00-00' in eine DATE-Spalte, wenn ein leerer Text ankommt. Das darf
+// nie als "00.00.0000" erscheinen und schon gar nicht als abgelaufenes
+// Datum gelesen werden -- unbekannt sieht sonst aus wie laengst vorbei.
+const leeresDatum = d => !d || String(d).slice(0, 10) === '0000-00-00';
+const dmy = d => leeresDatum(d) ? '–' : String(d).slice(0, 10).split('-').reverse().join('.');
 // Sparte des Betriebs (ENT-037). Sicherheit ist der stille Normalfall und
 // bekommt darum keinen Chip -- sonst traegt jede Zeile eine Marke, die
 // nichts unterscheidet. Nur die Reinigung wird ausgezeichnet.
@@ -4288,7 +4293,7 @@ function mdUebersicht() {
   // Ein abgelaufener Ausweis ist keine Nebensache: Damit darf niemand
   // eingeteilt werden. Ein bald ablaufender auch nicht mehr lange.
   const frist = (feld, wert) => {
-    if (!/gueltig_bis$/.test(feld) || !wert) { return ''; }
+    if (!/gueltig_bis$/.test(feld) || leeresDatum(wert)) { return ''; }
     const tag = String(wert).slice(0, 10);
     if (tag < heute) { return ' <span class="chip chip-x">abgelaufen</span>'; }
     const in60 = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
@@ -4298,7 +4303,7 @@ function mdUebersicht() {
   // Ein Feld als Text, ohne Beschriftung. null heisst "steht nichts drin".
   const text = ([f, , typ, quelle]) => {
     const roh = m[f];
-    if (typ === 'd') { return roh ? dmy(roh) : null; }
+    if (typ === 'd') { return leeresDatum(roh) ? null : dmy(roh); }
     if (typ === 'a' && quelle && !Array.isArray(quelle)) {
       const liste = quelle === 'anstellungsort' ? anstellungsorte : (mbListen[quelle] || []);
       const e = liste.find(x => Number(x.id) === Number(roh));
@@ -8707,7 +8712,11 @@ function mbZeichnen() {
   // Ein Diktat-Wert schlaegt den gespeicherten -- er steht ja zur Pruefung da.
   const wert = f => {
     const v = mbAend[f] !== undefined ? mbAend[f] : m[f];
-    return (v === null || v === undefined) ? '' : String(v);
+    if (v === null || v === undefined) { return ''; }
+    // Ein '0000-00-00' aus der Datenbank gehoert nicht ins Eingabefeld --
+    // sonst speichert der naechste Klick es wieder zurueck.
+    if (String(v).slice(0, 10) === '0000-00-00') { return ''; }
+    return String(v);
   };
   const mark = f => (mbAend[f] !== undefined ? ' ki' : '');
 

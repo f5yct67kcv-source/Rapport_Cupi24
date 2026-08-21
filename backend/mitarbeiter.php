@@ -251,10 +251,15 @@ function ma_eingabe_lesen(array $input, array $bestand = [], ?PDO $pdo = null): 
         $roh = trim((string)($input[$feld] ?? ''));
 
         if ($roh === '') {
-            // Leer heisst leer -- und bei Verweisen und Zahlen NULL, nicht 0.
+            // Leer heisst leer -- und bei Verweisen, Zahlen und DATEN NULL,
+            // nicht 0 und nicht der leere Text. Ein leerer Text in einer
+            // DATE-Spalte wird von MySQL ausserhalb des strengen Modus zu
+            // '0000-00-00'; die Oberflaeche zeigte daraufhin "00.00.0000"
+            // und stempelte nicht erfasste Bewilligungen als "abgelaufen".
+            // Ein nicht erfasstes Datum ist UNBEKANNT, nicht der 0.0.0000.
             // Ein Ja/Nein-Feld kennt kein "leer": nicht angekreuzt heisst nein.
             if ($typ === 'janein') { $spalten[$feld] = 0; continue; }
-            $spalten[$feld] = ($typ === 'id' || $typ === 'zahl') ? null : '';
+            $spalten[$feld] = ($typ === 'id' || $typ === 'zahl' || $typ === 'datum') ? null : '';
             continue;
         }
 

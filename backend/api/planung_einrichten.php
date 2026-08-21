@@ -14,6 +14,9 @@
 // entsteht dadurch kein zweiter Mechanismus: dieselbe Liste, derselbe Knopf.
 declare(strict_types=1);
 require __DIR__ . '/../db.php';
+// ma_felder() wird fuer die Nulldatum-Reparatur weiter unten gebraucht --
+// die Feldliste steht dort und wird hier nicht nachgebaut.
+require_once __DIR__ . '/../mitarbeiter.php';
 require __DIR__ . '/../kunden.php';
 
 $user = require_session();
@@ -602,6 +605,35 @@ if (hat_spalte($pdo, 'mitarbeiter', 'plz')) {
                 $sm->execute([$plz, $ort, (int)$m['id']]);
             }
             $getan[] = count($ungetrenntMa) . ' Mitarbeiteradresse(n) in PLZ und Ort getrennt';
+        }
+    }
+}
+
+// ── 2b4. Nulldaten in echte Leerwerte umwandeln (ENT-072, Korrektur).
+// ma_eingabe_lesen() hat ein leeres Datumsfeld als leeren TEXT gespeichert.
+// MySQL macht daraus ausserhalb des strengen Modus '0000-00-00'. Die
+// Oberflaeche zeigte daraufhin "00.00.0000" -- und markierte nicht erfasste
+// Bewilligungen als "abgelaufen", weil '0000-00-00' vor jedem heutigen Datum
+// liegt. Ein nicht erfasstes Datum ist UNBEKANNT und nicht laengst vorbei;
+// der Unterschied entscheidet darueber, ob jemand eingeteilt werden darf.
+//
+// Die Ursache ist behoben; dieser Block raeumt auf, was vorher geschrieben
+// wurde. Er laeuft nur ueber Spalten, die es gibt, und ist wiederholbar.
+$nullDatumSpalten = [];
+foreach (ma_felder() as $feld => $typ) {
+    if ($typ === 'datum' && hat_spalte($pdo, 'mitarbeiter', $feld)) { $nullDatumSpalten[] = $feld; }
+}
+if ($nullDatumSpalten) {
+    $wo = implode(' OR ', array_map(fn($f) => "$f = '0000-00-00'", $nullDatumSpalten));
+    $betroffen = (int)$pdo->query("SELECT COUNT(*) FROM mitarbeiter WHERE $wo")->fetchColumn();
+    if ($betroffen > 0) {
+        if ($nurPruefen) {
+            $getan[] = "$betroffen Mitarbeitende(r) mit Nulldatum (00.00.0000) in mindestens einem Datumsfeld";
+        } else {
+            $setzen = implode(', ', array_map(
+                fn($f) => "$f = CASE WHEN $f = '0000-00-00' THEN NULL ELSE $f END", $nullDatumSpalten));
+            $pdo->exec("UPDATE mitarbeiter SET $setzen WHERE $wo");
+            $getan[] = "$betroffen Mitarbeitende(r): Nulldaten auf \"nicht erfasst\" gesetzt";
         }
     }
 }
