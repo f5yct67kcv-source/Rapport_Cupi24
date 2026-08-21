@@ -14,7 +14,7 @@
   var WERKZEUGE = [
     { id: 'auswahl',      name: 'Auswählen',   hinweis: 'Element anklicken' },
     { id: 'verschieben',  name: 'Verschieben', hinweis: 'ziehen rastet ein, Alt hält es an' },
-    { id: 'abstand',      name: 'Abstand',     hinweis: '← → ↑ ↓ · Alt = aussen' },
+    { id: 'abstand',      name: 'Abstand',     hinweis: '← → ↑ ↓ innen · Alt = aussen, auch negativ' },
     { id: 'groesse',      name: 'Grösse',      hinweis: '← → Breite, ↑ ↓ Höhe' },
     { id: 'schrift',      name: 'Schrift',     hinweis: '↑ ↓ Grösse, ← → Stärke' },
     { id: 'text',         name: 'Text',        hinweis: 'anklicken und tippen' },
@@ -155,10 +155,25 @@
     }
     if (extra) Object.keys(extra).forEach(function (k) { e[k] = extra[k]; });
     e._els = els;
+    merkeZiel(e);
     eintraege.push(e);
     zeichneListe();
     sichere();
     return e;
+  }
+
+  /* Wohin das Element soll, nicht nur um wie viel es sich bewegt hat. Ein
+     Verschieben per transform kostet im Layout keinen Platz, im gebauten
+     Ergebnis aber schon -- ohne den Zielrahmen ist nicht zu erkennen, ob etwas
+     in dieselbe Zeile gehoert oder in eine neue. */
+  function merkeZiel(e) {
+    var el = (e._els || [])[0];
+    if (!el || !el.getBoundingClientRect) return;
+    var r = el.getBoundingClientRect();
+    e.ziel = {
+      x: Math.round(r.left), y: Math.round(r.top + window.scrollY),
+      w: Math.round(r.width), h: Math.round(r.height)
+    };
   }
 
   function gleicheMenge(a, b) {
@@ -174,6 +189,7 @@
       var e = eintraege[i];
       if (e.art === art && e.was === was && gleicheMenge(e._els, els)) {
         e.nachher = nachher;
+        merkeZiel(e);
         zeichneListe();
         sichere();
         return e;
@@ -199,6 +215,7 @@
       if (e.nachher !== undefined && e.nachher !== null) d.nachher = e.nachher;
       if (e.form) d.form = e.form;
       if (e.text) d.text = e.text;
+      if (e.ziel) d.ziel = e.ziel;
       return d;
     });
   }
@@ -251,7 +268,8 @@
 
   function alsText() {
     if (!eintraege.length) return 'Keine Änderungen.';
-    var zeilen = ['Skizze ' + new Date().toISOString().slice(0, 10) + ' · ' + location.pathname, ''];
+    var zeilen = ['Skizze ' + new Date().toISOString().slice(0, 10) + ' · ' + location.pathname,
+      'Fenster ' + window.innerWidth + ' × ' + window.innerHeight + ' px', ''];
     eintraege.forEach(function (e) {
       var z = e.nr + '. ' + e.art;
       if (e.was) z += ' · ' + e.was;
@@ -263,13 +281,19 @@
       if (e.vorher != null && e.nachher != null) zeilen.push('   ' + e.vorher + ' -> ' + e.nachher);
       else if (e.nachher != null) zeilen.push('   ' + e.nachher);
       if (e.form) zeilen.push('   Rechteck ' + e.form.w + ' x ' + e.form.h + ' bei ' + e.form.x + ',' + e.form.y);
+      if (e.ziel) zeilen.push('   steht danach bei ' + e.ziel.x + ',' + e.ziel.y +
+        ' und ist ' + e.ziel.w + ' x ' + e.ziel.h + ' px');
       zeilen.push('');
     });
     return zeilen.join('\n');
   }
 
   function kopiere() {
-    var nutz = alsText() + '\n\n```json\n' + JSON.stringify(alsDaten(), null, 2) + '\n```';
+    var nutz = alsText() + '\n\n```json\n' + JSON.stringify({
+      seite: location.pathname + location.hash,
+      fenster: { breite: window.innerWidth, hoehe: window.innerHeight },
+      aenderungen: alsDaten()
+    }, null, 2) + '\n```';
     navigator.clipboard.writeText(nutz).then(function () {
       melde('In die Zwischenablage kopiert');
     }, function () {
@@ -283,6 +307,7 @@
     var blob = new Blob([JSON.stringify({
       seite: location.pathname + location.hash,
       erstellt: new Date().toISOString(),
+      fenster: { breite: window.innerWidth, hoehe: window.innerHeight },
       aenderungen: alsDaten()
     }, null, 2)], { type: 'application/json' });
     var a = document.createElement('a');
@@ -461,8 +486,8 @@
     var text = w ? w.hinweis : '';
     if (/^(groesse|abstand|verschieben)$/.test(id)) text += ' · Shift = 10 px';
     if (id === 'schrift') text += ' · Shift = 4 px';
-    if (MEHRFACH.test(id)) text += ' · Shift+Klick wählt mehrere, G Container, H Linie';
-    if (id === 'farbe') text = 'Klick = Fläche, Shift+Klick = Schrift · G Container, H Linie';
+    if (MEHRFACH.test(id)) text += ' · mehrere: Shift+Klick, G, H';
+    if (id === 'farbe') text = 'Klick = Fläche, Shift+Klick = Schrift · mehrere: G, H';
     wurzel.getElementById('hinweis').textContent = text;
     wurzel.getElementById('farben').classList.toggle('an', id === 'farbe');
     document.body.style.cursor = (id === 'platzhalter' || id === 'messen') ? 'crosshair' : '';
@@ -815,21 +840,26 @@
 
     if (werkzeug === 'abstand') {
       var aussen = e.altKey;
-      var seite = richtung[0] ? 'Inline' : 'Block';
-      var eig = (aussen ? 'margin' : 'padding') + seite;
-      var lese = richtung[0] ? (aussen ? 'marginLeft' : 'paddingLeft')
-                             : (aussen ? 'marginTop' : 'paddingTop');
+      /* Innen wirkt symmetrisch: links und rechts, oder oben und unten.
+         Aussen wirkt gerichtet -- der Pfeil zeigt, wohin das Element soll -- und
+         darf ins Minus gehen. Sonst laesst sich ein Block, der oben gar keinen
+         eigenen Abstand hat, nur nach unten schieben und nie nach oben. */
+      var eig = aussen ? (richtung[0] ? 'marginLeft' : 'marginTop')
+                       : 'padding' + (richtung[0] ? 'Inline' : 'Block');
+      var lese = aussen ? eig : (richtung[0] ? 'paddingLeft' : 'paddingTop');
       var alteA = [], neueA = [];
       auswahl.forEach(function (el) { friereGeschwisterEin(el); });
       auswahl.forEach(function (el) {
         merkeStil(el, eig);
         var vorA = px(el, lese);
-        var neuA = Math.max(0, vorA + delta * schritt);
+        var neuA = vorA + delta * schritt;
+        if (!aussen) neuA = Math.max(0, neuA);
         el.style[eig] = neuA + 'px';
         alteA.push(vorA); neueA.push(neuA);
       });
       notiereGebuendelt(auswahl.slice(), aussen ? 'margin' : 'padding',
-        richtung[0] ? 'links und rechts' : 'oben und unten',
+        aussen ? (richtung[0] ? 'links' : 'oben')
+               : (richtung[0] ? 'links und rechts' : 'oben und unten'),
         spanne(alteA, 'px'), spanne(neueA, 'px'));
       aktualisiereAnzeige();
       return true;

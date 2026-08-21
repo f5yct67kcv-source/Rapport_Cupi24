@@ -423,14 +423,40 @@ th.sortbar.aktiv .pf { opacity: 1; color: var(--accent); }
 @keyframes sh { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
 /* Werkzeugleiste */
-.bar-tools { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 16px; }
+/* Kein Umbruch auf oberster Ebene: die Suche soll neben den Filtern stehen
+   bleiben. Wird es eng, bricht stattdessen der Filterblock unter sich um. */
+/* Die Filter behalten ihre Breite und bleiben in einer Zeile. Reicht der
+   Platz nicht, weicht die Suche in die naechste Zeile aus statt einen
+   Filter mitzureissen. */
+.bar-tools { display: flex; align-items: flex-start; gap: 9px; flex-wrap: wrap; padding: 10px 0; margin-bottom: 16px; }
 /* Zusammengehörige Bedienelemente rücken enger zusammen, damit die Leiste
    trotz vieler Felder in Blöcke zerfällt statt in eine Reihe Einzelteile. */
 .tool-gruppe { display: flex; align-items: center; gap: 5px; }
-.tool-bis { font-size: 12px; color: var(--ink-3); }
+.tool-bis { font-size: 12px; font-weight: 900; color: var(--ink-3); }
 .search { position: relative; flex: 1; min-width: 200px; max-width: 340px; }
 .search svg.i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--ink-3); }
 .search .inp { padding-left: 34px; }
+/* Groessere Bedienelemente in der Einsaetze-Leiste (Skizze 21.08.2026).
+   Bewusst nur hier: die Uebersicht behaelt ihre 41 px. */
+#pv-einsaetze .bar-tools .inp,
+#pv-einsaetze .bar-tools .btn { height: 45px; box-sizing: border-box; }
+/* Rechts gehalten ueber margin statt ueber einen Abstandhalter: bricht die
+   Leiste um, bliebe der in der ersten Zeile zurueck. */
+#pv-einsaetze .bar-tools .btn-primary { width: 167px; margin-left: auto; }
+#pStatus { padding-left: 21px; }
+/* Der Abstand zur Leiste kommt jetzt aus dem Innenabstand, der Aussenabstand
+   des Rasters faellt weg (Skizze 21.08.2026). */
+#plKpi { padding: 18px 0; margin-bottom: 0; }
+#pv-einsaetze > .bar-tools { margin-bottom: 37px; }
+#pv-einsaetze > .card { padding: 11px 0; }
+/* Bei ausgeklappter Seitennavigation bleiben nur 1444 px. Die Suche muss
+   weit genug schrumpfen koennen, sonst kippt die Leiste in zwei Zeilen. */
+.search-rechts { flex: 1 1 140px; max-width: 340px; min-width: 140px; margin-left: auto; }
+/* Die Filter bekommen ihren Platz zuerst und wachsen nicht. Die Suche nimmt,
+   was uebrig bleibt, hoechstens 340 px -- so draengt sie keinen Filter in
+   eine zweite Zeile. */
+.bar-filter { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; flex: 0 0 auto; min-width: 0; }
+.search-rechts { align-self: center; }
 
 /* Detail-Schublade */
 .scrim { position: fixed; inset: 0; background: rgba(16,18,22,.42); z-index: 60; opacity: 0; pointer-events: none; transition: opacity .2s; }
@@ -559,12 +585,13 @@ tbody tr.heute td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .pick-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--ink-3); }
 
 /* Reiter innerhalb eines Bereichs */
-.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 18px; overflow-x: auto; }
-.tab { border: none; background: transparent; padding: 10px 14px 9px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 22px; overflow-x: auto; }
+.tab { border: none; background: transparent; padding: 10px 14px 9px; font: inherit; font-size: 16px; font-weight: 600; color: var(--ink-3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
 .tab:hover { color: var(--ink); }
 .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
 .tab-nebenan { display: flex; align-items: center; gap: 6px; border: none; background: transparent; padding: 8px 6px 9px;
-  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; }
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent;
+  margin-right: 19px; }
 .tab-nebenan:hover { color: var(--ink); }
 .tab-nebenan svg.i { width: 15px; height: 15px; }
 .ptab { display: none; }
@@ -691,7 +718,10 @@ tbody tr.zu .i-schloss { color: var(--warn); }
 }
 
 /* Monatsmatrix — erste Spalte bleibt stehen, die Tage scrollen in der Karte */
-.mx-info { font-size: 12px; color: var(--ink-3); margin: -6px 0 12px; }
+/* Der obere Rand faellt nicht mit dem der Werkzeugleiste zusammen, sondern
+   kollabiert mit ihm: es gilt der groessere der beiden Werte, nicht die
+   Summe. Darum steht hier der volle Zielabstand. */
+.mx-info { font-size: 13px; color: var(--ink-3); margin: 17px 0 32px; }
 .mx-info b { color: var(--ink-2); font-weight: 600; }
 .mx { overflow-x: auto; }
 .mx table { border-collapse: separate; border-spacing: 0; }
@@ -1312,9 +1342,13 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
   /* Werkzeugleisten: ein Bedienelement je Zeile statt überlaufender Reihen.
      Auswahlfelder und Datumsfelder sind auf iOS deutlich breiter als auf dem
      Rechner -- feste Breiten führen dort zum waagrechten Schieben. */
-  .bar-tools { gap: 8px; }
+  .bar-tools { gap: 8px; flex-wrap: wrap; }
   .bar-tools > .sp { display: none; }
   .search { flex: 1 1 100%; min-width: 0; max-width: none; }
+  /* Auf schmalen Schirmen nimmt die Suche wieder die volle Zeile, das
+     Rechtshalten aus der Desktop-Regel muss dafuer weichen. */
+  .search-rechts { flex: 1 1 100%; max-width: none; margin-left: 0; }
+  .bar-filter { flex: 1 1 100%; gap: 8px; }
   .bar-tools select.inp, .bar-tools input.inp { flex: 1 1 100%; width: 100% !important; min-width: 0; }
   .bar-tools .btn { flex: 1 1 auto; justify-content: center; }
   .bar-tools .check { flex: 1 1 100%; }
@@ -1886,45 +1920,54 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
                ganzer Monat über die beiden Auswahlfelder. Der Zeitraum ist in
                beiden Fällen die eine Quelle der Wahrheit (ENT-034). -->
           <div class="bar-tools">
-            <div class="tool-gruppe">
-              <input class="inp" type="date" id="mxVon" style="width:auto" onchange="renderMatrix()" aria-label="Zeitraum von">
-              <span class="tool-bis">bis</span>
-              <input class="inp" type="date" id="mxBis" style="width:auto" onchange="renderMatrix()" aria-label="Zeitraum bis">
+            <!-- Die Filter stehen in einem eigenen Block. Nur so bleibt die
+                 Suche daneben in derselben Zeile: bricht die Leiste um, tut
+                 sie das innerhalb des Blocks (Skizze 21.08.2026). -->
+            <div class="bar-filter">
+              <div class="tool-gruppe">
+                <input class="inp" type="date" id="mxVon" style="width:auto" onchange="renderMatrix()" aria-label="Zeitraum von">
+                <span class="tool-bis">bis</span>
+                <input class="inp" type="date" id="mxBis" style="width:auto" onchange="renderMatrix()" aria-label="Zeitraum bis">
+              </div>
+              <select class="inp" id="mxSchnell" style="width:auto" onchange="mxSchnellSetzen()" aria-label="Zeitraum schnell wählen">
+                <option value="">Zeitraum</option>
+                <option value="heute">Heute</option>
+                <option value="woche">Diese Woche</option>
+                <option value="monat">Dieser Monat</option>
+              </select>
+              <div class="tool-gruppe">
+                <select class="inp" id="mxMon" style="width:91px" aria-label="Monat"></select>
+                <select class="inp" id="mxJahr" style="width:auto" aria-label="Jahr"></select>
+                <button class="btn btn-quiet btn-sm" onclick="mxMonatZeigen()">Monat anzeigen</button>
+              </div>
+              <div class="tool-gruppe">
+                <button class="btn btn-quiet btn-sm" onclick="mxSchieben(-1)" title="Zurück, um die Länge des Zeitraums">‹</button>
+                <button class="btn btn-quiet btn-sm" onclick="mxSchieben(1)" title="Weiter, um die Länge des Zeitraums">›</button>
+              </div>
+              <select class="inp" id="mxObj" style="width:127px" onchange="renderMatrix()" aria-label="Einzelnes Objekt anzeigen">
+                <option value="">Alle Objekte</option>
+              </select>
+              <select class="inp" id="mxSparte" style="width:137px" onchange="renderMatrix()" aria-label="Nach Sparte filtern">
+                <option value="">Beide Sparten</option>
+                <option value="sicherheit">Nur Sicherheit</option>
+                <option value="reinigung">Nur Reinigung</option>
+              </select>
+              <select class="inp" id="mxBeleg" style="width:145px" onchange="renderMatrix()" aria-label="Nach Belegung filtern">
+                <option value="">Jede Belegung</option>
+                <option value="luecke">Nur mit Lücken</option>
+                <option value="voll">Nur vollständig besetzte</option>
+                <option value="ohne">Nur ohne Einsätze</option>
+              </select>
             </div>
-            <select class="inp" id="mxSchnell" style="width:auto" onchange="mxSchnellSetzen()" aria-label="Zeitraum schnell wählen">
-              <option value="">Zeitraum</option>
-              <option value="heute">Heute</option>
-              <option value="woche">Diese Woche</option>
-              <option value="monat">Dieser Monat</option>
-            </select>
-            <div class="search">
+            <!-- Die Suche steht am Ende der Leiste, damit die Filter links
+                 zusammenbleiben (Skizze 21.08.2026). Rechts gehalten wird sie
+                 ueber margin-left und nicht ueber einen Abstandhalter: bricht
+                 die Leiste um, bliebe der in der ersten Zeile zurueck und die
+                 Suche stuende in der zweiten links. -->
+            <div class="search search-rechts">
               <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <input class="inp" type="search" id="mxSuche" placeholder="Objekt, Kunde, Ort oder Mitarbeitende …" oninput="renderMatrix()">
             </div>
-            <div class="sp" style="flex:1"></div>
-            <div class="tool-gruppe">
-              <select class="inp" id="mxMon" style="width:auto" aria-label="Monat"></select>
-              <select class="inp" id="mxJahr" style="width:auto" aria-label="Jahr"></select>
-              <button class="btn btn-quiet btn-sm" onclick="mxMonatZeigen()">Monat anzeigen</button>
-            </div>
-            <div class="tool-gruppe">
-              <button class="btn btn-quiet btn-sm" onclick="mxSchieben(-1)" title="Zurück, um die Länge des Zeitraums">‹</button>
-              <button class="btn btn-quiet btn-sm" onclick="mxSchieben(1)" title="Weiter, um die Länge des Zeitraums">›</button>
-            </div>
-            <select class="inp" id="mxSparte" style="width:auto" onchange="renderMatrix()" aria-label="Nach Sparte filtern">
-              <option value="">Beide Sparten</option>
-              <option value="sicherheit">Nur Sicherheit</option>
-              <option value="reinigung">Nur Reinigung</option>
-            </select>
-            <select class="inp" id="mxBeleg" style="width:auto" onchange="renderMatrix()" aria-label="Nach Belegung filtern">
-              <option value="">Jede Belegung</option>
-              <option value="luecke">Nur mit Lücken</option>
-              <option value="voll">Nur vollständig besetzte</option>
-              <option value="ohne">Nur ohne Einsätze</option>
-            </select>
-            <select class="inp" id="mxObj" style="width:auto" onchange="renderMatrix()" aria-label="Einzelnes Objekt anzeigen">
-              <option value="">Alle Objekte</option>
-            </select>
           </div>
           <div class="mx-info" id="mxInfo"></div>
           <div class="card">
@@ -1957,11 +2000,6 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             <option value="monat">Dieser Monat</option>
             <option value="alle">Alle, auch vergangene</option>
           </select>
-          <div class="search">
-            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="inp" type="search" id="pQ" placeholder="Kunde, Ort, Bezeichnung oder Mitarbeitende …" oninput="renderPlanung()">
-          </div>
-          <div class="sp" style="flex:1"></div>
           <!-- Herkunft der Zeile (ENT-058). Ein Einsatz entsteht entweder frei --
                eine Baustelle, ein Anlass -- oder aus einem Objekt samt seiner
                Masterschichten. Das sind zwei verschiedene Arbeiten, und wer
@@ -1987,6 +2025,13 @@ html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
             <option value="offen">Nur unterbesetzt</option>
             <option value="abgesagt">Nur abgesagt</option>
           </select>
+          <!-- Suche hinter den Filtern, Abstandhalter davor dem Knopf:
+               so stehen die Filter links beisammen und "Neuer Einsatz"
+               allein rechts (Skizze 21.08.2026). -->
+          <div class="search">
+            <svg class="i i-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="inp" type="search" id="pQ" placeholder="Kunde, Ort, Bezeichnung oder Mitarbeitende …" oninput="renderPlanung()">
+          </div>
           <button class="btn btn-primary btn-sm" onclick="openEinsatzNeu()">
             <svg class="i i-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Neuer Einsatz
@@ -10372,7 +10417,7 @@ if (token && me) {
   var WERKZEUGE = [
     { id: 'auswahl',      name: 'Auswählen',   hinweis: 'Element anklicken' },
     { id: 'verschieben',  name: 'Verschieben', hinweis: 'ziehen rastet ein, Alt hält es an' },
-    { id: 'abstand',      name: 'Abstand',     hinweis: '← → ↑ ↓ · Alt = aussen' },
+    { id: 'abstand',      name: 'Abstand',     hinweis: '← → ↑ ↓ innen · Alt = aussen, auch negativ' },
     { id: 'groesse',      name: 'Grösse',      hinweis: '← → Breite, ↑ ↓ Höhe' },
     { id: 'schrift',      name: 'Schrift',     hinweis: '↑ ↓ Grösse, ← → Stärke' },
     { id: 'text',         name: 'Text',        hinweis: 'anklicken und tippen' },
@@ -10513,10 +10558,25 @@ if (token && me) {
     }
     if (extra) Object.keys(extra).forEach(function (k) { e[k] = extra[k]; });
     e._els = els;
+    merkeZiel(e);
     eintraege.push(e);
     zeichneListe();
     sichere();
     return e;
+  }
+
+  /* Wohin das Element soll, nicht nur um wie viel es sich bewegt hat. Ein
+     Verschieben per transform kostet im Layout keinen Platz, im gebauten
+     Ergebnis aber schon -- ohne den Zielrahmen ist nicht zu erkennen, ob etwas
+     in dieselbe Zeile gehoert oder in eine neue. */
+  function merkeZiel(e) {
+    var el = (e._els || [])[0];
+    if (!el || !el.getBoundingClientRect) return;
+    var r = el.getBoundingClientRect();
+    e.ziel = {
+      x: Math.round(r.left), y: Math.round(r.top + window.scrollY),
+      w: Math.round(r.width), h: Math.round(r.height)
+    };
   }
 
   function gleicheMenge(a, b) {
@@ -10532,6 +10592,7 @@ if (token && me) {
       var e = eintraege[i];
       if (e.art === art && e.was === was && gleicheMenge(e._els, els)) {
         e.nachher = nachher;
+        merkeZiel(e);
         zeichneListe();
         sichere();
         return e;
@@ -10557,6 +10618,7 @@ if (token && me) {
       if (e.nachher !== undefined && e.nachher !== null) d.nachher = e.nachher;
       if (e.form) d.form = e.form;
       if (e.text) d.text = e.text;
+      if (e.ziel) d.ziel = e.ziel;
       return d;
     });
   }
@@ -10609,7 +10671,8 @@ if (token && me) {
 
   function alsText() {
     if (!eintraege.length) return 'Keine Änderungen.';
-    var zeilen = ['Skizze ' + new Date().toISOString().slice(0, 10) + ' · ' + location.pathname, ''];
+    var zeilen = ['Skizze ' + new Date().toISOString().slice(0, 10) + ' · ' + location.pathname,
+      'Fenster ' + window.innerWidth + ' × ' + window.innerHeight + ' px', ''];
     eintraege.forEach(function (e) {
       var z = e.nr + '. ' + e.art;
       if (e.was) z += ' · ' + e.was;
@@ -10621,13 +10684,19 @@ if (token && me) {
       if (e.vorher != null && e.nachher != null) zeilen.push('   ' + e.vorher + ' -> ' + e.nachher);
       else if (e.nachher != null) zeilen.push('   ' + e.nachher);
       if (e.form) zeilen.push('   Rechteck ' + e.form.w + ' x ' + e.form.h + ' bei ' + e.form.x + ',' + e.form.y);
+      if (e.ziel) zeilen.push('   steht danach bei ' + e.ziel.x + ',' + e.ziel.y +
+        ' und ist ' + e.ziel.w + ' x ' + e.ziel.h + ' px');
       zeilen.push('');
     });
     return zeilen.join('\n');
   }
 
   function kopiere() {
-    var nutz = alsText() + '\n\n```json\n' + JSON.stringify(alsDaten(), null, 2) + '\n```';
+    var nutz = alsText() + '\n\n```json\n' + JSON.stringify({
+      seite: location.pathname + location.hash,
+      fenster: { breite: window.innerWidth, hoehe: window.innerHeight },
+      aenderungen: alsDaten()
+    }, null, 2) + '\n```';
     navigator.clipboard.writeText(nutz).then(function () {
       melde('In die Zwischenablage kopiert');
     }, function () {
@@ -10641,6 +10710,7 @@ if (token && me) {
     var blob = new Blob([JSON.stringify({
       seite: location.pathname + location.hash,
       erstellt: new Date().toISOString(),
+      fenster: { breite: window.innerWidth, hoehe: window.innerHeight },
       aenderungen: alsDaten()
     }, null, 2)], { type: 'application/json' });
     var a = document.createElement('a');
@@ -10819,8 +10889,8 @@ if (token && me) {
     var text = w ? w.hinweis : '';
     if (/^(groesse|abstand|verschieben)$/.test(id)) text += ' · Shift = 10 px';
     if (id === 'schrift') text += ' · Shift = 4 px';
-    if (MEHRFACH.test(id)) text += ' · Shift+Klick wählt mehrere, G Container, H Linie';
-    if (id === 'farbe') text = 'Klick = Fläche, Shift+Klick = Schrift · G Container, H Linie';
+    if (MEHRFACH.test(id)) text += ' · mehrere: Shift+Klick, G, H';
+    if (id === 'farbe') text = 'Klick = Fläche, Shift+Klick = Schrift · mehrere: G, H';
     wurzel.getElementById('hinweis').textContent = text;
     wurzel.getElementById('farben').classList.toggle('an', id === 'farbe');
     document.body.style.cursor = (id === 'platzhalter' || id === 'messen') ? 'crosshair' : '';
@@ -11173,21 +11243,26 @@ if (token && me) {
 
     if (werkzeug === 'abstand') {
       var aussen = e.altKey;
-      var seite = richtung[0] ? 'Inline' : 'Block';
-      var eig = (aussen ? 'margin' : 'padding') + seite;
-      var lese = richtung[0] ? (aussen ? 'marginLeft' : 'paddingLeft')
-                             : (aussen ? 'marginTop' : 'paddingTop');
+      /* Innen wirkt symmetrisch: links und rechts, oder oben und unten.
+         Aussen wirkt gerichtet -- der Pfeil zeigt, wohin das Element soll -- und
+         darf ins Minus gehen. Sonst laesst sich ein Block, der oben gar keinen
+         eigenen Abstand hat, nur nach unten schieben und nie nach oben. */
+      var eig = aussen ? (richtung[0] ? 'marginLeft' : 'marginTop')
+                       : 'padding' + (richtung[0] ? 'Inline' : 'Block');
+      var lese = aussen ? eig : (richtung[0] ? 'paddingLeft' : 'paddingTop');
       var alteA = [], neueA = [];
       auswahl.forEach(function (el) { friereGeschwisterEin(el); });
       auswahl.forEach(function (el) {
         merkeStil(el, eig);
         var vorA = px(el, lese);
-        var neuA = Math.max(0, vorA + delta * schritt);
+        var neuA = vorA + delta * schritt;
+        if (!aussen) neuA = Math.max(0, neuA);
         el.style[eig] = neuA + 'px';
         alteA.push(vorA); neueA.push(neuA);
       });
       notiereGebuendelt(auswahl.slice(), aussen ? 'margin' : 'padding',
-        richtung[0] ? 'links und rechts' : 'oben und unten',
+        aussen ? (richtung[0] ? 'links' : 'oben')
+               : (richtung[0] ? 'links und rechts' : 'oben und unten'),
         spanne(alteA, 'px'), spanne(neueA, 'px'));
       aktualisiereAnzeige();
       return true;
