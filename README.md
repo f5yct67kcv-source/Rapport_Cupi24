@@ -108,3 +108,27 @@ und liefert nur das Ergebnis. Faellt PHP aus, liefern Webserver den Quelltext
 mitunter unveraendert aus, und dann stuende der Schluessel im Browser. Das ist
 unwahrscheinlich, aber es ist kein theoretischer Fall. Festgehalten, damit es
 eine bewusste Inkaufnahme bleibt und keine Ueberraschung.
+
+## Skizzenmodus
+
+Der Skizzenmodus legt eine Notizebene über die laufende Seite. Gedacht, um visuell
+festzuhalten, was sich ändern soll, statt es in Prosa zu beschreiben.
+
+Einschalten mit `Alt+S`, oder `?skizze=1` an die URL hängen. `Esc` beendet.
+Werkzeuge über die Zahlen `1` bis `9`, `Cmd+Z` nimmt den letzten Schritt zurück.
+
+Auswählen zeigt Selektor und Masse. Verschieben, Abstand, Grösse und Reihenfolge
+arbeiten mit den Pfeiltasten, `Shift` macht Zehnerschritte, `Alt` schaltet beim
+Abstand von innen auf aussen. Dazu Text ändern, Duplizieren, Ausblenden, Farbe,
+Messen, freie Platzhalter-Rechtecke für noch nicht existierende Elemente und
+Notizen an einzelnen Elementen.
+
+Jede Handlung landet im Protokoll mit Selektor und Alt-Neu-Wert. `Kopieren` legt
+das Protokoll als Text und JSON in die Zwischenablage, `Datei` speichert es als
+JSON. Nichts davon wird gespeichert: Neuladen setzt die Seite zurück.
+
+Der Code steht **inline in `dashboard.html`**, nicht als eigene Datei. Der
+Deploy-Workflow kopiert nur namentlich gelistete Dateien, und das Ändern des
+Workflows braucht das Recht `workflow`, das der GitHub-Login hier nicht hat.
+`skizze.js` liegt als lesbare Quelle daneben und wird nicht ausgeliefert:
+wer am Skizzenmodus etwas ändert, muss beide Stellen anfassen.
