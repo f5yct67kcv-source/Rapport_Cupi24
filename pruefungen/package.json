@@ -1,0 +1,7 @@
+{
+  "name": "rapport-cupi24-pruefungen",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node alle.mjs" },
+  "devDependencies": { "playwright": "^1.49.0" }
+}

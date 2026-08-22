@@ -17,3 +17,7 @@ Thumbs.db
 *~
 .vscode/
 .idea/
+
+# Pruefungen: Abhaengigkeiten und Bildschirmfotos entstehen bei jedem Lauf neu
+pruefungen/node_modules/
+pruefungen/bilder/
