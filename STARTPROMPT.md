@@ -9,14 +9,47 @@ und wird nicht gepflegt. Die Datei wird gepflegt.
 
 ---
 
+## Welche Repositories verdrahten
+
+| Art des Chats | Repositories | Warum |
+|---|---|---|
+| **Aufgaben-Chat (Code)** | `rapport_cupi24` **und** `-security-operations-platform-` | Der Code, und dazu Entscheidungsprotokoll, offene Punkte und die GAV-Register. Ohne das zweite kennt der Chat weder die freie ENT-Nummer noch die Auslegungen — genau daran ist am 21.08.2026 eine Nummer doppelt vergeben worden. |
+| **Nur Dokumentation** (Protokoll, Recherche, GAV) | nur `-security-operations-platform-` | Ohne Code, damit gar nicht erst versehentlich gebaut wird. |
+| **Dashboard-Werkzeug** | nur `sop_dashboard` | Eigenes Werkzeug (Vite/JS), berührt das Produkt nicht. |
+
+**Nie alle drei zusammen.** `sop_dashboard` hat mit dem Produkt nichts zu
+tun; es mitzuladen kostet nur Aufmerksamkeit.
+
+Was im Projekt-Repository steht und im Code-Chat gebraucht wird:
+
+- `00-projekt/entscheidungsprotokoll.md` — alle Entscheidungen. **Vor jeder
+  neuen ENT-Nummer hier nachsehen, welche frei ist.**
+- `00-projekt/offene-punkte.md` — was ungeklärt ist. Neue Befunde gehören
+  hierher, nicht in eine Chatnachricht, die verloren geht.
+- `90-gav/regelmatrix.md`, `auslegungsregister.md`, `testbibliothek.md` —
+  sobald Stunden, Zuschläge oder Lohnfolgen berührt werden.
+- `CLAUDE.md` — die Gate-Regeln und die Vertraulichkeit.
+
+**Das Projekt-Repository wird im Code-Chat gelesen, nicht umgebaut.**
+Geschrieben wird dort nur, was dokumentiert werden muss: ein
+Entscheidungseintrag oder ein offener Punkt.
+
+Beide Repositories haben ein eigenes `CLAUDE.md` — das eine mit den
+Projektregeln (Gates, Vertraulichkeit), das andere mit den Arbeitsregeln für
+den Code. Beide gelten.
+
+---
+
 ## Die Grundform: ein Chat, eine Aufgabe
 
 Ein Chat wird für **eine** Aufgabe geöffnet und nach Abschluss geschlossen.
 Nicht ein Chat je Bereich auf Dauer — der hat nie einen Moment, an dem er
 sauber übergibt.
 
-> Du arbeitest am Repository `rapport_cupi24`. Lies zuerst `CLAUDE.md` — dort
-> stehen die Arbeitsregeln, sie gelten vollständig.
+> Du arbeitest am Repository `rapport_cupi24`; `-security-operations-platform-`
+> ist als Nachschlagewerk dabei (Entscheidungsprotokoll, offene Punkte, GAV) —
+> dort wird gelesen und nur dokumentiert, nicht gebaut.
+> Lies zuerst `CLAUDE.md` in beiden — sie gelten vollständig.
 >
 > **Bereich: _<BEREICH>_ — Aufgabe: _<AUFGABE>_.**
 > Ausserhalb dieser Aufgabe liest du, aber änderst nichts. Fällt dir
