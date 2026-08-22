@@ -1,6 +1,10 @@
-# Rapport-Tool CUPI 24
+# sop-plattform — Betriebswerkzeug der CUPI 24 GmbH
 
-Internes Werkzeug der CUPI 24 GmbH zur Erfassung von Einsatzstunden.
+Internes Werkzeug der CUPI 24 GmbH: Einsatzplanung, Personalstamm,
+Kundenstamm, Abgleich der Ist-Zeiten und Stundenerfassung.
+
+Der frühere Name `Rapport_Cupi24` beschrieb nur den ersten Teil — die
+Stundenerfassung. Umbenannt am 22.08.2026 (ENT-078).
 Entwickelt unter der Ausnahme aus ENT-008/ENT-012 (rein interne Nutzung,
 kein Verkauf) — siehe Entscheidungsprotokoll im Projekt-Repository.
 

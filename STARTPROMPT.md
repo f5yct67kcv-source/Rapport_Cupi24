@@ -13,11 +13,11 @@ und wird nicht gepflegt. Die Datei wird gepflegt.
 
 | Art des Chats | Repositories | Warum |
 |---|---|---|
-| **Aufgaben-Chat (Code)** | `rapport_cupi24` **und** `-security-operations-platform-` | Der Code, und dazu Entscheidungsprotokoll, offene Punkte und die GAV-Register. Ohne das zweite kennt der Chat weder die freie ENT-Nummer noch die Auslegungen — genau daran ist am 21.08.2026 eine Nummer doppelt vergeben worden. |
-| **Nur Dokumentation** (Protokoll, Recherche, GAV) | nur `-security-operations-platform-` | Ohne Code, damit gar nicht erst versehentlich gebaut wird. |
-| **Dashboard-Werkzeug** | nur `sop_dashboard` | Eigenes Werkzeug (Vite/JS), berührt das Produkt nicht. |
+| **Aufgaben-Chat (Code)** | `sop-plattform` **und** `sop-projekt` | Der Code, und dazu Entscheidungsprotokoll, offene Punkte und die GAV-Register. Ohne das zweite kennt der Chat weder die freie ENT-Nummer noch die Auslegungen — genau daran ist am 21.08.2026 eine Nummer doppelt vergeben worden. |
+| **Nur Dokumentation** (Protokoll, Recherche, GAV) | nur `sop-projekt` | Ohne Code, damit gar nicht erst versehentlich gebaut wird. |
+| **Dashboard-Werkzeug** | nur `sop-dashboard` | Eigenes Werkzeug (Vite/JS), berührt das Produkt nicht. |
 
-**Nie alle drei zusammen.** `sop_dashboard` hat mit dem Produkt nichts zu
+**Nie alle drei zusammen.** `sop-dashboard` hat mit dem Produkt nichts zu
 tun; es mitzuladen kostet nur Aufmerksamkeit.
 
 Was im Projekt-Repository steht und im Code-Chat gebraucht wird:
@@ -46,7 +46,7 @@ Ein Chat wird für **eine** Aufgabe geöffnet und nach Abschluss geschlossen.
 Nicht ein Chat je Bereich auf Dauer — der hat nie einen Moment, an dem er
 sauber übergibt.
 
-> Du arbeitest am Repository `rapport_cupi24`; `-security-operations-platform-`
+> Du arbeitest am Repository `sop-plattform`; `sop-projekt`
 > ist als Nachschlagewerk dabei (Entscheidungsprotokoll, offene Punkte, GAV) —
 > dort wird gelesen und nur dokumentiert, nicht gebaut.
 > Lies zuerst `CLAUDE.md` in beiden — sie gelten vollständig.
@@ -116,7 +116,7 @@ Ergänzung zu dessen Startprompt:
   gemeinsame Bausteine — das ist der einzige Fall, in dem ein reiner
   Gestaltungs-Chat sinnvoll ist
 
-> Du arbeitest am Repository `rapport_cupi24`. Lies zuerst `CLAUDE.md`.
+> Du arbeitest am Repository `sop-plattform`. Lies zuerst `CLAUDE.md`.
 >
 > **Diese Sitzung ist querliegend: _<THEMA>_.** Sie darf jeden Bereich
 > anfassen. Sag mir zu Beginn, dass ich in dieser Zeit **keine zweite

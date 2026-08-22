@@ -3,7 +3,7 @@
 Internes Werkzeug der CUPI 24 GmbH. Entwickelt unter der Ausnahme aus
 ENT-008/ENT-012 (rein interne Nutzung, kein Verkauf). Die Projektregeln,
 das Entscheidungsprotokoll und die offenen Punkte liegen im **Projekt-
-Repository** (`-security-operations-platform-`), nicht hier.
+Repository** (`sop-projekt`), nicht hier.
 
 **Am Projekt arbeiten mehrere Sitzungen gleichzeitig.** Alles unten folgt
 daraus.
